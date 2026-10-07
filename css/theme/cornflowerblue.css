@@ -1,0 +1,17 @@
+﻿.header, #side-menu, #setting, #control{
+	background-color:cornflowerblue;
+
+}
+#main-privacy > .privacy-container
+{
+	border-left:20px solid cornflowerblue;
+}
+.calendar-title
+{
+	background-color:cornflowerblue;
+
+}
+.holidaylist th
+{
+	background-color: cornflowerblue;
+}

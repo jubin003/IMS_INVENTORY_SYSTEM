@@ -1,0 +1,90 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Customer_PO.aspx.cs" Inherits="entryforms_Customer_PO" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
+
+    <script type="text/javascript">
+        Sys.Application.add_load(function () {
+            // Initialize Nepali Date Picker for txtNdate
+            var txtNdate = document.getElementById("<%= txtNdate.ClientID %>");
+            if (txtNdate) {
+                txtNdate.nepaliDatePicker();
+            }
+        });
+    </script>
+    <table>
+        <tr>
+            <td><b>Fiscal Year:</b>
+                <asp:DropDownList ID="ddlFiscalYear" Width="150px" CssClass="form-control " runat="server"></asp:DropDownList>
+            </td>
+        </tr>
+        <tr>
+            <td><b>Date:</b>
+                <asp:TextBox ID="txtNdate" Width="150px" CssClass="form-control datepicker" runat="server"></asp:TextBox>
+            </td>
+        </tr>
+        <tr>
+            <td><b>Customer:</b>
+                <asp:DropDownList ID="ddlCustomer" Width="350px" CssClass="form-control " runat="server"
+                    AutoPostBack="true" OnSelectedIndexChanged="ddlCustomer_SelectedIndexChanged">
+                </asp:DropDownList>
+            </td>
+            <td>&nbsp&nbsp</td>
+
+        </tr>
+        <tr>
+            <td><b>Purchase Order Number:</b>
+                <asp:TextBox ID="txtPOnumber" Width="350px" CssClass="form-control" runat="server"></asp:TextBox></td>
+        </tr>
+        <tr>
+            <td>
+                <br />
+                <asp:Button ID="btn_Save" CssClass="btn btn-primary" runat="server" Text="Save" OnClick="btn_Save_Click" />&nbsp&nbsp&nbsp
+    <asp:Button ID="btn_reset" CssClass="btn btn-primary" runat="server" Text="Reset" OnClick="btn_reset_Click" /></td>
+        </tr>
+    </table>
+
+
+
+    <br />
+    <asp:Label ID="lblPK_id" runat="server" Text="" Visible="false"></asp:Label>
+    <asp:GridView ID="gridCustomerPo" runat="server" CssClass="gridtable" AutoGenerateColumns="False"
+        OnRowDataBound="gridCustomerPo_RowDataBound" OnRowCommand="gridCustomerPo_RowCommand" Width="100%">
+        <Columns>
+            <asp:TemplateField HeaderText="S.N">
+                <ItemTemplate>
+                    <asp:Label ID="lblSN" runat="server" Text="<%# Container.DataItemIndex+1 %>"></asp:Label>
+                    <asp:Label Text='<%# Bind("PK_ID") %>' ID="lblPK" Visible="false" runat="server" />
+
+                </ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Customer Name">
+
+                <ItemTemplate>
+                    <asp:Label Text='<%# Bind("CUSTOMER_ID") %>' ID="lblCustomerId" Visible="false" runat="server" />
+                    <asp:Label ID="lblShowCustomer" runat="server"></asp:Label>
+                </ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Purchase Order Number">
+
+                <ItemTemplate>
+                    <asp:Label Text='<%# Bind("PO_NUMBER") %>' ID="lblPONum" runat="server" />
+                </ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Date">
+                <EditItemTemplate>
+                    <asp:TextBox ID="txtNpdateE" CssClass="form-control " ClientIDMode="Static" Text='<%# Bind("PO_DATE_NP") %>' runat="server"></asp:TextBox>
+                </EditItemTemplate>
+                <ItemTemplate>
+                    <asp:Label Text='<%# Bind("PO_DATE_NP") %>' ID="lblNpDate" runat="server" />
+                </ItemTemplate>
+            </asp:TemplateField>
+            <asp:TemplateField HeaderText="Edit">
+                <ItemTemplate>
+                    <asp:ImageButton ID="imgEdit" CommandName="View" runat="server" ImageUrl="~/images/icons/edit.png" />
+                </ItemTemplate>
+            </asp:TemplateField>
+        </Columns>
+
+    </asp:GridView>
+</asp:Content>
+

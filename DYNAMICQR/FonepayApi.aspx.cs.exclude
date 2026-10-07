@@ -1,0 +1,136 @@
+using System;
+using System.Globalization;
+using System.Threading.Tasks;
+using System.Web.UI;
+using Newtonsoft.Json.Linq;
+
+// ============================================================================
+// FonepayApi.aspx.cs
+//
+// JSON API used by FonepayTest.aspx's client-side JS (plain fetch() calls,
+// not the ScriptManager PageMethods proxy). This uses RegisterAsyncTask with
+// Async="true" on the @Page directive -- the properly-supported ASP.NET Web
+// Forms mechanism for awaiting real async work before the response is sent.
+//
+// (Task-returning static [WebMethod] "Page Methods" -- what an earlier
+// version of this test page used -- are NOT reliably awaited by the
+// ScriptManager AJAX proxy, which is why that version hung on "Generating...".
+// RegisterAsyncTask does not have that problem.)
+//
+// Not meant as production API design (no auth/CSRF hardening) -- just enough
+// to exercise GenerateDynamicQrAsync / CheckPaymentStatus /
+// CheckQrStatusFromServerAsync end to end from a browser.
+//
+// Actions (all GET, ?action=...):
+//   generate     amount, remarks1, remarks2   -> starts a new QR
+//   status       prn                           -> local cached status (fast, for polling)
+//   statusServer prn                           -> forces a live call to Fonepay's
+//                                                  Check QR Request Status endpoint
+// ============================================================================
+
+public partial class FonepayApi : Page
+{
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        RegisterAsyncTask(new PageAsyncTask(ProcessRequestAsync));
+    }
+
+    private async Task ProcessRequestAsync()
+    {
+        Response.ContentType = "application/json";
+        Response.Cache.SetCacheability(System.Web.HttpCacheability.NoCache);
+
+        string action = Request.QueryString["action"] ?? "";
+        JObject json;
+
+        try
+        {
+            switch (action)
+            {
+                case "generate":
+                    json = await HandleGenerateAsync();
+                    break;
+
+                case "status":
+                    json = HandleStatus();
+                    break;
+
+                case "statusServer":
+                    json = await HandleStatusServerAsync();
+                    break;
+
+                default:
+                    Response.StatusCode = 400;
+                    json = new JObject { { "success", false }, { "error", "Unknown action '" + action + "'." } };
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            FonepayDynamicQrService.LogWebhook("FonepayApi EXCEPTION (action=" + action + "): " + ex);
+            Response.StatusCode = 500;
+            json = new JObject { { "success", false }, { "error", ex.Message } };
+        }
+
+        Response.Write(json.ToString(Newtonsoft.Json.Formatting.None));
+    }
+
+    private async Task<JObject> HandleGenerateAsync()
+    {
+        string amountRaw = Request.QueryString["amount"];
+        string remarks1 = Request.QueryString["remarks1"] ?? "Test";
+        string remarks2 = Request.QueryString["remarks2"] ?? "Test";
+
+        decimal amount;
+        if (!decimal.TryParse(amountRaw, NumberStyles.Any, CultureInfo.InvariantCulture, out amount) || amount <= 0)
+        {
+            Response.StatusCode = 400;
+            return new JObject { { "success", false }, { "error", "Enter a valid positive amount." } };
+        }
+
+        var result = await FonepayDynamicQrService.GenerateDynamicQrAsync(amount, remarks1, remarks2);
+
+        return new JObject
+        {
+            { "success", result.Success },
+            { "prn", result.Prn },
+            { "qrMessage", result.QrMessage },
+            { "webSocketUrl", result.ThirdPartyQrWebSocketUrl },
+            { "error", result.ErrorMessage }
+        };
+    }
+
+    private JObject HandleStatus()
+    {
+        string prn = Request.QueryString["prn"];
+        var result = FonepayDynamicQrService.CheckPaymentStatus(prn);
+
+        return new JObject
+        {
+            { "status", result.Status },
+            { "message", result.Message },
+            { "prn", result.Prn },
+            { "fonepayTraceId", result.FonepayTraceId }
+        };
+    }
+
+    private async Task<JObject> HandleStatusServerAsync()
+    {
+        string prn = Request.QueryString["prn"];
+        if (string.IsNullOrEmpty(prn))
+        {
+            Response.StatusCode = 400;
+            return new JObject { { "success", false }, { "error", "Missing prn." } };
+        }
+
+        var result = await FonepayDynamicQrService.CheckQrStatusFromServerAsync(prn);
+
+        return new JObject
+        {
+            { "status", result.Status },
+            { "message", result.Message },
+            { "prn", result.Prn },
+            { "fonepayTraceId", result.FonepayTraceId }
+        };
+    }
+}

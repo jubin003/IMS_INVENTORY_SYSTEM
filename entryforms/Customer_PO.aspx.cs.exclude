@@ -1,0 +1,162 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Entity.Components;
+using Service.Components;
+using System.IO;
+using PhyeGanCore;
+
+public partial class entryforms_Customer_PO : System.Web.UI.Page
+{
+    CUSTOMER CEnt = new CUSTOMER();
+    CUSTOMERService CSer = new CUSTOMERService();
+
+    FISCALYEAR FYEnt = new FISCALYEAR();
+    FISCALYEARService FYSer = new FISCALYEARService();
+
+    CUSTOMER_PO CPEnt = new CUSTOMER_PO();
+    CUSTOMER_POService CPSer = new CUSTOMER_POService();
+    PhyeGanDate PGD = new PhyeGanDate();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            txtNdate.Text = PGD.GetTodayNepaliDate();
+            LoadCustomer();
+            LoadFiscalYear();
+        }
+    }
+    protected void LoadFiscalYear()
+    {
+        FYEnt = new FISCALYEAR();
+        ddlFiscalYear.DataSource = FYSer.GetAll(FYEnt);
+        ddlFiscalYear.DataTextField = "FISCAL_YEAR";
+        ddlFiscalYear.DataValueField = "FISCAL_YEAR";
+        ddlFiscalYear.DataBind();
+    }
+    protected void LoadGrid()
+    {
+        CPEnt = new CUSTOMER_PO();
+        CPEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
+        CPEnt.PO_FISCALYEAR = ddlFiscalYear.SelectedValue;
+        gridCustomerPo.DataSource = CPSer.GetAll(CPEnt);
+        gridCustomerPo.DataBind();
+        gridCustomerPo.Visible = true;
+    }
+    protected void LoadCustomer()
+    {
+        CEnt = new CUSTOMER();
+        ddlCustomer.DataSource = CSer.GetAll(CEnt);
+        ddlCustomer.DataTextField = "CUSTOMER_NAME";
+        ddlCustomer.DataValueField = "CUSTOMER_CODE";
+        ddlCustomer.DataBind();
+        ddlCustomer.Items.Insert(0, "Select");
+    }
+
+    protected void btn_Save_Click(object sender, EventArgs e)
+    {
+        string[] Ndate = txtNdate.Text.Split('/');
+        string EngDate = PGD.ConvertNepaliTOEnglish(Ndate[0], Ndate[1], Ndate[2]);
+        if (lblPK_id.Text == "")
+        {
+            CPEnt = new CUSTOMER_PO();
+            CPEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
+            CPEnt.PO_NUMBER = txtPOnumber.Text;
+            CPEnt.PO_DAY = txtNdate.Text;
+            CPEnt.PO_DATE_ENG = EngDate;
+            CPEnt.PO_FISCAL_YEAR = ddlFiscalYear.SelectedValue;
+            CPEnt.PO_DAY = Ndate[0];
+            CPEnt.PO_MONTH = Ndate[1];
+            CPEnt.PO_YEAR = Ndate[2];
+            CPSer.Insert(CPEnt);
+            HelperFunction.MsgBox(this, this.GetType(), "Saved");
+        }
+        else
+        {
+            CPEnt = new CUSTOMER_PO();
+            CPEnt.PK_ID = lblPK_id.Text;
+            CPEnt = (CUSTOMER_PO)CPSer.GetSingle(CPEnt);
+            if (CPEnt != null)
+            {
+                CPEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
+                CPEnt.PO_NUMBER = txtPOnumber.Text;
+                CPEnt.PO_DATE_NP = txtNdate.Text;
+                CPEnt.PO_DATE_ENG = EngDate;
+                CPEnt.PO_FISCAL_YEAR = ddlFiscalYear.SelectedValue;
+                CPEnt.PO_DAY = Ndate[0];
+                CPEnt.PO_MONTH = Ndate[1];
+                CPEnt.PO_YEAR = Ndate[2];
+                CPSer.Update(CPEnt);
+                HelperFunction.MsgBox(this, this.GetType(), "Updated");
+            }
+        }
+        LoadGrid();
+    }
+
+    protected void gridCustomerPo_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow && (e.Row.RowState & DataControlRowState.Edit) == 0)
+        {
+            Label lblShowCustomer = (Label)e.Row.FindControl("lblShowCustomer");
+            Label lblCustomerId = (Label)e.Row.FindControl("lblCustomerId");
+
+            CEnt = new CUSTOMER();
+            CEnt.CUSTOMER_CODE = lblCustomerId.Text;
+            CEnt = (CUSTOMER)CSer.GetSingle(CEnt);
+            if (CEnt != null)
+            {
+                lblShowCustomer.Text = CEnt.CUSTOMER_NAME;
+            }
+        }
+
+
+
+    }
+
+
+
+
+
+    protected void ddlCustomer_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        LoadGrid();
+    }
+
+    protected void gridCustomerPo_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("View"))
+        {
+            GridViewRow gr = ((ImageButton)e.CommandSource).Parent.Parent as GridViewRow;
+            Label lblPK = gr.FindControl("lblPK") as Label;
+            CPEnt = new CUSTOMER_PO();
+            CPEnt.PK_ID = lblPK.Text;
+            CPEnt = (CUSTOMER_PO)CPSer.GetSingle(CPEnt);
+            if (CPEnt != null)
+            {
+                lblPK_id.Text = lblPK.Text;
+                txtNdate.Text = CPEnt.PO_DATE_NP;
+                txtPOnumber.Text = CPEnt.PO_NUMBER;
+                ddlFiscalYear.SelectedValue = CPEnt.PO_FISCAL_YEAR;
+                ddlCustomer.SelectedValue = CPEnt.CUSTOMER_ID;
+                ddlCustomer.Enabled = false;
+
+            }
+        }
+    }
+    protected void clearField()
+    {
+        //txtNdate.Text = "";
+        txtPOnumber.Text = "";
+        ddlCustomer.SelectedIndex = 0;
+    }
+
+    protected void btn_reset_Click(object sender, EventArgs e)
+    {
+        clearField();
+        ddlCustomer.Enabled = true;
+        gridCustomerPo.Visible = false;
+    }
+}

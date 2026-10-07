@@ -1,0 +1,156 @@
+﻿table.gridtable {
+	/*border: 1px solid #8BBCE9;*/
+	background-color: White;
+}
+
+	table.gridtable tr {
+		border-bottom: 0px;
+	}
+
+	table.gridtable th {
+		font-size: 14px;
+		background-color: #E8EBED;
+		color: Black;
+		vertical-align: middle;
+		text-align: center;
+		font-weight: bold;
+		height: 25px;
+		border: 1px solid #000000;
+	}
+
+	table.gridtable td {
+		font-size: 13px;
+		color: Black;
+		border-bottom: 0px;
+		padding: 4px;
+		vertical-align: middle;
+		text-align: left;
+		font-weight: normal;
+		/*border: 1px solid #8BBCE9*/
+	}
+
+
+/*-------------------------------------------------*/
+
+/*Calendar Control CSS*/
+.cal_Theme1 .ajax__calendar_container {
+	background-color: #808080;
+	border: solid 1px #77D5F7;
+	width: 200px;
+	margin-bottom: 20px;
+}
+
+.cal_Theme1 .ajax__calendar_header {
+	background-color: #ffffff;
+	margin-bottom: 4px;
+}
+
+.cal_Theme1 .ajax__calendar_title,
+.cal_Theme1 .ajax__calendar_next,
+.cal_Theme1 .ajax__calendar_prev {
+	color: #004080;
+	padding-bottom: 20px;
+	font-size: 16px;
+}
+
+.cal_Theme1 .ajax__calendar_body {
+	background-color: #ffffff;
+	border: solid 1px #77D5F7;
+	font-size: 14px;
+}
+
+.cal_Theme1 .ajax__calendar_dayname {
+	text-align: center;
+	font-weight: bold;
+	margin-bottom: 4px;
+	margin-top: 2px;
+	color: #004080;
+}
+
+.cal_Theme1 .ajax__calendar_day {
+	color: #004080;
+	text-align: center;
+}
+
+.cal_Theme1 .ajax__calendar_hover .ajax__calendar_day,
+.cal_Theme1 .ajax__calendar_hover .ajax__calendar_month,
+.cal_Theme1 .ajax__calendar_hover .ajax__calendar_year,
+.cal_Theme1 .ajax__calendar_active {
+	color: #004080;
+	font-weight: bold;
+	background-color: #DEF1F4;
+}
+
+
+
+.cal_Theme1 .ajax__calendar_today {
+	font-weight: bold;
+	color: #ffffff;
+}
+
+.cal_Theme1 .ajax__calendar_other,
+.cal_Theme1 .ajax__calendar_hover .ajax__calendar_today,
+.cal_Theme1 .ajax__calendar_hover .ajax__calendar_title {
+	color: #bbbbbb;
+}
+/*-------------------------------------------------*/
+/* Check box Slider*/
+.switch {
+	position: relative;
+	display: inline-block;
+	width: 52px;
+	height: 24px;
+}
+
+	.switch input {
+		display: none;
+	}
+
+.slider {
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: #ccc;
+	-webkit-transition: .4s;
+	transition: .4s;
+}
+
+	.slider:before {
+		position: absolute;
+		content: "";
+		height: 18px;
+		width: 18px;
+		left: 3px;
+		bottom: 3px;
+		background-color: white;
+		-webkit-transition: .4s;
+		transition: .4s;
+	}
+
+input:checked + .slider {
+	background-color: #2196F3;
+}
+
+input:focus + .slider {
+	box-shadow: 0 0 1px #2196F3;
+}
+
+input:checked + .slider:before {
+	-webkit-transform: translateX(22px);
+	-ms-transform: translateX(22px);
+	transform: translateX(22px);
+}
+
+/* Rounded sliders */
+.slider.round {
+	border-radius: 30px;
+}
+
+	.slider.round:before {
+		border-radius: 50%;
+	}
+/*--------------------------------------------------------*/
+

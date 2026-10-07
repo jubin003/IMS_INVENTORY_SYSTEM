@@ -1,0 +1,134 @@
+--To drop any indexes
+DROP INDEX PRODUCT_U01;
+
+
+--- ALTER TABLE NAME_COMPANY
+RENAME COLUMN SHREEYL TO IS_MANUFACTURER; 
+
+
+
+CREATE UNIQUE INDEX CUSTOMER_U02 ON CUSTOMER (VAT_PAN_NUMBER);
+
+ALTER TABLE SUPPLIERS ADD (
+  CONSTRAINT SUPPLIERS_PK_ID
+ PRIMARY KEY
+ (PK_ID)
+    USING INDEX 
+    TABLESPACE SYSTEM
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                FREELISTS        1
+                FREELIST GROUPS  1
+               ),
+  CONSTRAINT SUPPLIERS_U01
+ UNIQUE (SUPPLIER_TYPE, SUPPLIER_CODE)
+    USING INDEX 
+    TABLESPACE SYSTEM
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                FREELISTS        1
+                FREELIST GROUPS  1
+               ),
+  CONSTRAINT SUPPLIERS_U02
+ UNIQUE (VAT_PAN_NUMBER)
+    USING INDEX 
+    TABLESPACE SYSTEM
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                FREELISTS        1
+                FREELIST GROUPS  1
+               ));
+
+
+-------------- Purchase Invoice Master --------------------------------
+ALTER TABLE PURCHASE_INVOICE_MASTER ADD (
+  CONSTRAINT PURCHASE_INVOICE_MASTER_PK
+ PRIMARY KEY
+ (PK_ID)
+    USING INDEX 
+    TABLESPACE SYSTEM
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                FREELISTS        1
+                FREELIST GROUPS  1
+               ),
+  CONSTRAINT PURCHASE_INVOICE_MASTER_U01
+ UNIQUE (DAKHILA_NUMBER, DAKHILA_FY, OFFICE_CODE)
+    USING INDEX 
+    TABLESPACE SYSTEM
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                FREELISTS        1
+                FREELIST GROUPS  1
+               ));
+
+
+-------------- Sales Invoice Master ---------------------------
+ALTER TABLE SALES_INVOICE_MASTER ADD (
+  CONSTRAINT SALES_INVOICE_MASTER_PK
+ PRIMARY KEY
+ (PK_ID)
+    USING INDEX 
+    TABLESPACE SYSTEM
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                FREELISTS        1
+                FREELIST GROUPS  1
+               ),
+  CONSTRAINT SALES_INVOICE_MASTER_U01
+ UNIQUE (INVOICE_NUMBER, INVOICE_FY)
+    USING INDEX 
+    TABLESPACE SYSTEM
+    PCTFREE    10
+    INITRANS   2
+    MAXTRANS   255
+    STORAGE    (
+                INITIAL          64K
+                MINEXTENTS       1
+                MAXEXTENTS       UNLIMITED
+                PCTINCREASE      0
+                FREELISTS        1
+                FREELIST GROUPS  1
+               ));
+
+
+ --- SALES _INVOICE_MASTER
+ALTER TABLE SALES_INVOICE_MASTER DROP CONSTRAINT SALES_INVOICE_MASTER_U01;
+
+ALTER TABLE SALES_INVOICE_MASTER  ADD CONSTRAINT SALES_INVOICE_MASTER_U02 UNIQUE (INVOICE_FY, INVOICE_NUMBER, OFFICE_CODE ); 

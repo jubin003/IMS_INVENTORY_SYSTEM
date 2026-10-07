@@ -1,0 +1,289 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Entity.Components;
+using Service.Components;
+using DataHelper.Framework;
+using PhyeGanCore;
+
+public partial class Administration_ClosingBalance : System.Web.UI.Page
+{
+    FISCALYEAR FYEnt = new FISCALYEAR();
+    FISCALYEARService FYSer = new FISCALYEARService();
+
+    CLOSING_STATUS CSEnt = new CLOSING_STATUS();
+    CLOSING_STATUSService CSSer = new CLOSING_STATUSService();
+
+    PRODUCT_CATEGORY PCEnt = new PRODUCT_CATEGORY();
+    PRODUCT_CATEGORYService PCSer = new PRODUCT_CATEGORYService();
+
+    PRODUCT_SUB_CATEGORY PSCEnt = new PRODUCT_SUB_CATEGORY();
+    PRODUCT_SUB_CATEGORYService PSCSer = new PRODUCT_SUB_CATEGORYService();
+
+    PRODUCT PEnt = new PRODUCT();
+    PRODUCTService PSer = new PRODUCTService();
+
+    PRODUCT_UNIT PUEnt = new PRODUCT_UNIT();
+    PRODUCT_UNITService PUSer = new PRODUCT_UNITService();
+
+    PRODUCT_COLOUR PColEnt = new PRODUCT_COLOUR();
+    PRODUCT_COLOURService PColSer = new PRODUCT_COLOURService();
+
+    PRODUCT_SIZE PSEnt = new PRODUCT_SIZE();
+    PRODUCT_SIZEService PSSer = new PRODUCT_SIZEService();
+
+    PRODUCT_MANUFACTURE PMEnt = new PRODUCT_MANUFACTURE();
+    PRODUCT_MANUFACTUREService PMSer = new PRODUCT_MANUFACTUREService();
+
+    OPENING_BALANCE OBEnt = new OPENING_BALANCE();
+    OPENING_BALANCEService OBSer = new OPENING_BALANCEService();
+
+    HelperFunction hf = new HelperFunction();
+    PhyeGan PG = new PhyeGan();
+    PhyeGanDate pgd = new PhyeGanDate();
+    Boolean IsPageRefresh = false;
+
+    UserProfileEntity userProfileEnt = new UserProfileEntity();
+
+    static string path = "";
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        try
+        {
+            if (!IsPostBack)
+            {
+                ViewState["postids"] = System.Guid.NewGuid().ToString();
+                Session["postid"] = ViewState["postids"].ToString();
+
+                userProfileEnt = (UserProfileEntity)HttpContext.Current.Session["UserProfile"];
+                path = HttpContext.Current.Request.Url.AbsolutePath.ToLower();
+                path = path.Replace(PG.Org_Base_URL(), "");
+
+                if (hf.checkPageAccess(path, userProfileEnt.UserGroupID.ToString()))
+                {
+                    loadBranch();
+                    checkBranch();
+                    LoadFiscalYear();
+                }
+                else
+                {
+                    Response.Redirect("~/forbidden.aspx");
+                }
+            }
+            else
+            {
+                if (ViewState["postids"].ToString() != Session["postid"].ToString())
+                {
+                    IsPageRefresh = true;
+                }
+                Session["postid"] = System.Guid.NewGuid().ToString();
+                ViewState["postids"] = Session["postid"].ToString();
+            }
+        }
+        catch (System.Threading.ThreadAbortException)
+        {
+            Response.Redirect("~/forbidden.aspx");
+        }
+        catch
+        {
+            Response.Redirect("~/Login.aspx");        }
+        
+    }
+
+    protected void loadBranch()
+    {
+        ddlBranch.DataSource = PG.getBranchList();
+        ddlBranch.DataTextField = "OFFICENAME";
+        ddlBranch.DataValueField = "PK_ID";
+        ddlBranch.DataBind();
+
+        userProfileEnt = (UserProfileEntity)HttpContext.Current.Session["UserProfile"];
+        if (userProfileEnt.LocationTypeID == 1 && PG.checkBranchAccess(path, userProfileEnt.UserGroupID.ToString()) && PG.CompanyBranch_Status())
+        {
+            divBranch.Visible = true;
+            ddlBranch.Items.Insert(0, "-");
+        }
+        else
+        {
+            divBranch.Visible = false;
+            ddlBranch.SelectedValue = userProfileEnt.LocationID;
+        }
+    }
+    protected void LoadFiscalYear()
+    {
+        FYEnt = new FISCALYEAR();
+        ddlFiscalYear.DataSource = FYSer.GetAll(FYEnt);
+        ddlFiscalYear.DataValueField = "FISCAL_YEAR";
+        ddlFiscalYear.DataTextField = "FISCAL_YEAR";
+        ddlFiscalYear.DataBind();
+        ddlFiscalYear.SelectedValue = pgd.checkFiscalYear(pgd.NepaliMonth(), pgd.NepaliYear());
+    }
+    protected void btnView_Click(object sender, EventArgs e)
+    {
+        LoadStock();
+    }
+    protected void LoadStock()
+    {
+        string office_code = "";
+        if (ddlBranch.SelectedValue != "-")
+        {
+            office_code = ddlBranch.SelectedValue;
+        }
+        grdStock.DataSource = hf.getOpeningClosingBalance(ddlFiscalYear.SelectedValue, null, null, null, null, null, null, null, office_code);
+        grdStock.DataBind();
+
+        if (hf.ProductBatch() == "1")
+            grdStock.Columns[2].Visible = true;
+        else
+            grdStock.Columns[2].Visible = false;
+
+        if (hf.ProductExpiry() == "1")
+            grdStock.Columns[3].Visible = true;
+        else
+            grdStock.Columns[3].Visible = false;
+
+        if (hf.ProductColor() == "1")
+            grdStock.Columns[4].Visible = true;
+        else
+            grdStock.Columns[4].Visible = false;
+
+        if (hf.ProductSize() == "1")
+            grdStock.Columns[5].Visible = true;
+        else
+            grdStock.Columns[5].Visible = false;
+
+        if (hf.ProductManufacturer() == "1")
+            grdStock.Columns[6].Visible = true;
+        else
+            grdStock.Columns[6].Visible = false;
+    }
+
+    protected void btnClosing_Click(object sender, EventArgs e)
+    {
+        CSEnt = new CLOSING_STATUS();
+        CSEnt.FISCAL_YEAR = ddlFiscalYear.SelectedValue;
+        CSEnt.STATUS = "1";
+        CSEnt = (CLOSING_STATUS)CSSer.GetSingle(CSEnt);
+        if (CSEnt == null)
+        {
+
+            if (ddlFiscalYear.SelectedValue == pgd.checkFiscalYear(pgd.NepaliMonth(), pgd.NepaliYear()))
+            {
+                string lastdateofFY = "";
+
+                #region fiscalyear ko last day find out gare ko 
+
+                lastdateofFY = pgd.ConvertNepaliTOEnglish("32", "3", pgd.NepaliYear());
+
+                if (lastdateofFY == "")
+                {
+                    lastdateofFY = pgd.ConvertNepaliTOEnglish("31", "3", pgd.NepaliYear());
+                }
+                else if (lastdateofFY == "")
+                {
+                    lastdateofFY = pgd.ConvertNepaliTOEnglish("30", "3", pgd.NepaliYear());
+                }
+                else if(lastdateofFY == "")
+                {
+                    lastdateofFY = pgd.ConvertNepaliTOEnglish("29", "3", pgd.NepaliYear());
+                }
+
+                #endregion
+
+                #region if selected fiscal year ra current fiscal year same ho ra aja ko date fiscal year ko last date ho vaye closing garne.. else not
+
+                if (lastdateofFY == pgd.ConvertNepaliTOEnglish(pgd.NepaliDay(), pgd.NepaliMonth(), pgd.NepaliYear()))
+                {
+                    PerformClosing();
+                }
+                else
+                {
+                    HelperFunction.MsgBox(this, this.GetType(), "Sorry today is not the end day of this Fiscal year.");
+                }
+                #endregion
+            }
+            else
+            {
+                #region select gareko fiscal year ra current year same hoina vaye selected fiscal year ko closing garne
+
+                PerformClosing();
+                #endregion
+            }
+        }
+        else
+        {
+            HelperFunction.MsgBox(this, this.GetType(), "Closing of Fiscal Year: " + ddlFiscalYear.SelectedValue + " is previously done.");
+        }
+    }
+    protected void PerformClosing()
+    {
+        DistributedTransaction DT = new DistributedTransaction();
+
+        foreach (GridViewRow gr in grdStock.Rows)
+        {
+
+            Label lblProductId = gr.FindControl("lblProductId") as Label;
+            Label lblBatchNo = gr.FindControl("lblBatchNo") as Label;
+            Label lblExpiryDate = gr.FindControl("lblExpiryDate") as Label;
+            Label lblColourId = gr.FindControl("lblColourId") as Label;
+            Label lblSizeID = gr.FindControl("lblSizeID") as Label;
+            Label lblManufacturerID = gr.FindControl("lblManufacturerID") as Label;
+            Label lblClosing = gr.FindControl("lblClosing") as Label;
+
+            OBEnt = new OPENING_BALANCE();
+
+            OBEnt.PRODUCT_ID = lblProductId.Text;
+            OBEnt.BATCH_NUMBER = lblBatchNo.Text;
+            OBEnt.EXPIRY_DATE = lblExpiryDate.Text;
+            OBEnt.COLOUR_ID = lblColourId.Text;
+            OBEnt.SIZE_ID = lblSizeID.Text;
+            OBEnt.MANUFACTURER_ID = lblManufacturerID.Text;
+            OBEnt.QUANTITY = lblClosing.Text;
+            string[] currfy = ddlFiscalYear.SelectedValue.Split('/');
+            string fpart = (Convert.ToDouble(currfy[0]) + 1).ToString();
+            string spart = (Convert.ToDouble(currfy[1]) + 1).ToString();
+            OBEnt.FISCAL_YEAR = fpart + "/" + spart;
+            OBEnt.OFFICE_CODE = ddlBranch.SelectedValue;
+
+            OBSer.Insert(OBEnt, DT);
+        }
+
+        CSEnt = new CLOSING_STATUS();
+        CSEnt.FISCAL_YEAR = ddlFiscalYear.SelectedValue;
+        CSEnt.OFFICE_CODE = ddlBranch.SelectedValue;
+        CSEnt.STATUS = "1";
+        CSSer.Insert(CSEnt, DT);
+
+        if (DT.HAPPY == true)
+        {
+            DT.Commit();
+            HelperFunction.MsgBox(this, this.GetType(), "Successfully Closing of Fiscal Year: " + ddlFiscalYear.SelectedValue + " is done");
+        }
+        else
+        {
+            DT.Abort();
+            HelperFunction.MsgBox(this, this.GetType(), "Something Goes Wrong. Please Try Again");
+        }
+        DT.Dispose();
+    }
+
+    protected void checkBranch()
+    {
+        if(ddlBranch.SelectedValue == "-")
+        {
+            btnClosing.Visible = false;
+        }
+        else
+        {
+            btnClosing.Visible = true;
+        }
+    }
+
+    protected void ddlBranch_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        checkBranch();
+    }
+}

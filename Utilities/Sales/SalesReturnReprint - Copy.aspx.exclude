@@ -1,0 +1,937 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="SalesReturnReprint - Copy.aspx.cs" Inherits="Utilities_Sales_SalesReturnReprint" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" Runat="Server">
+     <script type="text/javascript">
+        function printPartOfPage() {
+            var printContent = document.getElementById('bill_format_1');
+            var windowUrl = 'about:blank';
+            var uniqueName = new Date();
+            var windowName = 'Print' + uniqueName.getTime();
+            var printWindow = window.open(windowUrl, windowName, 'left=0,top=0,width=0,height=0');
+            printWindow.document.write(printContent.innerHTML);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            //printWindow.close();
+        }
+
+    </script>
+    <div class="container-fluid form-group-sm">
+        <div class="row">
+            <div class="col-md-1">
+                Date Wise<br />
+                <asp:CheckBox ID="chkDateWise" runat="server" OnCheckedChanged="chkDateWise_CheckedChanged" AutoPostBack="true" />
+            </div>
+            <div class="col-md-2" runat="server" visible="true" id="NoDate1">
+                Fiscal Year<br />
+                <asp:DropDownList ID="ddlFiscalYear" runat="server" CssClass="form-control"></asp:DropDownList>
+            </div>
+            <div class="col-md-2" runat="server" visible="true" id="NoDate2">
+                Debit Note No<br />
+                <asp:TextBox ID="txtDebitNoteNo" runat="server" CssClass="form-control"></asp:TextBox>
+            </div>
+            <div class="col-md-2" runat="server" visible="false" id="WithDate1">
+                From Date<br />
+                <asp:TextBox ID="txtFromDate" runat="server" CssClass="form-control datepicker"></asp:TextBox>
+            </div>
+            <div class="col-md-2" runat="server" visible="false" id="WithDate2">
+                To Date<br />
+                <asp:TextBox ID="txtToDate" runat="server" CssClass="form-control datepicker"></asp:TextBox>
+            </div>
+            <div class="col-md-1">
+                <br />
+                <asp:Button ID="btnShow" runat="server" Text="Show" CssClass="btn btn-primary" OnClick="btnShow_Click" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12">
+                <asp:GridView ID="grdSalesReturn" runat="server" AutoGenerateColumns="False" CssClass="gridtable" Width="100%" OnRowCommand="grdSalesReturn_RowCommand">
+                    <Columns>
+                        <asp:TemplateField HeaderText="Sno">
+                            <ItemTemplate>
+                                <asp:Label ID="lblSno" runat="server" Text="<%# Container.DataItemIndex+1 %>"></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Credit Note Detail">
+                            <ItemTemplate>
+                                <asp:Label ID="lblPK_ID" runat="server" Text='<%# Bind("PK_ID") %>' Visible="false"></asp:Label>
+                                <table style="width: 100%">
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Note Number</td>
+                                        <td style="font-weight: 700;">:
+                                            <asp:Label ID="lblCNNumber" runat="server" Text='<%# Bind("CREDIT_NOTE_NUMBER") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Note Date(BS)</td>
+                                        <td>:
+                                            <asp:Label ID="lblCNDateEN" runat="server" Text='<%# Bind("NOTE_DATE_EN") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Note Date(AD)</td>
+                                        <td>:
+                                            <asp:Label ID="lblDNDateNP" runat="server" Text='<%# Bind("NOTE_DATE_NP") %>'></asp:Label></td>
+                                    </tr>                                   
+                                </table>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Invoice Detail">
+                            <ItemTemplate>
+                                <table style="width: 100%">
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Invoice Number</td>
+                                        <td>:
+                                <asp:Label ID="lblInvoiceNumber" runat="server" Text='<%# Bind("INVOICE_NUMBER") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Invoice Date(BS)</td>
+                                        <td>:
+                                <asp:Label ID="lblInvoiceDateNP" runat="server" Text='<%# Bind("INVOICE_DATE_NP") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Invoice Date(AD)</td>
+                                        <td>:
+                                <asp:Label ID="lblInvoiceDateEN" runat="server" Text='<%# Bind("INVOICE_DATE_EN") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Customer Name</td>
+                                        <td>:  
+                                <asp:Label ID="lblCustomerName" runat="server" Text='<%# Bind("CUSTOMER_NAME") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Address </td>
+                                        <td>:  
+                                <asp:Label ID="lblCustomerAddress" runat="server" Text='<%# Bind("CUSTOMER_ADDRESS") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Contact</td>
+                                        <td>:  
+                                <asp:Label ID="lblCustomerContact" runat="server" Text='<%# Bind("CUSTOMER_CONTACT_NUMBER") %>'></asp:Label></td>
+                                    </tr>
+                                </table>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Return Amount Detail">
+                            <ItemTemplate>
+                                <table style="width: 100%">
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Total Amount</td>
+                                        <td style="text-align:right">:<asp:Label ID="lblTotalAmount" runat="server" Text='<%# Bind("SUB_TOTAL") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Discount Amount</td>
+                                        <td style="text-align:right">:<asp:Label ID="lblDiscountAmount" runat="server" Text='<%# Bind("DISCOUNT_AMOUNT") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr  id="trInvVat" runat="server" visible="false">
+                                        <td style="width: 120px; font-weight: 700;">VAT Amount</td>
+                                        <td style="text-align:right">:<asp:Label ID="lblVATAmount" runat="server" Text='<%# Bind("TAX_VAT_AMOUNT") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Round off</td>
+                                        <td style="text-align:right">:<asp:Label ID="lblRoundOff" runat="server" Text='<%# Bind("ROUND_OFF") %>'></asp:Label></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="width: 120px; font-weight: 700;">Return Amount</td>
+                                        <td style="text-align:right">:<asp:Label ID="lblReturnAmount" runat="server" Text='<%# Bind("SALES_RETURN_AMOUNT") %>'></asp:Label></td>
+                                    </tr>
+                                </table>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Remarks">
+                            <ItemTemplate>
+                                <asp:Label ID="lblRemarks" runat="server" Text='<%# Bind("RETURN_REMARKS") %>'></asp:Label>
+                            </ItemTemplate>
+                            <ItemStyle VerticalAlign="Top" />
+                        </asp:TemplateField>
+                        <asp:TemplateField>
+                            <ItemTemplate>
+                                <asp:ImageButton ID="btnEdit" runat="server" ImageUrl="~/images/icons/view.png" CommandName="Alter" />
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                    </Columns>
+
+                </asp:GridView>
+            </div>
+        </div>
+    </div>
+    
+    <div id="printdetail" runat="server" visible="false" style="margin-top: 1000px">
+        <div id="print_div" style="width: 210mm; padding: 30px 30px 30px 30px; box-sizing: border-box; margin: auto;">
+            <div id="bill_format_1" style="margin-bottom: 50px; box-sizing: border-box; padding: 5px;">
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 15%; text-align: center; vertical-align: top;">
+                            <asp:Image ID="sImage1" runat="server" Width="100px" ImageUrl="~/images/logo.png" />
+                        </td>
+                        <td style="text-align: center;">
+                            <table style="width: 100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblCompanyName" runat="server" Text="" Style="font-weight: bold; font-size: 32px;"></asp:Label></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblCompanyAddress" runat="server" Text="" Style="font-size: 12pt;"></asp:Label></td>
+                                </tr>
+                                <tr runat="server" id="divEmail">
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblWebsite" runat="server" Text="" Style="font-size: 12pt;"></asp:Label>
+                                        <asp:Label ID="lblDivider" runat="server" Text="|" Style="font-size: 12pt;"></asp:Label>
+                                        <asp:Label ID="lblEmail" runat="server" Text="" Style="font-size: 12pt;"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblPhone" runat="server" Text="" Style="font-size: 12pt;"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="Label1" runat="server" Style="font-size: 12pt; font-weight: normal; font-family: Verdana;" Text="PAN No."></asp:Label>
+                                        <asp:Label ID="lblPanNo" runat="server" Style="font-size: 12pt; font-weight: normal; font-family: Verdana;"></asp:Label>
+
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="width: 15%; text-align: center; vertical-align: top;"></td>
+                    </tr>
+                       <tr style="padding-top: 10px; padding-bottom: 10px;">
+                        <td style="text-align: center; font-weight: bold; font-family: Verdana; font-size: 26px" colspan="3">
+                            <asp:Label ID="lblHeading" runat="server" Text="Credit Note"></asp:Label>
+                        </td>
+                    </tr>
+                    
+                </table>
+                <table style="width: 100%; font-size: 13pt">
+                    <tr>
+                        <td>Credit Note No.</td>
+                        <td>:                           
+                            <asp:Label Font-Size="14pt" Font-Bold="true" ID="lblCreditNoteNo" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right">Credit Note Date 
+                        </td>
+                        <td style="text-align: right">:<asp:Label ID="lblCNNepaliDate" runat="server"></asp:Label>
+                            [<asp:Label ID="lblCNEnglishDate" runat="server"></asp:Label>]
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 20%">Invoice Number</td>
+                        <td style="width: 30%">:
+                            <asp:Label ID="lblCNInvoiceNumber" runat="server"></asp:Label>
+                        </td>
+                        <td style="width: 20%; text-align: right">Invoice Date</td>
+                        <td style="text-align: right">:<asp:Label ID="lblInvoiceNepaliDate" runat="server"></asp:Label>
+                            [<asp:Label ID="lblInvoiceEnglishDate" runat="server"></asp:Label>]</td>
+                    </tr>
+
+                    <tr>
+                        <td>Customer Name</td>
+                        <td colspan="3">:                  
+                         <asp:Label ID="lblCNCustomerName" runat="server"></asp:Label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="">Address</td>
+                        <td style="">:
+                         <asp:Label ID="lblCNCustomerAddress" runat="server"></asp:Label></td>
+                        <td style="text-align: right" colspan="2">&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td>PAN No</td>
+                        <td>:
+                         <asp:Label ID="lblCNCustomerPanNo" runat="server"></asp:Label></td>
+                        <td style="text-align: right" colspan="2">Mode of Payment:
+                            <asp:Label ID="lblCNModeofPayment" runat="server"></asp:Label></td>
+                    </tr>
+                </table>
+                   <table style="width: 100%; font-size: 10pt; border-collapse: collapse;">
+                    <tr>
+                        <th style="width: 5%; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; text-align: center">SN.</th>
+                        <th style="height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; text-align: left">Particular</th>
+                        <th style="width: 1%; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; text-align: left"></th>
+                        <%--Batch--%>
+                        <th style="width: 1%; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; text-align: center;"></th>
+                        <%--Exp--%>
+                  <%--      <th style="width: 15mm; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; text-align: center">Qty 1</th>--%>
+                        <th style="width: 15mm; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; text-align: center">Qty </th>
+                        <th style="width: 15mm; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; text-align: center">Rate</th>
+                        <th style="width: 15mm; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; text-align: center" runat="server" visible="false">Amount</th>
+                        <th style="width: 15mm; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; text-align: center" runat="server" visible="false">Disc</th>
+                        <th style="width: 15mm; height: 18px; border-top: 1px solid black; border-bottom: 1px solid black; border-left: 1px solid black; border-right: 1px solid black; text-align: center">Amount</th>
+                    </tr>
+                    <tr>
+                        <td style="border-top: 1px solid black; border-left: 1px solid black; text-align: center; height: 18px;">
+                            <asp:Label ID="lblSN1" runat="server"></asp:Label>
+                        </td>
+                        <td style="border-top: 1px solid black; border-left: 1px solid black; padding-left: 2px; height: 18px;">&nbsp;
+                            <asp:Label ID="lblService1" runat="server"></asp:Label>
+                        </td>
+                        <td style="border-top: 1px solid black; text-align: center; height: 18px;">
+                            <asp:Label ID="lblBatch1" runat="server"></asp:Label>
+                        </td>
+                        <td style="border-top: 1px solid black; text-align: center; height: 18px;">
+                            <asp:Label ID="lblExpDate1" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="border-top: 1px solid black; border-left: 1px solid black; text-align: center; height: 18px;">
+                            <asp:Label ID="lblUQty1" runat="server"></asp:Label></td>--%>
+                        <td style="border-top: 1px solid black; border-left: 1px solid black; text-align: center; height: 18px;">
+                            <asp:Label ID="lblQty1" runat="server"></asp:Label>
+                        </td>
+                        <td style="border-top: 1px solid black; border-left: 1px solid black; text-align: right; padding-right: 1px; height: 18px;">
+                            <asp:Label ID="lblRate1" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="border-top: 1px solid black; border-left: 1px solid black; text-align: right; padding-right: 1px; height: 18px;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt1" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="border-top: 1px solid black; border-left: 1px solid black; text-align: right; padding-right: 1px; height: 18px;"  runat="server" visible="false">
+                            <asp:Label ID="lblSD1" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="border-top: 1px solid black; border-left: 1px solid black; border-right: 1px solid black; text-align: right; padding-right: 1px; height: 18px;">
+                            <asp:Label ID="lblTotal1" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN2" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService2" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch2" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate2" runat="server"></asp:Label>
+                        </td>
+                        <%--<td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty2" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty2" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate2" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt2" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;"  runat="server" visible="false">
+                            <asp:Label ID="lblSD2" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal2" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN3" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService3" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch3" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate3" runat="server"></asp:Label>
+                        </td>
+                      <%--  <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty3" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty3" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate3" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt3" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;"  runat="server" visible="false">
+                            <asp:Label ID="lblSD3" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal3" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN4" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService4" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch4" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate4" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty4" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty4" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate4" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;"  runat="server" visible="false">
+                            <asp:Label ID="lblAmt4" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;"  runat="server" visible="false">
+                            <asp:Label ID="lblSD4" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal4" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN5" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService5" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch5" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate5" runat="server"></asp:Label>
+                        </td>
+                        <%--<td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty5" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty5" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate5" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt5" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD5" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal5" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN6" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService6" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch6" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate6" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty6" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty6" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate6" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt6" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD6" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal6" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN7" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService7" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch7" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate7" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty7" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty7" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate7" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt7" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;"  runat="server" visible="false">
+                            <asp:Label ID="lblSD7" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal7" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN8" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService8" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch8" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate8" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty8" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty8" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate8" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt8" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;"  runat="server" visible="false">
+                            <asp:Label ID="lblSD8" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal8" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN9" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService9" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch9" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate9" runat="server"></asp:Label>
+                        </td>
+                      <%--  <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty9" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty9" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate9" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt9" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD9" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal9" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN10" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService10" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch10" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate10" runat="server"></asp:Label>
+                        </td>
+                      <%--  <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty10" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty10" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate10" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt10" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD10" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal10" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN11" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService11" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch11" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate11" runat="server"></asp:Label>
+                        </td>
+                    <%--    <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty11" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty11" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate11" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt11" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD11" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal11" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN12" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService12" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch12" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate12" runat="server"></asp:Label>
+                        </td>
+                      <%--  <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty12" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty12" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate12" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt12" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD12" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal12" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN13" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService13" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch13" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center;">
+                            <asp:Label ID="lblExpDate13" runat="server"></asp:Label>
+                        </td>
+                      <%--  <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty13" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty13" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate13" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt13" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD13" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal13" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN14" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService14" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch14" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate14" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty14" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty14" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate14" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt14" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD14" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal14" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN15" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService15" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch15" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate15" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty15" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty15" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate15" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt15" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD15" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal15" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN16" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService16" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center;">
+                            <asp:Label ID="lblBatch16" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center;">
+                            <asp:Label ID="lblExpDate16" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty16" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty16" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate16" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt16" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD16" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal16" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN17" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService17" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch17" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate17" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty17" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty17" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate17" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt17" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD17" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal17" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN18" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp; 
+                            <asp:Label ID="lblService18" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch18" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate18" runat="server"></asp:Label>
+                        </td>
+                      <%--  <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty18" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty18" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate18" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt18" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD18" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal18" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblSN19" runat="server"></asp:Label>
+                        </td>
+                        <td style="padding-left: 2px; border-left: 1px solid black;">&nbsp;
+                            <asp:Label ID="lblService19" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblBatch19" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: center">
+                            <asp:Label ID="lblExpDate19" runat="server"></asp:Label>
+                        </td>
+                       <%-- <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblUQty19" runat="server"></asp:Label></td>--%>
+                        <td style="text-align: center; border-left: 1px solid black;">
+                            <asp:Label ID="lblQty19" runat="server"></asp:Label>
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;">
+                            <asp:Label ID="lblRate19" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblAmt19" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD19" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; padding-right: 1px; border-left: 1px solid black; border-right: 1px solid black;">
+                            <asp:Label ID="lblTotal19" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                    <tr>
+                        <td style="border-bottom: 1px solid black; border-left: 1px solid black; text-align: center">
+                            <asp:Label ID="lblSN20" runat="server"></asp:Label>
+                        </td>
+                        <td style="border-bottom: 1px solid black; border-left: 1px solid black; padding-left: 2px">&nbsp; 
+                            <asp:Label ID="lblService20" runat="server"></asp:Label>
+                        </td>
+                        <td style="border-bottom: 1px solid black; text-align: center">
+                            <asp:Label ID="lblBatch20" runat="server"></asp:Label>
+                        </td>
+                        <td style="border-bottom: 1px solid black; text-align: center">
+                            <asp:Label ID="lblExpDate20" runat="server"></asp:Label>
+                        </td>
+                   <%--     <td style="border-bottom: 1px solid black; border-left: 1px solid black; text-align: center">
+                            <asp:Label ID="lblUQty20" runat="server"></asp:Label>&nbsp;</td>--%>
+                        <td style="border-bottom: 1px solid black; border-left: 1px solid black; text-align: center">
+                            <asp:Label ID="lblQty20" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="border-bottom: 1px solid black; border-left: 1px solid black; text-align: right; padding-right: 1px">
+                            <asp:Label ID="lblRate20" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="border-bottom: 1px solid black; border-left: 1px solid black; text-align: right; padding-right: 1px" runat="server" visible="false">
+                            <asp:Label ID="lblAmt20" runat="server"></asp:Label>&nbsp;
+                        </td>
+                        <td style="text-align: right; border-bottom: 1px solid black; padding-right: 1px; border-left: 1px solid black;" runat="server" visible="false">
+                            <asp:Label ID="lblSD20" runat="server"></asp:Label>&nbsp;</td>
+                        <td style="text-align: right; border-bottom: 1px solid black; padding-right: 1px; border-right: 1px solid black; border-left: 1px solid black;">
+                            <asp:Label ID="lblTotal20" runat="server"></asp:Label>&nbsp;</td>
+                    </tr>
+                </table>
+                <table style="width: 100%; font-size: 12pt; border-collapse: collapse; border-top: 1px solid black;">
+                    <tr>
+                        <td style="width: 60%; vertical-align: top;">
+                            <table style="width: 100%">
+                                <tr>
+                                    <td>In words:
+                                        Rs.
+                                        <asp:Label ID="lblCNAmounInWords" runat="server" Style="font-size: 12pt"></asp:Label><br />
+                                    </td>
+                                </tr>
+                                <tr style="border-top: solid 1px">
+                                    <td>
+                                        <b>Credit Note Remarks:</b>
+                                        <br />
+                                        <asp:Label ID="lblCNRemarks" runat="server" Text=""></asp:Label>
+                                    </td>
+                                </tr>
+                            </table>
+
+                        </td>
+                        <td style="width: 40%">
+                            <table style="width: 100%; border-collapse: collapse; border: none;">
+                                <tr>
+                                    <td style="padding-left: 3%">Total</td>
+                                    <td style="text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblCNSubTotal" runat="server"></asp:Label></td>
+                                </tr>
+                                <tr>
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Discount
+                                        <asp:Label ID="lblCNDiscountPercent" runat="server" Text=""></asp:Label>
+                                        %</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblCNDiscountAmount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Taxable amount</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblCNTaxableAmount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr  id="trInvVats" runat="server" visible="true">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">VAT
+                                        <asp:Label ID="lblCNVATPercent" runat="server"></asp:Label>
+                                        % </td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblCNVATAmount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Total</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblCNGrandTotal" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                               <tr id="trInvRoundOff" runat="server" visible="false">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Round off</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblCNRoundoff" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                 <tr runat="server" id="trInvRoTot">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Total</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblCNInvoiceAmount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+                <table style="width: 100%; font-size: 12pt">
+                    <tr>
+                        <td>
+                            <br />
+                            <br />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: right;">
+                            <asp:Label ID="lblInvCreatedBy" runat="server" Text=""></asp:Label>
+                        </td>
+                    </tr>
+                   
+                    <tr>
+                        <td style="text-align: right;">
+                            Credit Note Created By</td>
+                    </tr>
+                   
+                </table>
+            </div>
+        </div>
+    </div>
+</asp:Content>
+

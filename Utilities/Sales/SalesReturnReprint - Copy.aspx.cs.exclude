@@ -1,0 +1,893 @@
+﻿using Entity.Components;
+using PhyeGanCore;
+using Service.Components;
+using System;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+
+public partial class Utilities_Sales_SalesReturnReprint : System.Web.UI.Page
+{
+    FISCALYEAR FYEnt = new FISCALYEAR();
+    FISCALYEARService FYSer = new FISCALYEARService();
+    PRODUCT PEnt = new PRODUCT();
+    PRODUCTService PSer = new PRODUCTService();
+
+    CUSTOMER CEnt = new CUSTOMER();
+    CUSTOMERService CSer = new CUSTOMERService();
+
+    PRODUCT_UNIT PUEnt = new PRODUCT_UNIT();
+    PRODUCT_UNITService PUSer = new PRODUCT_UNITService();
+
+    PRODUCT_SETTING PSEnt = new PRODUCT_SETTING();
+    PRODUCT_SETTINGService PSSer = new PRODUCT_SETTINGService();
+
+    SALES_INVOICE_MASTER SIMEnt = new SALES_INVOICE_MASTER();
+    SALES_INVOICE_MASTERService SIMSer = new SALES_INVOICE_MASTERService();
+
+    SALES_INVOICE_DETAIL SIDEnt = new SALES_INVOICE_DETAIL();
+    SALES_INVOICE_DETAILService SIDSer = new SALES_INVOICE_DETAILService();
+
+    SALES_RETURN_MASTER SRMEnt = new SALES_RETURN_MASTER();
+    SALES_RETURN_MASTERService SRMSer = new SALES_RETURN_MASTERService();
+
+    SALES_RETURN_DETAIL SRDEnt = new SALES_RETURN_DETAIL();
+    SALES_RETURN_DETAILService SRDSer = new SALES_RETURN_DETAILService();
+
+    PAYMENT_TYPE PTEnt = new PAYMENT_TYPE();
+    PAYMENT_TYPEService PTSEr = new PAYMENT_TYPEService();
+
+    AGENT AEnt = new AGENT();
+    AGENTService ASer = new AGENTService();
+
+    AREA AREAEnt = new AREA();
+    AREAService AREASer = new AREAService();
+
+    PhyeGan PG = new PhyeGan();
+    PhyeGanDate PGD = new PhyeGanDate();
+    HelperFunction hf = new HelperFunction();
+    UserProfileEntity userProfile = new UserProfileEntity();
+    Boolean IsPageRefresh = false;
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            ViewState["postids"] = System.Guid.NewGuid().ToString();
+            Session["postid"] = ViewState["postids"].ToString();
+            try
+            {
+                userProfile = (UserProfileEntity)HttpContext.Current.Session["UserProfile"];
+                string path = HttpContext.Current.Request.Url.AbsolutePath.ToLower();
+                path = path.Replace(PG.Org_Base_URL(), "");
+                if (hf.checkPageAccess(path, userProfile.UserGroupID.ToString()))
+                {
+                    LoadFiscalYear();
+                }
+                else
+                {
+                    Response.Redirect("~/forbidden.aspx");
+                }
+                if (PG.CompanyTAXType() != "VAT")//whether or not to show vat on bill
+                {
+                    trInvVats.Visible = false;
+                    
+
+                }
+            }
+            catch (System.Threading.ThreadAbortException)
+            {
+                Response.Redirect("~/forbidden.aspx");
+            }
+            catch
+            {
+                Response.Redirect("~/Login.aspx");
+            }
+        }
+    }
+    protected void LoadFiscalYear()
+    {
+        FYEnt = new FISCALYEAR();
+        ddlFiscalYear.DataSource = FYSer.GetAll(FYEnt);
+        ddlFiscalYear.DataTextField = "FISCAL_YEAR";
+        ddlFiscalYear.DataValueField = "FISCAL_YEAR";
+        ddlFiscalYear.DataBind();
+        ddlFiscalYear.SelectedValue = PGD.checkFiscalYear(PGD.NepaliMonth(), PGD.NepaliYear());
+    }
+
+    protected void btnShow_Click(object sender, EventArgs e)
+    {
+        userProfile = (UserProfileEntity)HttpContext.Current.Session["UserProfile"];
+        if (chkDateWise.Checked == true)
+        {
+            grdSalesReturn.DataSource = hf.getSalesReturnList("", "", PGD.GetEnglishDateFromNepali(txtFromDate.Text, "dd/mm/yyyy"), PGD.GetEnglishDateFromNepali(txtToDate.Text, "dd/mm/yyyy"),userProfile.LocationID);
+        }
+        else
+        {
+            grdSalesReturn.DataSource = hf.getSalesReturnList(ddlFiscalYear.SelectedValue, txtDebitNoteNo.Text, "", "", userProfile.LocationID);
+        }
+        grdSalesReturn.DataBind();
+    }
+
+    protected void chkDateWise_CheckedChanged(object sender, EventArgs e)
+    {
+        if (chkDateWise.Checked == true)
+        {
+            NoDate1.Visible = false;
+            NoDate2.Visible = false;
+            WithDate1.Visible = true;
+            WithDate2.Visible = true;
+        }
+        else
+        {
+            NoDate1.Visible = true;
+            NoDate2.Visible = true;
+            WithDate1.Visible = false;
+            WithDate2.Visible = false;
+        }
+    }
+    protected void grdSalesReturn_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("Alter"))
+        {
+            GridViewRow gr = ((ImageButton)e.CommandSource).Parent.Parent as GridViewRow;
+            Label lblPK_ID = gr.FindControl("lblPK_ID") as Label;
+            PrintCreditNote(lblPK_ID.Text);
+            ScriptManager.RegisterStartupScript(this, this.GetType(), "", "printPartOfPage();", true);
+        }
+    }
+
+    #region to print bill
+
+    protected void LoadCompanyDetail()
+    {
+        userProfile = (UserProfileEntity)HttpContext.Current.Session["UserProfile"];
+        lblCompanyName.Text = PG.CompanyName();
+        lblCompanyAddress.Text = PG.BranchAddress(userProfile.LocationID);
+        lblEmail.Text = PG.BranchEmail(userProfile.LocationID);
+        lblWebsite.Text = PG.CompanyWebsite();
+        if (PG.CompanyEmail() == "" && PG.CompanyWebsite() == "")
+        {
+            divEmail.Visible = false;
+        }
+        lblPanNo.Text = PG.CompanyVATPan();
+        lblPhone.Text = PG.BranchContact(userProfile.LocationID);
+    }
+    protected void clearCN()
+    {
+        lblCreditNoteNo.Text = "";
+        lblCNCustomerName.Text = "";
+        lblCNInvoiceNumber.Text = "";
+        lblCNCustomerAddress.Text = "";
+        lblCNModeofPayment.Text = "";
+        lblCNCustomerPanNo.Text = "";
+        lblCNNepaliDate.Text = "";
+        lblCNEnglishDate.Text = "";
+        lblInvoiceNepaliDate.Text = "";
+        lblInvoiceEnglishDate.Text = "";
+
+
+        lblCNSubTotal.Text = "";
+        lblCNDiscountPercent.Text = "";
+        lblCNDiscountAmount.Text = "";
+        lblCNTaxableAmount.Text = "";
+        lblCNVATPercent.Text = "";
+        lblCNVATAmount.Text = "";
+        lblCNGrandTotal.Text = "";
+        lblCNRoundoff.Text = "";
+        lblCNInvoiceAmount.Text = "";
+        lblCNAmounInWords.Text = "";
+        lblCNRemarks.Text = "";
+
+        lblSN1.Text = "";
+        lblSN2.Text = "";
+        lblSN3.Text = "";
+        lblSN4.Text = "";
+        lblSN5.Text = "";
+        lblSN6.Text = "";
+        lblSN7.Text = "";
+        lblSN8.Text = "";
+        lblSN9.Text = "";
+        lblSN10.Text = "";
+        lblSN11.Text = "";
+        lblSN12.Text = "";
+        lblSN13.Text = "";
+        lblSN14.Text = "";
+        lblSN15.Text = "";
+        lblSN16.Text = "";
+        lblSN17.Text = "";
+        lblSN18.Text = "";
+        lblSN19.Text = "";
+        lblSN20.Text = "";
+
+
+        lblService1.Text = "";
+        lblService2.Text = "";
+        lblService3.Text = "";
+        lblService4.Text = "";
+        lblService5.Text = "";
+        lblService6.Text = "";
+        lblService7.Text = "";
+        lblService8.Text = "";
+        lblService9.Text = "";
+        lblService10.Text = "";
+        lblService11.Text = "";
+        lblService12.Text = "";
+        lblService13.Text = "";
+        lblService14.Text = "";
+        lblService15.Text = "";
+        lblService16.Text = "";
+        lblService17.Text = "";
+        lblService18.Text = "";
+        lblService19.Text = "";
+        lblService20.Text = "";
+
+        lblBatch1.Text = "";
+        lblBatch2.Text = "";
+        lblBatch3.Text = "";
+        lblBatch4.Text = "";
+        lblBatch5.Text = "";
+        lblBatch6.Text = "";
+        lblBatch7.Text = "";
+        lblBatch8.Text = "";
+        lblBatch9.Text = "";
+        lblBatch10.Text = "";
+        lblBatch11.Text = "";
+        lblBatch12.Text = "";
+        lblBatch13.Text = "";
+        lblBatch14.Text = "";
+        lblBatch15.Text = "";
+        lblBatch16.Text = "";
+        lblBatch17.Text = "";
+        lblBatch18.Text = "";
+        lblBatch19.Text = "";
+        lblBatch20.Text = "";
+
+        lblExpDate1.Text = "";
+        lblExpDate2.Text = "";
+        lblExpDate3.Text = "";
+        lblExpDate4.Text = "";
+        lblExpDate5.Text = "";
+        lblExpDate6.Text = "";
+        lblExpDate7.Text = "";
+        lblExpDate8.Text = "";
+        lblExpDate9.Text = "";
+        lblExpDate10.Text = "";
+        lblExpDate11.Text = "";
+        lblExpDate12.Text = "";
+        lblExpDate13.Text = "";
+        lblExpDate14.Text = "";
+        lblExpDate15.Text = "";
+        lblExpDate16.Text = "";
+        lblExpDate17.Text = "";
+        lblExpDate18.Text = "";
+        lblExpDate19.Text = "";
+        lblExpDate20.Text = "";
+
+
+        lblRate1.Text = "";
+        lblRate2.Text = "";
+        lblRate3.Text = "";
+        lblRate4.Text = "";
+        lblRate5.Text = "";
+        lblRate6.Text = "";
+        lblRate7.Text = "";
+        lblRate8.Text = "";
+        lblRate9.Text = "";
+        lblRate10.Text = "";
+        lblRate11.Text = "";
+        lblRate12.Text = "";
+        lblRate13.Text = "";
+        lblRate14.Text = "";
+        lblRate15.Text = "";
+        lblRate16.Text = "";
+        lblRate17.Text = "";
+        lblRate18.Text = "";
+        lblRate19.Text = "";
+        lblRate20.Text = "";
+
+        lblQty1.Text = "";
+        lblQty2.Text = "";
+        lblQty3.Text = "";
+        lblQty4.Text = "";
+        lblQty5.Text = "";
+        lblQty6.Text = "";
+        lblQty7.Text = "";
+        lblQty8.Text = "";
+        lblQty9.Text = "";
+        lblQty10.Text = "";
+        lblQty11.Text = "";
+        lblQty12.Text = "";
+        lblQty13.Text = "";
+        lblQty14.Text = "";
+        lblQty15.Text = "";
+        lblQty16.Text = "";
+        lblQty17.Text = "";
+        lblQty18.Text = "";
+        lblQty19.Text = "";
+        lblQty20.Text = "";
+
+        lblAmt1.Text = "";
+        lblAmt2.Text = "";
+        lblAmt3.Text = "";
+        lblAmt4.Text = "";
+        lblAmt5.Text = "";
+        lblAmt6.Text = "";
+        lblAmt7.Text = "";
+        lblAmt8.Text = "";
+        lblAmt9.Text = "";
+        lblAmt10.Text = "";
+        lblAmt11.Text = "";
+        lblAmt12.Text = "";
+        lblAmt13.Text = "";
+        lblAmt14.Text = "";
+        lblAmt15.Text = "";
+        lblAmt16.Text = "";
+        lblAmt17.Text = "";
+        lblAmt18.Text = "";
+        lblAmt19.Text = "";
+        lblAmt20.Text = "";
+
+        lblSD1.Text = "";
+        lblSD2.Text = "";
+        lblSD3.Text = "";
+        lblSD4.Text = "";
+        lblSD5.Text = "";
+        lblSD6.Text = "";
+        lblSD7.Text = "";
+        lblSD8.Text = "";
+        lblSD9.Text = "";
+        lblSD10.Text = "";
+        lblSD11.Text = "";
+        lblSD12.Text = "";
+        lblSD13.Text = "";
+        lblSD14.Text = "";
+        lblSD15.Text = "";
+        lblSD16.Text = "";
+        lblSD17.Text = "";
+        lblSD18.Text = "";
+        lblSD19.Text = "";
+        lblSD20.Text = "";
+
+        lblTotal1.Text = "";
+        lblTotal2.Text = "";
+        lblTotal3.Text = "";
+        lblTotal4.Text = "";
+        lblTotal5.Text = "";
+        lblTotal6.Text = "";
+        lblTotal7.Text = "";
+        lblTotal8.Text = "";
+        lblTotal9.Text = "";
+        lblTotal10.Text = "";
+        lblTotal11.Text = "";
+        lblTotal12.Text = "";
+        lblTotal13.Text = "";
+        lblTotal14.Text = "";
+        lblTotal15.Text = "";
+        lblTotal16.Text = "";
+        lblTotal17.Text = "";
+        lblTotal18.Text = "";
+        lblTotal19.Text = "";
+        lblTotal20.Text = "";
+    }
+    protected void PrintCreditNote(string PK_ID)
+    {
+        LoadCompanyDetail();
+        clearCN();
+
+        SRMEnt = new SALES_RETURN_MASTER();
+        SRMEnt.PK_ID = PK_ID;
+        SRMEnt = (SALES_RETURN_MASTER)SRMSer.GetSingle(SRMEnt);
+        if (SRMEnt != null)
+        {
+            SIMEnt = new SALES_INVOICE_MASTER();
+            SIMEnt.PK_ID = SRMEnt.SALES_INVOICE_ID;
+            SIMEnt = (SALES_INVOICE_MASTER)SIMSer.GetSingle(SIMEnt);
+            if (SIMEnt != null)
+            {
+                lblCNInvoiceNumber.Text = SIMEnt.INVOICE_NUMBER;
+                lblInvoiceNepaliDate.Text = SIMEnt.INVOICE_DAY + "/" + SIMEnt.INVOICE_MONTH + "/" + SIMEnt.INVOICE_YEAR;
+                lblInvoiceEnglishDate.Text = SIMEnt.INVOICE_DATE;
+            }
+
+            lblCreditNoteNo.Text = SRMEnt.CREDIT_NOTE_NUMBER;
+            lblCNNepaliDate.Text = SRMEnt.NOTE_DAY + "/" + SRMEnt.NOTE_MONTH + "/" + SRMEnt.NOTE_YEAR;
+            lblCNEnglishDate.Text = SRMEnt.NOTE_DATE;
+            lblCNCustomerName.Text = SRMEnt.CUSTOMER_NAME;
+            lblCNCustomerAddress.Text = SRMEnt.CUSTOMER_ADDRESS;
+            lblCNCustomerPanNo.Text = SRMEnt.COSTOMER_PAN_VAT;
+            lblCNModeofPayment.Text = hf.getPaymentType(SRMEnt.SALES_RETURN_TYPE);
+            lblCNSubTotal.Text = Convert.ToDouble(SRMEnt.SUB_TOTAL).ToString("0.00");
+            lblCNDiscountPercent.Text = Convert.ToDouble(SRMEnt.DISCOUNT_PERCENT).ToString("0.00");
+            lblCNDiscountAmount.Text = Convert.ToDouble(SRMEnt.DISCOUNT_AMOUNT).ToString("0.00");
+            lblCNTaxableAmount.Text = Convert.ToDouble(SRMEnt.TAXABLE_AMOUNT).ToString("0.00");
+            lblCNVATPercent.Text = SRMEnt.TAX_VAT_AMOUNT == "0" ? "0" : (Convert.ToDouble(PG.CompanyTAXPercent()).ToString("00.00"));
+            lblCNVATAmount.Text = Convert.ToDouble(SRMEnt.TAX_VAT_AMOUNT).ToString("0.00");
+            lblCNGrandTotal.Text = Convert.ToDouble(SRMEnt.GRAND_TOTAL).ToString("0.00");
+            lblCNRoundoff.Text = SRMEnt.ROUND_OFF;
+            lblCNInvoiceAmount.Text = Convert.ToDouble(SRMEnt.SALES_RETURN_AMOUNT).ToString("0.00");
+            lblCNAmounInWords.Text = hf.NumWordsWrapper(Convert.ToDouble(SRMEnt.SALES_RETURN_AMOUNT)) + " Only";
+            lblCNRemarks.Text = SRMEnt.RETURN_REMARKS;
+            lblInvCreatedBy.Text = SRMEnt.USER_ID;
+            #region Return Detail
+            #region for serial no 1 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "1";
+
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN1.Text = "1";
+                    lblSN2.Text = "&nbsp;";
+                    lblSN3.Text = "&nbsp;";
+                    lblSN4.Text = "&nbsp;";
+                    lblSN5.Text = "&nbsp;";
+                    lblSN6.Text = "&nbsp;";
+                    lblSN7.Text = "&nbsp;";
+                    lblSN8.Text = "&nbsp;";
+                    lblSN9.Text = "&nbsp;";
+                    lblSN10.Text = "&nbsp;";
+                    lblSN11.Text = "&nbsp;";
+                    lblSN12.Text = "&nbsp;";
+                    lblSN13.Text = "&nbsp;";
+                    lblSN14.Text = "&nbsp;";
+                    lblSN15.Text = "&nbsp;";
+                    lblSN16.Text = "&nbsp;";
+                    lblSN17.Text = "&nbsp;";
+                    lblSN18.Text = "&nbsp;";
+                    lblSN19.Text = "&nbsp;";
+                    lblSN20.Text = "&nbsp;";
+
+                    lblService1.Text = PEnt.PRODUCT_NAME;
+                    lblRate1.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty1.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt1.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD1.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal1.Text = SRDEnt.TAXABLE_TOTAL;
+
+                }
+            }
+            #endregion
+            #region for serial no 2 particular details
+
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "2";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN2.Text = "2";
+                    lblService2.Text = PEnt.PRODUCT_NAME;
+                    lblRate2.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty2.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt2.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD2.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal2.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+
+            #endregion
+            #region for serial no 3 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "3";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN3.Text = "3";
+                    lblService3.Text = PEnt.PRODUCT_NAME;
+                    lblRate3.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty3.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt3.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD3.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal3.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 4 particular details
+
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "4";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN4.Text = "4";
+                    lblService4.Text = PEnt.PRODUCT_NAME;
+                    lblRate4.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty4.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt4.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD4.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal4.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+
+            #endregion
+            #region for serial no 5 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "5";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN5.Text = "5";
+                    lblService5.Text = PEnt.PRODUCT_NAME;
+                    lblRate5.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty5.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt5.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD5.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal5.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 6 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "6";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN6.Text = "6";
+                    lblService6.Text = PEnt.PRODUCT_NAME;
+                    lblRate6.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty6.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt6.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD6.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal6.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 7 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "7";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN7.Text = "7";
+                    lblService7.Text = PEnt.PRODUCT_NAME;
+                    lblRate7.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty7.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt7.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD7.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal7.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 8 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "8";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN8.Text = "8";
+                    lblService8.Text = PEnt.PRODUCT_NAME;
+                    lblRate8.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty8.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt8.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD8.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal8.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 9 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "9";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN9.Text = "9";
+                    lblService9.Text = PEnt.PRODUCT_NAME;
+                    lblRate9.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty9.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt9.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD9.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal9.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+
+            #endregion
+            #region for serial no 10 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "10";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN10.Text = "10";
+                    lblService10.Text = PEnt.PRODUCT_NAME;
+                    lblRate10.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty10.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt10.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD10.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal10.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 11 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "11";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN11.Text = "11";
+                    lblService11.Text = PEnt.PRODUCT_NAME;
+                    lblRate11.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty11.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt11.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD11.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal11.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 12 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "12";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN12.Text = "12";
+                    lblService12.Text = PEnt.PRODUCT_NAME;
+                    lblRate12.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty12.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt12.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD12.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal12.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+
+            #endregion
+            #region for serial no 13 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "13";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN13.Text = "13";
+                    lblService13.Text = PEnt.PRODUCT_NAME;
+                    lblRate13.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty13.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt13.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD13.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal13.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 14 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "14";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN14.Text = "14";
+                    lblService14.Text = PEnt.PRODUCT_NAME;
+                    lblRate14.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty14.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt14.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD14.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal14.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 15 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "15";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN15.Text = "15";
+                    lblService15.Text = PEnt.PRODUCT_NAME;
+                    lblRate15.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty15.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt15.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD15.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal15.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 16 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "16";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN16.Text = "16";
+                    lblService16.Text = PEnt.PRODUCT_NAME;
+                    lblRate16.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty16.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt16.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD16.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal16.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 17 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "17";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN17.Text = "17";
+                    lblService17.Text = PEnt.PRODUCT_NAME;
+                    lblRate17.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty17.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt17.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD17.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal17.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 18 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "18";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN18.Text = "18";
+                    lblService18.Text = PEnt.PRODUCT_NAME;
+                    lblRate18.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty18.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt18.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD18.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal18.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 19 particular details
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "19";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN19.Text = "19";
+                    lblService19.Text = PEnt.PRODUCT_NAME;
+                    lblRate19.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty19.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt19.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD19.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal19.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+            #endregion
+            #region for serial no 20 particular details
+
+            SRDEnt = new SALES_RETURN_DETAIL();
+            SRDEnt.SALES_RETURN_ID = PK_ID;
+            SRDEnt.SNO = "20";
+            SRDEnt = (SALES_RETURN_DETAIL)SRDSer.GetSingle(SRDEnt);
+            if (SRDEnt != null)
+            {
+                PEnt = new PRODUCT();
+                PEnt.PK_ID = SRDEnt.PRODUCT_ID;
+                PEnt = (PRODUCT)PSer.GetSingle(PEnt);
+                if (PEnt != null)
+                {
+                    lblSN20.Text = "20";
+                    lblService20.Text = PEnt.PRODUCT_NAME;
+                    lblRate20.Text = Convert.ToDouble(SRDEnt.RATE).ToString("#0.00");
+                    lblQty20.Text = SRDEnt.QUANTITY + " " + hf.getProductUnit(PEnt.PK_ID);
+                    lblAmt20.Text = Convert.ToDouble(SRDEnt.TOTAL).ToString("#0.00");
+                    lblSD20.Text = SRDEnt.SCHEME_DISCOUNT;
+                    lblTotal20.Text = SRDEnt.TAXABLE_TOTAL;
+                }
+            }
+
+            #endregion
+            #endregion
+            printdetail.Visible = true;
+            ScriptManager.RegisterStartupScript(this, this.GetType(), "", "printPartOfPage();", true);
+        }
+
+    }
+    #endregion
+
+
+
+}

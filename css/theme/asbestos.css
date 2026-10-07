@@ -1,0 +1,22 @@
+﻿.header, #side-menu, #menu, #setting, #control{
+	background-color:#7f8c8d;
+
+}
+#main-privacy > .privacy-container
+{
+	border-left:20px solid #7f8c8d;
+}
+
+.calendar-title
+{
+	background-color:#7f8c8d;
+
+}
+
+.holidaylist th
+{
+	background-color: #7f8c8d;
+}
+
+
+

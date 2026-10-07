@@ -1,0 +1,174 @@
+
+
+CREATE OR REPLACE TRIGGER DML_ADBS
+BEFORE DELETE OR INSERT OR UPDATE
+ON ADBS
+REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+CREATE OR REPLACE TRIGGER LOG_CREATE_CREDIT_NOTE
+AFTER INSERT
+ON SALES_RETURN_MASTER REFERENCING NEW AS NEW OLD AS OLD
+FOR EACH ROW
+begin
+insert into  log_table  VALUES (log_seq.NEXTVAL,:new.NOTE_DATE,TO_CHAR(sysdate, 'YYYY-MM-DD HH24:MI:SS'),:new.USER_ID,'Cancel','Invoice',:new.PK_ID);
+end;
+
+
+
+CREATE OR REPLACE TRIGGER LOG_CREATE_INVOICE
+AFTER INSERT
+ON SALES_INVOICE_MASTER REFERENCING NEW AS NEW OLD AS OLD
+FOR EACH ROW
+BEGIN
+INSERT INTO  LOG_TABLE  VALUES (LOG_SEQ.NEXTVAL,:NEW.INVOICE_DATE,TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS'),:NEW.USER_ID,'INSERT','INVOICE',:NEW.PK_ID);
+IF :NEW.COPY_PRINTNO  <> :OLD.COPY_PRINTNO 
+  THEN
+INSERT INTO  LOG_TABLE  VALUES (LOG_SEQ.NEXTVAL,:NEW.INVOICE_DATE,TO_CHAR(SYSDATE, 'YYYY-MM-DD HH24:MI:SS'),:NEW.USER_ID,'PRINT','INVOICE',:NEW.PK_ID);
+        END IF;
+END;
+
+
+
+CREATE OR REPLACE TRIGGER DML_LOG_TABLE
+BEFORE DELETE OR INSERT OR UPDATE
+ON LOG_TABLE 
+REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+
+CREATE OR REPLACE TRIGGER DML_NAME_COMPANY
+BEFORE DELETE OR INSERT OR UPDATE ON 
+NAME_COMPANY REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+
+
+CREATE OR REPLACE TRIGGER DML_P_INVOICE_DETAIL 
+BEFORE DELETE OR INSERT OR UPDATE ON 
+PURCHASE_INVOICE_DETAIL REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+
+CREATE OR REPLACE TRIGGER DML_P_INVOICE_MASTER
+BEFORE DELETE OR INSERT OR UPDATE ON 
+PURCHASE_INVOICE_MASTER REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end ;
+
+CREATE OR REPLACE TRIGGER DML_P_RETURN_DETAIL
+BEFORE DELETE OR INSERT OR UPDATE ON 
+PURCHASE_RETURN_DETAIL REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+CREATE OR REPLACE TRIGGER DML_P_RETURN_MASTER
+BEFORE DELETE OR INSERT OR UPDATE ON 
+PURCHASE_RETURN_MASTER REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+CREATE OR REPLACE TRIGGER LOG_PRINT_INVOICE
+AFTER INSERT OR UPDATE
+ON SALES_INVOICE_MASTER 
+REFERENCING NEW AS NEW OLD AS OLD
+FOR EACH ROW
+begin
+IF :NEW.IS_PRINTED <> :OLD.IS_PRINTED
+THEN
+    insert into  log_table  VALUES (log_seq.NEXTVAL,to_date(to_char(sysdate,'dd/mm/yyyy'),'dd/mm/yyyy'),TO_CHAR(sysdate, 'YYYY-MM-DD HH24:MI:SS'),:new.PRINT_BY,'PRINT','INVOICE',:new.PK_ID);
+END IF;
+IF :NEW.COPY_PRINTNO <> :OLD.COPY_PRINTNO
+  THEN
+insert into  log_table  VALUES (log_seq.NEXTVAL,to_date(to_char(sysdate,'dd/mm/yyyy'),'dd/mm/yyyy'),TO_CHAR(sysdate, 'YYYY-MM-DD HH24:MI:SS'),:new.PRINT_BY,'COPY PRINT','INVOICE',:new.PK_ID);
+        END IF;
+end;
+
+
+CREATE OR REPLACE TRIGGER DML_PRODUCT_ADJUSTMENT
+BEFORE DELETE OR INSERT OR UPDATE ON 
+PRODUCT_ADJUSTMENT REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+CREATE OR REPLACE TRIGGER DML_S_RETURN_DETAIL
+BEFORE DELETE OR INSERT OR UPDATE ON 
+SALES_RETURN_DETAIL REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+
+CREATE OR REPLACE TRIGGER DML_S_RETURN_MASTER 
+BEFORE DELETE OR INSERT OR UPDATE ON 
+SALES_RETURN_MASTER REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+
+CREATE OR REPLACE TRIGGER DML_SALES_INVOICE_DETAIL
+BEFORE DELETE OR INSERT OR UPDATE 
+ON SALES_INVOICE_DETAIL REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+
+CREATE OR REPLACE TRIGGER DML_SALES_INVOICE_MASTER 
+BEFORE DELETE OR INSERT OR UPDATE ON 
+SALES_INVOICE_MASTER REFERENCING NEW AS NEW OLD AS OLD
+begin 
+    if not(pkj_modify.Is_DML_allowed)
+    then 
+        raise_application_error('909090','Error'); 
+    end if; 
+end;
+
+
+

@@ -1,0 +1,22 @@
+﻿.header, #side-menu, #menu, #setting, #control{
+	background-color:midnightblue;
+
+}
+
+#main-privacy > .privacy-container
+{
+	border-left:20px solid midnightblue;
+}
+.calendar-title
+{
+	background-color: midnightblue;
+}
+.holidaylist th
+{
+	background-color: midnightblue;
+}
+
+
+
+
+

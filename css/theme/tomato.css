@@ -1,0 +1,21 @@
+﻿.header, #side-menu, #menu, #setting, #control{
+	background-color:tomato;
+
+}
+
+#main-privacy > .privacy-container
+{
+	border-left:20px solid tomato;
+}
+.calendar-title
+{
+	background-color:tomato;
+
+}
+.holidaylist th
+{
+	background-color:tomato;
+}
+
+
+

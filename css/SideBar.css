@@ -1,0 +1,1187 @@
+﻿/* ============================================================
+   HMS SIDEBAR
+   ============================================================ */
+
+:root {
+    --sidebar-width: 260px;
+    --sidebar-collapsed-width: 65px;
+
+    --sidebar-bg: #263746;
+    --sidebar-bg-dark: #21303d;
+    --sidebar-bg-darker: #192630;
+
+    --sidebar-hover: #30485b;
+    --sidebar-hover-dark: #293d4d;
+
+    --sidebar-text: #d8e0e6;
+    --sidebar-text-muted: #aeb9c3;
+
+    --sidebar-accent: #4db6e9;
+    --sidebar-border: rgba(255, 255, 255, 0.1);
+}
+
+
+/* ============================================================
+   GLOBAL
+   ============================================================ */
+
+html,
+body {
+    margin: 0;
+    min-height: 100%;
+}
+
+body {
+    padding-top: 0 !important;
+}
+
+
+/* ============================================================
+   SIDEBAR
+   ============================================================ */
+
+#hmsSidebar {
+    position: fixed !important;
+
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+
+    width: var(--sidebar-width) !important;
+    height: 100vh !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    background: var(--sidebar-bg) !important;
+    color: var(--sidebar-text);
+
+    /*
+       Must remain visible so the collapse button
+       can sit outside the sidebar.
+    */
+    overflow: visible !important;
+
+    box-sizing: border-box;
+
+    z-index: 9999;
+
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.18);
+
+    transition: width 0.25s ease;
+}
+
+
+/* ============================================================
+   HEADER / LOGO
+   ============================================================ */
+
+.sidebar-header {
+    position: relative;
+
+    width: 100%;
+    height: 87px;
+    min-height: 87px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    flex-shrink: 0;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #dddddd;
+
+    overflow: visible !important;
+
+    box-sizing: border-box;
+}
+
+
+.sidebar-brand {
+    width: 100%;
+    height: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+
+    text-decoration: none !important;
+}
+
+
+.sidebar-brand:hover,
+.sidebar-brand:focus {
+    text-decoration: none !important;
+}
+
+
+.sidebar-logo,
+.sidebar-brand img {
+    width: 100% !important;
+    height: 100% !important;
+
+    max-width: none !important;
+    max-height: none !important;
+
+    display: block;
+
+    object-fit: contain;
+
+    transition: opacity 0.2s ease;
+}
+
+
+/* ============================================================
+   COLLAPSE BUTTON
+   ============================================================ */
+
+.sidebar-collapse-btn {
+    position: absolute;
+
+    top: 50%;
+    right: -18px;
+
+    transform: translateY(-50%);
+
+    width: 36px;
+    height: 36px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0;
+
+    background: #263f52;
+    color: #ffffff;
+
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+
+    cursor: pointer;
+
+    z-index: 10001;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.30);
+
+    transition: background 0.2s ease;
+}
+
+
+.sidebar-collapse-btn:hover {
+    background: #34566d;
+}
+
+
+.sidebar-collapse-btn i {
+    margin: 0;
+    padding: 0;
+
+    font-size: 13px;
+    line-height: 1;
+}
+
+
+/* ============================================================
+   SCROLLABLE MENU
+   ============================================================ */
+
+.sidebar-menu {
+    flex: 1;
+
+    width: 100%;
+    min-height: 0;
+
+    padding: 10px 0;
+
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    box-sizing: border-box;
+}
+
+
+.sidebar-menu::-webkit-scrollbar {
+    width: 5px;
+}
+
+
+.sidebar-menu::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+
+.sidebar-menu::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.18);
+    border-radius: 10px;
+}
+
+
+.sidebar-menu::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+
+.sidebar-dashboard {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+
+    padding: 13px 17px;
+
+    color: var(--sidebar-text) !important;
+
+    font-size: 14px;
+
+    text-decoration: none !important;
+
+    border-left: 3px solid transparent;
+
+    box-sizing: border-box;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+
+.sidebar-dashboard:hover,
+.sidebar-dashboard:focus {
+    color: #ffffff !important;
+
+    background: var(--sidebar-hover);
+
+    border-left-color: var(--sidebar-accent);
+
+    text-decoration: none !important;
+}
+
+
+/* ============================================================
+   MODULE
+   ============================================================ */
+
+.sidebar-module {
+    width: 100%;
+}
+
+
+.sidebar-module-toggle {
+    width: 100%;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 13px 17px;
+
+    color: var(--sidebar-text) !important;
+
+    font-size: 14px;
+
+    text-decoration: none !important;
+
+    border-left: 3px solid transparent;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease;
+}
+
+
+.sidebar-module-toggle:hover,
+.sidebar-module-toggle:focus {
+    color: #ffffff !important;
+
+    background: var(--sidebar-hover);
+
+    text-decoration: none !important;
+}
+
+
+.sidebar-module.sidebar-open > .sidebar-module-toggle {
+    color: #ffffff !important;
+
+    background: var(--sidebar-hover);
+
+    border-left-color: var(--sidebar-accent);
+}
+
+
+/* ============================================================
+   MODULE LEFT SIDE
+   ============================================================ */
+
+.sidebar-module-left {
+    display: flex;
+    align-items: center;
+
+    flex: 1;
+
+    min-width: 0;
+}
+
+
+.sidebar-icon {
+    width: 25px;
+    min-width: 25px;
+
+    margin-right: 8px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    text-align: center;
+}
+
+
+.sidebar-module-left > span[id*="menuicon"] {
+    width: 25px;
+    min-width: 25px;
+
+    margin-right: 8px;
+
+    display: inline-block;
+
+    text-align: center;
+}
+
+
+.sidebar-module .menuname {
+    overflow: hidden;
+
+    white-space: nowrap;
+
+    text-overflow: ellipsis;
+}
+
+
+/* ============================================================
+   ARROWS
+   ============================================================ */
+
+.sidebar-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    margin-left: 8px;
+
+    flex-shrink: 0;
+
+    transition: transform 0.2s ease;
+}
+
+
+.sidebar-module.sidebar-open
+> .sidebar-module-toggle
+.sidebar-arrow {
+    transform: rotate(90deg);
+}
+
+
+.sidebar-submodule.submenu-open
+> .sidebar-submodule-toggle
+.sidebar-arrow {
+    transform: rotate(90deg);
+}
+
+
+/* ============================================================
+   SUBMODULE CONTAINER
+   ============================================================ */
+
+.sidebar-submodules {
+    width: 100%;
+
+    display: none;
+
+    background: var(--sidebar-bg-dark);
+}
+
+
+.sidebar-module.sidebar-open > .sidebar-submodules {
+    display: block;
+}
+
+
+/* ============================================================
+   SUBMODULE
+   ============================================================ */
+
+.sidebar-submodule {
+    width: 100%;
+}
+
+
+.sidebar-submodule-toggle {
+    width: 100%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    padding: 11px 17px 11px 45px;
+
+    color: #c5d0d8 !important;
+
+    font-size: 13px;
+
+    text-decoration: none !important;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+
+.sidebar-submodule-toggle:hover,
+.sidebar-submodule-toggle:focus,
+.sidebar-submodule.submenu-open > .sidebar-submodule-toggle {
+    color: #ffffff !important;
+
+    background: var(--sidebar-hover-dark);
+
+    text-decoration: none !important;
+}
+
+
+/* ============================================================
+   PAGE CONTAINER
+   ============================================================ */
+
+.sidebar-pages {
+    width: 100%;
+
+    display: none;
+
+    background: var(--sidebar-bg-darker);
+}
+
+
+.sidebar-submodule.submenu-open > .sidebar-pages {
+    display: block;
+}
+
+
+/* ============================================================
+   PAGE LINKS
+   ============================================================ */
+
+.sidebar-page-link {
+    width: 100%;
+
+    display: block;
+
+    padding: 10px 15px 10px 62px;
+
+    color: var(--sidebar-text-muted) !important;
+
+    font-size: 12px;
+
+    text-decoration: none !important;
+
+    border-left: 3px solid transparent;
+
+    box-sizing: border-box;
+
+    transition:
+        background 0.15s ease,
+        color 0.15s ease,
+        border-color 0.15s ease;
+}
+
+
+.sidebar-page-link:hover,
+.sidebar-page-link:focus {
+    color: #ffffff !important;
+
+    background: #2b4052;
+
+    border-left-color: var(--sidebar-accent);
+
+    text-decoration: none !important;
+}
+
+
+/* Current page */
+
+.sidebar-page-link.active-page {
+    color: #ffffff !important;
+
+    background: #31495d;
+
+    font-weight: 600;
+
+    border-left-color: #ffffff;
+}
+
+
+.sidebar-page-link.active-page .page-dot {
+    color: #ffffff;
+}
+
+
+.page-dot {
+    display: inline-block;
+
+    margin-right: 7px;
+
+    font-size: 13px;
+}
+
+
+/* ============================================================
+   SETTINGS
+   ============================================================ */
+
+.sidebar-settings {
+    position: relative;
+
+    width: 100%;
+
+    flex-shrink: 0;
+
+    background: #1b2934;
+
+    border-top: 1px solid var(--sidebar-border);
+
+    box-sizing: border-box;
+}
+
+
+.sidebar-settings-toggle {
+    width: 100%;
+    min-height: 55px;
+
+    padding: 12px 17px;
+
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+
+    color: var(--sidebar-text) !important;
+
+    text-decoration: none !important;
+
+    cursor: pointer;
+
+    box-sizing: border-box;
+
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+
+.sidebar-settings-toggle:hover,
+.sidebar-settings-toggle:focus,
+.sidebar-settings.settings-open > .sidebar-settings-toggle {
+    color: #ffffff !important;
+
+    background: var(--sidebar-hover);
+
+    text-decoration: none !important;
+}
+
+
+.sidebar-settings.settings-open
+> .sidebar-settings-toggle
+.sidebar-arrow {
+    transform: rotate(180deg);
+}
+
+
+/* ============================================================
+   SETTINGS PANEL
+   ============================================================ */
+
+.sidebar-settings-panel {
+    position: absolute;
+
+    left: 10px;
+    right: 10px;
+
+    bottom: calc(100% + 8px);
+
+    display: none;
+
+    background: #ffffff;
+    color: #333333;
+
+    border-radius: 5px;
+
+    overflow: hidden;
+
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.30);
+
+    z-index: 10000;
+}
+
+
+.sidebar-settings.settings-open
+> .sidebar-settings-panel {
+    display: block;
+}
+
+
+/* ============================================================
+   PROFILE
+   ============================================================ */
+
+.sidebar-profile {
+    display: flex;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 14px;
+
+    background: #ffffff;
+
+    border-bottom: 1px solid #eeeeee;
+}
+
+
+.sidebar-profile-image {
+    width: 45px !important;
+    height: 45px !important;
+    min-width: 45px;
+
+    object-fit: cover;
+
+    border-radius: 50%;
+}
+
+
+.sidebar-profile-name {
+    color: #333333 !important;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    text-decoration: none !important;
+
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+.sidebar-profile-name:hover,
+.sidebar-profile-name:focus {
+    color: #000000 !important;
+
+    text-decoration: none !important;
+}
+
+
+/* ============================================================
+   SETTINGS LINKS
+   ============================================================ */
+
+.sidebar-setting-link {
+    width: 100%;
+
+    display: flex !important;
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 11px 15px;
+
+    color: #444444 !important;
+
+    font-size: 13px;
+
+    text-decoration: none !important;
+
+    box-sizing: border-box;
+}
+
+
+.sidebar-setting-link i {
+    width: 18px;
+
+    text-align: center;
+}
+
+
+.sidebar-setting-link:hover,
+.sidebar-setting-link:focus {
+    color: #111111 !important;
+
+    background: #f2f4f6;
+
+    text-decoration: none !important;
+}
+
+
+.sidebar-signout {
+    color: #c74343 !important;
+
+    border-top: 1px solid #eeeeee;
+}
+
+
+.sidebar-signout:hover {
+    color: #b52d2d !important;
+
+    background: #fff3f3;
+}
+
+
+/* ============================================================
+   COLLAPSED SIDEBAR
+   ============================================================ */
+
+#hmsSidebar.sidebar-collapsed {
+    width: var(--sidebar-collapsed-width) !important;
+}
+
+#hmsSidebar.sidebar-collapsed .sidebar-logo,
+#hmsSidebar.sidebar-collapsed .sidebar-brand img {
+    width: 55px !important;
+    height: 55px !important;
+
+    max-width: 55px !important;
+    max-height: 55px !important;
+
+    object-fit: contain;
+
+    opacity: 1 !important;
+}
+
+#hmsSidebar.sidebar-collapsed .sidebar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    overflow: hidden;
+}
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-logo,
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-brand img {
+    width: 100% !important;
+    height: 100% !important;
+
+    max-width: none !important;
+    max-height: none !important;
+
+    object-fit: contain;
+}
+
+/* Hide labels/arrows */
+
+#hmsSidebar.sidebar-collapsed .menuname,
+
+#hmsSidebar.sidebar-collapsed
+.sidebar-dashboard > span:not(.sidebar-icon),
+
+#hmsSidebar.sidebar-collapsed
+.sidebar-module-toggle > .sidebar-arrow,
+
+#hmsSidebar.sidebar-collapsed
+.sidebar-settings-toggle > .sidebar-arrow,
+
+#hmsSidebar.sidebar-collapsed
+.sidebar-settings-toggle
+.sidebar-module-left > span:not(.sidebar-icon) {
+    display: none !important;
+}
+
+
+/* Hide nested content */
+
+#hmsSidebar.sidebar-collapsed .sidebar-submodules,
+#hmsSidebar.sidebar-collapsed .sidebar-settings-panel {
+    display: none !important;
+}
+
+
+/* Center top-level icons */
+
+#hmsSidebar.sidebar-collapsed .sidebar-dashboard,
+#hmsSidebar.sidebar-collapsed .sidebar-module-toggle,
+#hmsSidebar.sidebar-collapsed .sidebar-settings-toggle {
+    justify-content: center !important;
+
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+
+#hmsSidebar.sidebar-collapsed .sidebar-module-left {
+    width: 100%;
+
+    justify-content: center !important;
+}
+
+
+#hmsSidebar.sidebar-collapsed .sidebar-icon {
+    width: auto !important;
+
+    margin: 0 !important;
+
+    text-align: center !important;
+}
+
+
+/* ============================================================
+   TEMPORARY HOVER EXPANSION
+   Only applies when sidebar is logically collapsed.
+   ============================================================ */
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open {
+    width: var(--sidebar-width) !important;
+}
+
+
+/* Restore logo */
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-logo,
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-brand img {
+    opacity: 1;
+}
+
+
+/* Restore labels */
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .menuname,
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open
+.sidebar-dashboard > span:not(.sidebar-icon),
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open
+.sidebar-settings-toggle
+.sidebar-module-left > span:not(.sidebar-icon) {
+    display: inline !important;
+}
+
+
+/* Restore arrows */
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open
+.sidebar-module-toggle > .sidebar-arrow,
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open
+.sidebar-settings-toggle > .sidebar-arrow {
+    display: inline-flex !important;
+}
+
+
+/*
+   Restore submodules only when their module
+   is actually open.
+*/
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open
+.sidebar-module.sidebar-open
+> .sidebar-submodules {
+    display: block !important;
+}
+
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open
+.sidebar-module:not(.sidebar-open)
+> .sidebar-submodules {
+    display: none !important;
+}
+
+
+/* Restore top-level alignment */
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-dashboard {
+    justify-content: flex-start !important;
+
+    padding-left: 17px !important;
+    padding-right: 17px !important;
+}
+
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-module-toggle,
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-settings-toggle {
+    justify-content: space-between !important;
+
+    padding-left: 17px !important;
+    padding-right: 17px !important;
+}
+
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-module-left {
+    width: auto;
+
+    justify-content: flex-start !important;
+}
+
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open .sidebar-icon {
+    width: 25px !important;
+
+    margin-right: 8px !important;
+
+    text-align: center !important;
+}
+
+
+/* Allow settings popup during temporary expansion */
+
+#hmsSidebar.sidebar-collapsed.sidebar-hover-open
+.sidebar-settings.settings-open
+> .sidebar-settings-panel {
+    display: block !important;
+}
+
+
+/* ============================================================
+   MAIN PAGE
+   ============================================================ */
+
+.main-page {
+    margin-left: var(--sidebar-width) !important;
+
+    width: calc(100% - var(--sidebar-width)) !important;
+
+    min-height: 100vh;
+
+    padding: 20px;
+
+    display: block;
+
+    box-sizing: border-box;
+
+    transition:
+        margin-left 0.25s ease,
+        width 0.25s ease;
+}
+
+
+.main-page > .container-fluid {
+    width: 100%;
+
+    margin: 0;
+
+    box-sizing: border-box;
+}
+
+
+/*
+   Important:
+   hover expansion does NOT move the page.
+   The sidebar temporarily overlays it.
+*/
+
+body.sidebar-is-collapsed .main-page {
+    margin-left: var(--sidebar-collapsed-width) !important;
+
+    width: calc(100% - var(--sidebar-collapsed-width)) !important;
+}
+
+
+/* ============================================================
+   BREADCRUMB
+   ============================================================ */
+
+.main-page .custom-breadcrumb {
+    box-sizing: border-box;
+}
+
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+
+.footer-pos {
+    margin-left: var(--sidebar-width) !important;
+
+    width: calc(100% - var(--sidebar-width)) !important;
+
+    box-sizing: border-box;
+
+    transition:
+        margin-left 0.25s ease,
+        width 0.25s ease;
+}
+
+
+body.sidebar-is-collapsed .footer-pos {
+    margin-left: var(--sidebar-collapsed-width) !important;
+
+    width: calc(100% - var(--sidebar-collapsed-width)) !important;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 991px) {
+
+    #hmsSidebar {
+        transform: translateX(-100%);
+
+        transition:
+            transform 0.25s ease,
+            width 0.25s ease;
+    }
+
+
+    #hmsSidebar.mobile-open {
+        transform: translateX(0);
+    }
+
+
+    .main-page {
+        margin-left: 0 !important;
+
+        width: 100% !important;
+
+        padding: 15px;
+    }
+
+
+    .footer-pos,
+    body.sidebar-is-collapsed .footer-pos {
+        margin-left: 0 !important;
+
+        width: 100% !important;
+    }
+
+
+    body.sidebar-is-collapsed .main-page {
+        margin-left: 0 !important;
+
+        width: 100% !important;
+    }
+}
+
+
+/* ============================================================
+   SMALL SCREENS
+   ============================================================ */
+
+@media (max-width: 576px) {
+
+    #hmsSidebar,
+    #hmsSidebar.sidebar-collapsed,
+    #hmsSidebar.sidebar-collapsed.sidebar-hover-open {
+        width: 240px !important;
+    }
+
+
+    /*
+       Mobile should behave as a normal drawer.
+       Do not apply desktop collapsed appearance.
+    */
+    #hmsSidebar.sidebar-collapsed .sidebar-brand {
+        overflow: hidden;
+    }
+    
+    #hmsSidebar.sidebar-collapsed .sidebar-logo,
+    #hmsSidebar.sidebar-collapsed .sidebar-brand img {
+        position: absolute;
+
+        width: var(--sidebar-width) !important;
+        height: 87px !important;
+
+        max-width: none !important;
+        max-height: none !important;
+
+        object-fit: contain;
+
+        /*
+           Move original full logo horizontally so that
+           only the PG section is visible inside 65px.
+        */
+        left: 50%;
+
+        transform: translateX(-50%);
+
+        opacity: 1 !important;
+    }
+    #hmsSidebar.sidebar-collapsed .menuname,
+    #hmsSidebar.sidebar-collapsed
+    .sidebar-dashboard > span:not(.sidebar-icon),
+    #hmsSidebar.sidebar-collapsed
+    .sidebar-settings-toggle
+    .sidebar-module-left > span:not(.sidebar-icon) {
+        display: inline !important;
+    }
+
+
+    #hmsSidebar.sidebar-collapsed
+    .sidebar-module-toggle > .sidebar-arrow,
+    #hmsSidebar.sidebar-collapsed
+    .sidebar-settings-toggle > .sidebar-arrow {
+        display: inline-flex !important;
+    }
+
+
+    #hmsSidebar.sidebar-collapsed .sidebar-dashboard {
+        justify-content: flex-start !important;
+
+        padding: 13px 17px !important;
+    }
+
+
+    #hmsSidebar.sidebar-collapsed .sidebar-module-toggle,
+    #hmsSidebar.sidebar-collapsed .sidebar-settings-toggle {
+        justify-content: space-between !important;
+
+        padding-left: 17px !important;
+        padding-right: 17px !important;
+    }
+
+
+    #hmsSidebar.sidebar-collapsed .sidebar-module-left {
+        width: auto;
+
+        justify-content: flex-start !important;
+    }
+
+
+    #hmsSidebar.sidebar-collapsed .sidebar-icon {
+        width: 25px !important;
+
+        margin-right: 8px !important;
+    }
+
+
+    .sidebar-module-toggle {
+        font-size: 13px;
+    }
+
+
+    .sidebar-submodule-toggle {
+        padding-left: 40px;
+
+        font-size: 12px;
+    }
+
+
+    .sidebar-page-link {
+        padding-left: 55px;
+
+        font-size: 12px;
+    }
+}

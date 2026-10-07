@@ -1,0 +1,1396 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="ProductExport.aspx.cs" Inherits="Export_ProductExport"
+    Async="true" MaintainScrollPositionOnPostback="true" %>
+
+<%@ Register Assembly="AjaxControlToolkit" Namespace="AjaxControlToolkit" TagPrefix="cc1" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
+    <script type="text/javascript">
+        function printPartOfPage() {
+            var printContent = document.getElementById('bill_format_1');
+            var printWindow = window.open('about:blank', 'Print' + new Date().getTime(), 'left=0,top=0,width=800,height=600');
+            printWindow.document.write(printContent.innerHTML);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            return false;
+        }
+
+
+
+        function printTOKand80mm() {
+            var tokContent = document.getElementById('bill_format_tok_simple');
+            var billContent = document.getElementById('bill_format_80mm');
+
+            var printWindow = window.open('about:blank', 'PrintCombined' + new Date().getTime(), 'left=0,top=0,width=400,height=600');
+
+            printWindow.document.write('<style>');
+            printWindow.document.write('@page { size: 80mm auto; margin: 0mm; }');
+            printWindow.document.write('body { margin: 0; padding: 5px; font-family: Consolas; font-size: 13px; }');
+            printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: Consolas; font-size: 13px; }');
+            printWindow.document.write('th { border-top: 1px solid #000 !important; border-bottom: 1px solid #000 !important; border-left: none !important; border-right: none !important; padding: 2px; }');
+            printWindow.document.write('td { padding: 2px; border: none !important; }');
+            printWindow.document.write('.td-border-top { border-top: 1px solid #000 !important; }');
+            printWindow.document.write('.td-border-bottom { border-bottom: 1px solid #000 !important; }');
+            printWindow.document.write('.grid80mm { width: 100%; border-collapse: collapse; }');
+            printWindow.document.write('.grid80mm thead tr th { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; border-left: none; border-right: none; }');
+            printWindow.document.write('.grid80mm tbody tr td { padding: 2px; border: none; }');
+            printWindow.document.write('.page-break { page-break-before: always; border-top: 1px dashed #000; margin: 6px 0; }');
+            printWindow.document.write('</style>');
+
+            // TOK first — use outerHTML so the wrapper's border/padding print too
+            printWindow.document.write(tokContent.outerHTML);
+
+            // separator / page break, then 80mm bill right after
+            printWindow.document.write('<div class="page-break"></div>');
+            printWindow.document.write(billContent.innerHTML);
+
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            return false;
+        }
+
+        function printBill80mmOnly() {
+            var billContent = document.getElementById('bill_format_80mm');
+            var printWindow = window.open('about:blank', 'Print80mmOffice' + new Date().getTime(), 'left=0,top=0,width=400,height=600');
+
+            printWindow.document.write('<style>');
+            printWindow.document.write('@page { size: 80mm auto; margin: 0mm; }');
+            printWindow.document.write('body { margin: 0; padding: 5px; font-family: Consolas; font-size: 13px; }');
+            printWindow.document.write('table { width: 100%; border-collapse: collapse; font-family: Consolas; font-size: 13px; }');
+            printWindow.document.write('th { border-top: 1px solid #000 !important; border-bottom: 1px solid #000 !important; border-left: none !important; border-right: none !important; padding: 2px; }');
+            printWindow.document.write('td { padding: 2px; border: none !important; }');
+            printWindow.document.write('.td-border-top { border-top: 1px solid #000 !important; }');
+            printWindow.document.write('.td-border-bottom { border-bottom: 1px solid #000 !important; }');
+            printWindow.document.write('.grid80mm { width: 100%; border-collapse: collapse; }');
+            printWindow.document.write('.grid80mm thead tr th { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; border-left: none; border-right: none; }');
+            printWindow.document.write('.grid80mm tbody tr td { padding: 2px; border: none; }');
+            printWindow.document.write('</style>');
+            printWindow.document.write(billContent.innerHTML);
+
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            return false;
+        }
+
+        function printOfficeCopyAnd80mm() {
+            // A4 office copy first (unchanged existing behaviour)
+            //printPartOfPage();
+            // then the 80mm copy in its own print window, slightly delayed so the two print dialogs don't collide
+            setTimeout(function () { printBill80mmOnly(); }, 700);
+            return false;
+        }
+
+        function printProforma() {
+            var printContent = document.getElementById('bill_format_proforma');
+            var printWindow = window.open('about:blank', 'PrintProforma' + new Date().getTime(), 'left=0,top=0,width=800,height=600');
+            printWindow.document.write(printContent.innerHTML);
+            printWindow.document.close();
+            printWindow.focus();
+            printWindow.print();
+            return false;
+        }
+
+        // Proforma first, then the existing A4 tax invoice right after (used on Save)
+        function printProformaThenA4() {
+            printProforma();
+            setTimeout(function () { printPartOfPage(); }, 700);
+            return false;
+        }
+
+        // Proforma first, then the existing 80mm + TOK combo right after (used on Save, Continuous bill type)
+        function printProformaThen80mmTOK() {
+            printProforma();
+            setTimeout(function () { printTOKand80mm(); }, 700);
+            return false;
+        }
+
+        // Builds the Proforma grid's "Sub Total" footer row entirely on the client:
+        // merges the S.N/HS/Particulars/Qty/Rate cells into one bordered "Sub Total"
+        // cell and puts the subtotal amount in the last cell, next to Amount.
+        // Called (via ScriptManager.RegisterStartupScript) right after gridProforma
+        // is data-bound in LoadSalesGridProforma, and before any print function runs.
+        function formatProformaFooter() {
+            var table = document.getElementById('<%= gridProforma.ClientID %>');
+           if (!table || !table.rows.length) return;
+
+           var footerRow = table.rows[table.rows.length - 1];
+           if (!footerRow || footerRow.cells.length < 7) return;
+
+           // Original cells:
+           // [0]=S.N [1]=HS [2]=Category [3]=Particulars [4]=Qty [5]=Rate [6]=Amount
+
+           footerRow.cells[0].innerText = '';
+           footerRow.cells[0].style.border = '1px solid #000';
+
+           footerRow.cells[1].innerText = '';
+           footerRow.cells[1].style.border = '1px solid #000';
+
+           // "Sub Total" spans Category + Particulars + Qty + Rate  (4 columns)
+           var particularsCell = footerRow.cells[2];
+           particularsCell.colSpan = 4;
+           particularsCell.innerText = 'Sub Total';
+           particularsCell.style.textAlign = 'left';
+           particularsCell.style.border = '1px solid #000';
+
+           // Remove the 3 merged cells after it (Particulars, Qty, Rate)
+           footerRow.deleteCell(3);   // Particulars
+           footerRow.deleteCell(3);   // Qty
+           footerRow.deleteCell(3);   // Rate
+
+           // Now cells[3] IS the Amount column
+           var amountCell = footerRow.cells[3];
+           var hiddenSubTotal = document.getElementById('<%= hdnProSubTotal.ClientID %>');
+    amountCell.innerText = hiddenSubTotal ? hiddenSubTotal.value : '';
+    amountCell.style.textAlign = 'right';
+    amountCell.style.border = '1px solid #000';
+
+           // --- Freight Charge row (clone of Sub Total row) ---
+    var freightRow = footerRow.cloneNode(true);
+    freightRow.cells[2].innerText = 'Freight Charge';
+    var hiddenFreight = document.getElementById('<%= hdnProFreightCharge.ClientID %>');
+    freightRow.cells[3].innerText = hiddenFreight ? hiddenFreight.value : '';
+    footerRow.parentNode.appendChild(freightRow);
+
+           // --- Grand Total row (clone of Sub Total row) ---
+    var grandRow = footerRow.cloneNode(true);
+    grandRow.cells[2].innerText = 'Grand Total';
+    var hiddenGrand = document.getElementById('<%= hdnProGrandTotal.ClientID %>');
+    grandRow.cells[3].innerText = hiddenGrand ? hiddenGrand.value : '';
+    footerRow.parentNode.appendChild(grandRow);
+}
+
+function printTOK() {
+    var printContent = document.getElementById('bill_format_tok');
+    var printWindow = window.open('about:blank', 'PrintTOK' + new Date().getTime(), 'left=0,top=0,width=400,height=600');
+    printWindow.document.write('<style>');
+    printWindow.document.write('@page { size: 80mm auto; margin: 0mm; }');
+    printWindow.document.write('body { margin: 0; padding: 5px; font-family: Consolas; font-size: 13px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; }');
+    printWindow.document.write('th { border-top: 1px solid #000 !important; border-bottom: 1px solid #000 !important; border-left: none !important; border-right: none !important; padding: 2px; }');
+    printWindow.document.write('td { padding: 2px; border: none !important; }');
+    printWindow.document.write('.grid80mm { width: 100%; border-collapse: collapse; }');
+    printWindow.document.write('.grid80mm thead tr th { border-top: 1px solid #000; border-bottom: 1px solid #000; padding: 2px; border-left: none; border-right: none; }');
+    printWindow.document.write('.grid80mm tbody tr td { padding: 2px; border: none; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write(printContent.innerHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    return false;
+}
+    </script>
+
+    <div class="form-group-sm container-fluid">
+        <table style="width: 100%; border-bottom: solid 1px;">
+            <tr>
+                <td style="width: 700px; padding-right: 5px;">
+                    <table style="width: 700px" class="gridtable">
+                        <tr>
+                            <td>Transaction Date
+                                <br />
+                                <asp:TextBox ID="txtTransactionDate" runat="server" CssClass="form-control datepicker" Style="width: 200px"></asp:TextBox>
+                            </td>
+                            <td>Invoice Date
+                                <br />
+                                <asp:TextBox ID="txtInvoiceDate" runat="server" CssClass="form-control" Enabled="false" Style="width: 200px"></asp:TextBox>
+                            </td>
+                            <td>Contract No
+                                <br />
+                                <asp:TextBox ID="txtContractNo" runat="server" CssClass="form-control"></asp:TextBox></td>
+                            <td>Contract Date
+                                <br />
+                                <asp:TextBox ID="txtContractDate" runat="server" CssClass="form-control datepicker"></asp:TextBox></td>
+                        </tr>
+                        <tr id="divExistingCustomer" runat="server">
+                            <td>Customer Code
+                                <br />
+                                <asp:TextBox ID="txtCustomerCode" runat="server" CssClass="form-control"
+                                    AutoPostBack="true" OnTextChanged="txtCustomerCode_TextChanged"></asp:TextBox>
+                            </td>
+                            <td colspan="3">Name
+                             <br />
+                                <asp:DropDownList ID="ddlCustomer" runat="server" CssClass="form-control" Width="100%"
+                                    Font-Size="Larger" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomer_SelectedIndexChanged">
+                                </asp:DropDownList>
+                                <script>
+                                    $('#<%=ddlCustomer.ClientID%>').chosen();
+                                </script>
+                            </td>
+
+                        </tr>
+                        <tr>
+                            <td colspan="2">Address
+                            <br />
+                                <asp:TextBox ID="txtCustomerAddress" runat="server" CssClass="form-control"></asp:TextBox>
+                            </td>
+                            <td>PAN/VAT No
+                            <br />
+                                <asp:TextBox ID="txtCustomerPANVAT" runat="server" CssClass="form-control" Style="width: 200px" Text="0"
+                                    AutoPostBack="true" MaxLength="9" TextMode="Number" OnTextChanged="txtCustomerPANVAT_TextChanged"></asp:TextBox>
+                            </td>
+                            <td>Contact No<br />
+                                <asp:TextBox ID="txtCustomerContact" runat="server" CssClass="form-control" Style="width: 200px"></asp:TextBox>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td id="tdSalesType" runat="server" visible="false" style="width: 300px; padding-left: 15px; padding-right: 15px; border-left: dashed 1px; vertical-align: top;">
+                    <table style="width: 100%">
+                        <tr>
+
+                            <td style="padding-left: 8px" runat="server" visible="false">Invoice Type
+                                <br />
+                                <asp:DropDownList ID="ddlExempted" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlExempted_SelectedIndexChanged">
+                                    <asp:ListItem Text="Tax Invoice" Value="1"></asp:ListItem>
+                                    <asp:ListItem Text="Exempted Invoice" Value="0"></asp:ListItem>
+                                </asp:DropDownList>
+                            </td>
+                        </tr>
+                        <tr id="divBankDetail" runat="server" visible="false">
+                            <td colspan="2">
+                                <asp:Label ID="lblQRofBank" runat="server" Text="Bank"></asp:Label><br />
+                                <asp:DropDownList ID="ddlBank" runat="server" CssClass="form-control"></asp:DropDownList>
+                                <br />
+
+                            </td>
+                        </tr>
+                        <tr id="divCredit" runat="server" visible="false">
+                            <td>Credit Limit
+                            <br />
+                                <asp:TextBox ID="txtCustomerCreditLimit" runat="server" CssClass="form-control" ReadOnly="true"></asp:TextBox>
+                            </td>
+                            <td style="margin-left: 80px; padding-left: 8px">Balance
+                            <br />
+                                <asp:TextBox ID="txtCustomerBalance" runat="server" CssClass="form-control" ReadOnly="true"></asp:TextBox>
+                            </td>
+                        </tr>
+                        <tr id="trRateType"
+                            runat="server">
+                            <td colspan="2">Product Rate Type:<asp:DropDownList ID="ddlProductRateType" CssClass="form-control" AutoPostBack="true" runat="server" OnSelectedIndexChanged="ddlProductRateType_SelectedIndexChanged"></asp:DropDownList>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width: 600px; padding-left: 15px; border-left: dashed 1px; vertical-align: top;">
+                    <table class="gridtable" style="width: 100%">
+                        <tr>
+
+                            <td>Shipment Type
+                                <br />
+                                <asp:TextBox ID="txtShipmentType" runat="server" CssClass="form-control"></asp:TextBox>
+                            </td>
+
+                            <td>AWB No
+                                <br />
+                                <asp:TextBox ID="txtShipmentNo" runat="server" CssClass="form-control"></asp:TextBox>
+                            </td>
+                            <td>Freight Charge
+                                <br />
+                                <asp:TextBox ID="txtFreightCharge" runat="server" CssClass="form-control"></asp:TextBox>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Mode Of Payment
+                            <br />
+                                <asp:DropDownList ID="ddlPaymentType" runat="server" CssClass="form-control"
+                                    OnSelectedIndexChanged="ddlPaymentType_SelectedIndexChanged" AutoPostBack="true">
+                                </asp:DropDownList>
+                            </td>
+
+                            <td id="tdAdvAmount" visible="false" runat="server">Advance Amount
+                                <br />
+                                <asp:TextBox ID="txtAdvanceAmt" runat="server" CssClass="form-control"></asp:TextBox>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Product Price In
+                                <br />
+                                <asp:DropDownList ID="ddlPriceIn" runat="server" CssClass="form-control"
+                                    AutoPostBack="true" OnSelectedIndexChanged="ddlPriceIn_SelectedIndexChanged">
+                                </asp:DropDownList>
+                                <asp:Label ID="lblExchangeRateInfo1" runat="server" CssClass="text-muted" Style="font-size: 11px;" Visible="false"></asp:Label>
+                                <asp:Label ID="BRate" runat="server" Text="" Visible="false"></asp:Label>
+                            </td>
+
+                            <td id="tdPaymentCurrency" runat="server" visible="false">Billing In Currency
+                                <br />
+                                <asp:DropDownList ID="ddlPaymentCurrency" runat="server" CssClass="form-control"
+                                    AutoPostBack="true" OnSelectedIndexChanged="ddlPaymentCurrency_SelectedIndexChanged">
+                                </asp:DropDownList>
+                                <asp:Label ID="lblExchangeRateInfo2" runat="server" CssClass="text-muted" Style="font-size: 11px;" Visible="false"></asp:Label>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td>
+            </tr>
+        </table>
+        <br />
+        <table style="width: 1200px">
+            <tr>
+                <td>Code<br />
+                    <asp:TextBox ID="txtProductCode" runat="server" CssClass="form-control" Width="80px"
+                        AutoPostBack="true" OnTextChanged="txtProductCode_TextChanged"></asp:TextBox>
+                </td>
+                <td>Product Name<br />
+                    <asp:DropDownList ID="ddlProduct" runat="server" CssClass="form-control" Width="400px"
+                        Font-Size="Larger" AutoPostBack="true" OnSelectedIndexChanged="ddlProduct_SelectedIndexChanged">
+                    </asp:DropDownList>
+                    <script>
+                        $('#<%=ddlProduct.ClientID%>').chosen();
+                    </script>
+                </td>
+                <td runat="server" id="divBatch" visible="false">Batch<br />
+                    <asp:DropDownList ID="ddlBatch" Width="80px" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlBatch_SelectedIndexChanged"></asp:DropDownList>
+                    <asp:TextBox ID="txtExpDate" runat="server" Visible="false"></asp:TextBox>
+                </td>
+                <td runat="server" id="tdAvaiQty" visible="true">Available Qty<br />
+                    <asp:TextBox ID="txtAvilableQty" runat="server" CssClass="form-control" Width="80px" Enabled="false"></asp:TextBox>
+                </td>
+                <td>
+                    <br />
+                    <asp:Label ID="lblUUnit" runat="server" Text=""></asp:Label>
+                </td>
+                <td id="tdDualUnit" runat="server" visible="false">Alternate Unit<br />
+                    <asp:TextBox ID="txtUQty" runat="server" CssClass="form-control" Width="80px" AutoPostBack="true" OnTextChanged="txtUQty_TextChanged"></asp:TextBox>
+                </td>
+                <td>
+                    <br />
+                    <asp:Label ID="lblBUnit" runat="server" Text=""></asp:Label>
+                </td>
+                <td>Basic Unit<br />
+                    <asp:TextBox ID="txtQty" runat="server" CssClass="form-control" Width="80px" AutoPostBack="true" OnTextChanged="txtQty_TextChanged"></asp:TextBox>
+                </td>
+                <td>Rate/Basic Unit<br />
+                    <asp:TextBox ID="txtRate" runat="server" CssClass="form-control" Width="80px" AutoPostBack="true" OnTextChanged="txtRate_TextChanged"></asp:TextBox>
+                </td>
+                <td>Amount<br />
+                    <asp:TextBox ID="txtAmount" runat="server" CssClass="form-control" Width="80px" AutoPostBack="true" OnTextChanged="txtAmount_TextChanged"></asp:TextBox>
+                </td>
+                <td id="tdSchDisc" runat="server" visible="false">Sche Disc.
+                    <br />
+                    <asp:TextBox ID="txtScheDisc" runat="server" CssClass="form-control" Width="80px"></asp:TextBox>
+                </td>
+
+                <td>
+                    <br />
+                    <asp:Button ID="btnPack" runat="server" Text="Pack" CssClass="btn btn-primary" OnClick="btnPack_Click" />
+                </td>
+                <td>
+                    <br />
+                    <asp:Button ID="btnAdd" runat="server" Text="Add" CssClass="btn btn-primary" OnClick="btnAdd_Click" />
+                </td>
+            </tr>
+        </table>
+        <asp:HiddenField runat="server" ID="hdnProductCode" />
+        <asp:HiddenField runat="server" ID="hdnEditPackPK" />
+        <asp:HiddenField runat="server" ID="hdnPackMode" />
+        <asp:HiddenField runat="server" ID="hdnEditPackQty" />
+        <asp:HiddenField runat="server" ID="hdnEditPackProductCode" />
+        <asp:HiddenField runat="server" ID="hdnPackSno" />
+
+        <div style="display: none;">
+            <asp:Button ID="btnPopup" runat="server" Text="popup" />
+            <cc1:ModalPopupExtender ID="btnPopup_ModalPopupExtender" runat="server" BackgroundCssClass="modalBackground" CancelControlID="btnCancel" DynamicServicePath=""
+                Enabled="True"
+                PopupControlID="divEdit"
+                TargetControlID="btnPopup">
+            </cc1:ModalPopupExtender>
+        </div>
+
+        <div id="divEdit" style="display: none; background-color: white; border: 1px solid #444; padding: 20px; width: 700px;">
+            <div class="row" style="background-color: aqua; margin-top: -20px">
+                <div class="col-md-6">
+                    Packing Detail
+                </div>
+                <div class="col-md-6" style="text-align: right;">
+                    <asp:Button runat="server" ID="btnCancel" Text=" X " CssClass="btn btn-danger" OnClick="btnCancel_Click" />
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-3">
+                    <asp:Label runat="server" ID="lblAvlQty" Text="Available Qty"></asp:Label>
+                    <asp:TextBox runat="server" ID="txtAvlQty" CssClass="form-control" ReadOnly="true"></asp:TextBox>
+                </div>
+                <div class="col-md-3">
+                    <asp:Label runat="server" ID="lblQty" Text="Quantity"></asp:Label>
+                    <asp:TextBox runat="server" ID="txtPckQTY" CssClass="form-control" AutoPostBack="true" OnTextChanged="txtPckQTY_TextChanged"></asp:TextBox>
+                </div>
+                <div class="col-md-3">
+                    <asp:Label runat="server" ID="lblPack" Text="Packed In"></asp:Label>
+                    <asp:TextBox runat="server" ID="txtPack" CssClass="form-control"></asp:TextBox>
+                </div>
+                <div class="col-md-1">
+                    <br />
+                    <asp:Button runat="server" ID="btnAddPack" Text="Add" CssClass="btn btn-success" OnClick="btnAddPack_Click" />
+                </div>
+
+            </div>
+
+            <div class="row">
+                <div class="col-md-12">
+                    <asp:GridView runat="server" ID="grdPack" CssClass="table table-bordered mt-2" AutoGenerateColumns="false"
+                        OnRowCommand="grdPack_RowCommand" OnRowDataBound="grdPack_RowDataBound">
+                        <Columns>
+                            <asp:TemplateField HeaderText="S.N">
+                                <ItemTemplate>
+                                    <asp:Label ID="lblPackSN" runat="server" Text='<%# Container.DataItemIndex + 1 %>'></asp:Label>
+                                </ItemTemplate>
+                                <ItemStyle Width="50px" />
+                            </asp:TemplateField>
+                            <asp:TemplateField HeaderText="Product Code">
+                                <ItemTemplate>
+                                    <asp:Label ID="lblPackProductCode" runat="server" Text='<%# Bind("PRODUCT_CODE") %>'></asp:Label>
+                                    <asp:Label ID="lblPackPK_ID" runat="server" Text='<%# Bind("PK_ID") %>' Visible="false"></asp:Label>
+                                </ItemTemplate>
+                            </asp:TemplateField>
+                            <asp:TemplateField HeaderText="Row No">
+                                <ItemTemplate>
+                                    <asp:Label ID="lblPackSno" runat="server" Text='<%# Bind("SNO") %>'></asp:Label>
+                                </ItemTemplate>
+                                <ItemStyle Width="60px" />
+                            </asp:TemplateField>
+                            <asp:TemplateField HeaderText="Quantity">
+                                <ItemTemplate>
+                                    <asp:Label ID="lblPackQty" runat="server" Text='<%# Bind("QTY") %>'></asp:Label>
+                                    <asp:TextBox ID="txtPackQty" runat="server" Width="80px" Visible="false" Text='<%# Bind("QTY") %>'></asp:TextBox>
+                                </ItemTemplate>
+                                <ItemStyle HorizontalAlign="Right" />
+                            </asp:TemplateField>
+                            <asp:TemplateField HeaderText="Pack">
+                                <ItemTemplate>
+                                    <asp:Label ID="lblPackNo" runat="server" Text='<%# Bind("PACK_NO") %>'></asp:Label>
+                                    <asp:TextBox ID="txtPackNo" runat="server" Width="120px" Visible="false" Text='<%# Bind("PACK_NO") %>'></asp:TextBox>
+                                </ItemTemplate>
+                                <ItemStyle HorizontalAlign="Right" />
+                            </asp:TemplateField>
+                            <asp:TemplateField HeaderText="">
+                                <ItemTemplate>
+                                    <asp:ImageButton ID="imgPackEdit" runat="server" CommandName="EditPack" CommandArgument='<%# Bind("PK_ID") %>' ImageUrl="~/images/icons/edit.png" />
+                                    <asp:ImageButton ID="imgPackDelete" runat="server" CommandName="RemovePack" CommandArgument='<%# Bind("PK_ID") %>' ImageUrl="~/images/icons/deletes.png" />
+                                    <asp:ImageButton ID="imgPackUpdate" runat="server" CommandName="UpdatePack" CommandArgument='<%# Bind("PK_ID") %>' ImageUrl="~/images/icons/chkd.png" Visible="false" />
+                                    <asp:ImageButton ID="imgPackCancel" runat="server" CommandName="CancelPack" CommandArgument='<%# Bind("PK_ID") %>' ImageUrl="~/images/icons/cancel.png" Visible="false" />
+                                </ItemTemplate>
+                                <ItemStyle Width="140px" />
+                            </asp:TemplateField>
+
+                        </Columns>
+                    </asp:GridView>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-12">
+                    <asp:Button runat="server" ID="btnSavePack" Text="Save" Visible="false" CssClass="btn btn-primary mt-2" OnClick="btnSavePack_Click" />
+                </div>
+            </div>
+        </div>
+        <table style="border: solid; font-size: 12px;">
+            <tr>
+                <td style="width: 1000px">
+                    <div style="height: 300px; width: 1000px; overflow: scroll; overflow-x: hidden; margin-top: 8px;">
+                        <div style="background-color: cadetblue; text-align: center; width: 975px">
+                            <b>Invoice Detail </b>
+                        </div>
+                        <asp:GridView ID="grdSalesDetail" runat="server" AutoGenerateColumns="False" Width="975px" CssClass="gridtable" OnRowDataBound="grdSalesDetail_RowDataBound"
+                            OnRowCommand="grdSalesDetail_RowCommand" Font-Size="11px">
+                            <Columns>
+                                <asp:TemplateField HeaderText="Sno">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblSno" runat="server" Text="<%# Container.DataItemIndex+1 %>"></asp:Label>
+                                        <asp:Label ID="lblProductPK_ID" runat="server" Text='<%# Bind("PK_ID") %>' Visible="false"></asp:Label>
+                                        <asp:Label ID="lblTaxable" runat="server" Text='<%# Bind("TAXABLE") %>' Visible="false"></asp:Label>
+                                    </ItemTemplate>
+                                    <ItemStyle Width="50px" />
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Code">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblProductCode" runat="server" Text='<%# Bind("PRODUCT_CODE") %>'></asp:Label>
+                                    </ItemTemplate>
+                                    <ItemStyle Width="100px" />
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Product Name">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblProductName" runat="server" Text='<%# Bind("PRODUCT") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Batch" Visible="false">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblBatch" runat="server" Text='<%# Bind("BATCH_NO") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Exp. Date" Visible="false">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblExpDate" runat="server" Text='<%# Bind("EXPIRY_DATE") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Alternate Qty" Visible="false">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblUQty" runat="server" Text='<%# Bind("U_QUANTITY") %>'></asp:Label>
+                                        <asp:Label ID="lblUUnit" runat="server" Text='<%# Bind("U_UNIT") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Qty">
+                                    <ItemTemplate>
+                                        <asp:TextBox ID="txtGridQty" runat="server" Width="50px"
+                                            Style="display: inline-block; text-align: right;"
+                                            Text='<%# Bind("QUANTITY") %>' AutoPostBack="true" OnTextChanged="txtGridQty_TextChanged"></asp:TextBox>
+                                        <asp:Label ID="lblUnit" runat="server" Text='<%# Bind("UNIT") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Rate(NPR)">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblRate" runat="server" Text='<%# Bind("RATE") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Total(NPR)">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblItemTotal" runat="server" Text='<%# Bind("TOTAL") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Disc" Visible="false">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblScheDisc" runat="server" Text='<%# Bind("SCHE_DISC") %>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Amount" Visible="false">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblAfterScheDisc" runat="server" Text='<%# Bind("AFTER_SCHE_DISC")%>'></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Rate (FC)">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblFCRate" runat="server" Text=''></asp:Label>
+                                    </ItemTemplate>
+                                    <ItemStyle Width="80px" HorizontalAlign="Right" />
+                                </asp:TemplateField>
+
+                                <asp:TemplateField HeaderText="Total (FC)">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblFCTotal" runat="server" Text=''></asp:Label>
+                                    </ItemTemplate>
+                                    <ItemStyle Width="80px" HorizontalAlign="Right" />
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="" Visible="false">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblNumericRate" runat="server"
+                                            Text='<%# Bind("NUMERIC_RATE") %>' Visible="false"></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="">
+                                    <ItemTemplate>
+                                        <asp:ImageButton ID="imgGridPackEdit" runat="server" CommandName="EditGridPack" CommandArgument='<%# Container.DataItemIndex %>' ImageUrl="~/images/icons/box.png" ToolTip="Edit Pack" />
+                                    </ItemTemplate>
+                                    <ItemStyle Width="30px" />
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="">
+                                    <ItemTemplate>
+                                        <asp:ImageButton ID="ImageButton2" CommandName="Remove" ImageUrl="~/images/icons/deletes.png" runat="server" />
+                                    </ItemTemplate>
+                                    <ItemStyle Width="50px" />
+                                </asp:TemplateField>
+                            </Columns>
+
+                        </asp:GridView>
+
+                    </div>
+                </td>
+                <td style="vertical-align: top; padding-left: 5px; padding-right: 5px;">
+                    <table style="width: 300px;">
+                        <tr>
+                            <td style="width: 90px;">Sub Total</td>
+                            <td style="width: 45px;"></td>
+                            <td style="text-align: right; width: 35px;">
+                                <asp:Label ID="lblSubTotalAmount" runat="server" Text=""></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 90px;">Sche. Disc</td>
+                            <td style="width: 45px;">&nbsp;</td>
+                            <td style="text-align: right; width: 35px;">
+                                <asp:Label ID="lblTotalScheDisc" runat="server" Text=""></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 90px;">After Sch.Disc</td>
+                            <td style="width: 45px;">&nbsp;</td>
+                            <td style="text-align: right; width: 35px;">
+                                <asp:Label ID="lblAfterSchDiscount" runat="server" Text=""></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Trade Discount</td>
+                            <td>
+                                <asp:TextBox ID="txtDiscount" runat="server" Width="35px" Text="0" OnTextChanged="txtDiscount_TextChanged" AutoPostBack="true"></asp:TextBox>
+                                %</td>
+                            <td style="text-align: right;">
+                                <asp:TextBox ID="txtDiscountAmount" runat="server" Width="80px" Style="text-align: right" OnTextChanged="txtDiscountAmount_TextChanged" AutoPostBack="true"></asp:TextBox></td>
+                        </tr>
+                        <tr>
+                            <td>Total</td>
+                            <td></td>
+                            <td style="text-align: right;">
+                                <asp:Label ID="lblTotalAmount" runat="server" Text=""></asp:Label>
+                            </td>
+                        </tr>
+                        <tr runat="server" id="divVAT1">
+                            <td>VAT</td>
+                            <td>
+                                <asp:TextBox ID="txtVATPercent" runat="server" Width="35px" Text="" AutoPostBack="true" OnTextChanged="txtVATPercent_TextChanged" ReadOnly="true"></asp:TextBox>
+                                %</td>
+                            <td style="text-align: right;">
+                                <asp:Label ID="lblVAT" runat="server" Text=""></asp:Label></td>
+                        </tr>
+                        <tr runat="server" id="trFreightNPR">
+                            <td>Freight Charge (NPR)</td>
+                            <td></td>
+                            <td style="text-align: right;">
+                                <asp:Label ID="lblFreightChargeNPR" runat="server" Text="0.00"></asp:Label>
+                            </td>
+                        </tr>
+                        <tr runat="server" id="trFreightFC">
+                            <td>Freight Charge (FC)</td>
+                            <td></td>
+                            <td style="text-align: right;">
+                                <asp:Label ID="lblFreightChargeFC" runat="server" Text="0.00"></asp:Label>
+                            </td>
+                        </tr>
+                        <tr runat="server" id="trVATReturn" visible="false">
+                            <td>VAT Return</td>
+                            <td>
+                                <asp:Label ID="lblVATReturnPercent" runat="server" Text="10"></asp:Label>%</td>
+                            <td style="text-align: right;">
+                                <asp:Label ID="lblVATReturn" runat="server" Text=""></asp:Label>
+                            </td>
+                        </tr>
+                        <tr runat="server" id="divVAT2">
+                            <td>Grand Total</td>
+                            <td></td>
+                            <td style="text-align: right;">
+                                <asp:Label ID="lblGrandTotal" runat="server" Text=""></asp:Label>
+                            </td>
+                        </tr>
+                        <tr runat="server" visible="false" id="trRoundOff">
+
+                            <td>Rounding</td>
+                            <td></td>
+                            <td style="text-align: right;">
+                                <asp:TextBox ID="txtRound" runat="server" Width="80px" Text="" Style="text-align: right"
+                                    AutoPostBack="true" OnTextChanged="txtRound_TextChanged" Enabled="true"></asp:TextBox>
+                            </td>
+                        </tr>
+                        <tr visible="false" runat="server" id="trRtotal">
+                            <td>Invoice Amount</td>
+                            <td></td>
+                            <td style="text-align: right;">
+                                <asp:Label ID="lblInvoiceAmount" runat="server" Text=""></asp:Label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">&nbsp;</td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">
+                                <br />
+                                <asp:Button ID="btnSave" runat="server" Text="Save" CssClass="btn btn-primary" Width="100%" OnClick="btnSave_Click" /><br />
+                                <br />
+                                <asp:Button ID="btnOfficeCopy" runat="server" Text="Print Office Copy" CssClass="btn btn-primary" Width="100%" OnClick="btnOfficeCopy_Click" Visible="false" />
+                                <br />
+                                <br />
+                                <asp:Button ID="btnProforma" runat="server" Text="Print Export Invoice" CssClass="btn btn-primary" Width="100%" OnClick="btnProforma_Click" Visible="false" />
+                                <br />
+                                <br />
+                                <%--<asp:Button ID="btnPrintTOK" runat="server" Text="Print TOK" CssClass="btn btn-primary" Width="100%"
+                                    OnClick="btnPrintTOK_Click" Visible="false" />--%>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">
+                                <strong>
+                                    <asp:Label ID="lblerror" runat="server" Style="color: #CC0000"></asp:Label>
+                                </strong>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+
+        </table>
+        <table style="width: 1300px">
+            <tr>
+                <td>Remarks for Invoice
+                    <br />
+                    <asp:TextBox ID="txtRemarks" runat="server" CssClass="form-control" TextMode="MultiLine" Text=""></asp:TextBox>
+                </td>
+            </tr>
+            <tr>
+                <td>Remarks for Export
+                    <br />
+                    <asp:TextBox ID="txtRemarksE" runat="server" CssClass="form-control" TextMode="MultiLine" Text="STATEMENT ON ORIGIN:
+                         The exporter One World (Nepal) Trading NPREX 5000637320133NPTEPC of the products covered by this document declares that,
+                         except where otherwise clearly indicated, these products are of Nepaliese Prefemtial origin according to rules of origin 
+                        of the Generalised System of Preferences of the European Union and that the origin criterion met is 'W'"></asp:TextBox>
+                </td>
+            </tr>
+        </table>
+
+    </div>
+
+    <div>
+        <asp:Label ID="lblunique_token" runat="server" Text="" Visible="false"></asp:Label>
+        <asp:Label ID="lblPK_ID" runat="server" Text="" Visible="false"></asp:Label>
+        <asp:Label ID="lblOrderNoHidden" runat="server" Text="" Visible="false"></asp:Label>
+    </div>
+    <div id="printdetail" runat="server" visible="false" style="margin-top: 1000px">
+        <div id="print_div" style="width: 210mm; padding: 30px 30px 30px 30px; box-sizing: border-box; margin: auto;">
+            <div id="bill_format_1" style="margin-bottom: 50px; box-sizing: border-box; padding: 5px; font-family: Calibri">
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 15%; text-align: center; vertical-align: top;">
+                            <asp:Image ID="sImage1" runat="server" Width="100px" ImageUrl="~/images/logo.png" />
+                        </td>
+                        <td style="text-align: center;">
+                            <table style="width: 100%">
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblCompanyName" runat="server" Text="" Style="font-weight: bold; font-size: 32px;"></asp:Label></td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblCompanyAddress" runat="server" Text="" Style="font-size: 12pt;"></asp:Label></td>
+                                </tr>
+                                <tr runat="server" id="divEmail">
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblWebsite" runat="server" Text="" Style="font-size: 12pt;"></asp:Label>
+                                        <asp:Label ID="lblDivider" runat="server" Text="|" Style="font-size: 12pt;"></asp:Label>
+                                        <asp:Label ID="lblEmail" runat="server" Text="" Style="font-size: 12pt;"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center;">
+                                        <asp:Label ID="lblPhone1" runat="server" Text="" Style="font-size: 12pt;"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="text-align: center;" style="height: 22px">
+                                        <asp:Label ID="Label1" runat="server" Style="font-size: 12pt; font-weight: normal; font-family: Verdana;" Text="PAN NO"></asp:Label>
+                                        <asp:Label ID="lblPanNo" runat="server" Style="font-size: 12pt; font-weight: normal; font-family: Verdana;"></asp:Label>
+
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                        <td style="width: 15%; text-align: center; vertical-align: top;"></td>
+                    </tr>
+
+                    <tr style="padding-top: 10px; padding-bottom: 10px;">
+                        <td style="text-align: center; font-weight: bold; font-family: Verdana; font-size: 22px" colspan="3">
+                            <asp:Label ID="lblInvoiceHeading" runat="server" Text=""></asp:Label>
+                        </td>
+                    </tr>
+
+                </table>
+                <table style="width: 100%; font-size: 13pt">
+                    <tr>
+                        <td colspan="2"></td>
+                        <td style="width: 40%; text-align: right">Tran. Date:<asp:Label ID="lblTranNepaliDate" runat="server"></asp:Label>
+                            [<asp:Label ID="lblTranDate" runat="server"></asp:Label>]</td>
+                    </tr>
+                    <tr>
+                        <td style="width: 15%;">Invoice No.</td>
+                        <td style="width: 45%;">:
+                            <asp:Label Font-Size="14pt" Font-Bold="true" ID="lblInvoiceNo" runat="server"></asp:Label>
+                        </td>
+                        <td style="width: 40%; text-align: right">Bill Date &nbsp;:<asp:Label ID="lblBillNepaliDate" runat="server"></asp:Label>
+                            [<asp:Label ID="lblBillEnglishDate" runat="server"></asp:Label>]
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>Name</td>
+                        <td colspan="2">:                  
+                         <asp:Label ID="lblCustomerName" runat="server"></asp:Label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="">Address</td>
+                        <td style="">:
+                         <asp:Label ID="lblAddress" runat="server"></asp:Label>,<asp:Label ID="lblCountry" runat="server"></asp:Label></td>
+                        <td style="text-align: right"><span style="float: right">
+                            <asp:Label ID="lblInvoiceHeading1" runat="server" Font-Bold="True"></asp:Label></span></td>
+                    </tr>
+                    <tr>
+                        <td>PAN No</td>
+                        <td>:
+                         <asp:Label ID="lblCustomerPanNo" runat="server"></asp:Label></td>
+                        <td style="text-align: right">Mode of Payment :
+                            <asp:Label ID="lblModeofPayment" runat="server"></asp:Label></td>
+                    </tr>
+                </table>
+                <style>
+                    .custom-grid {
+                        border-collapse: collapse;
+                        width: 100%;
+                        font-family: Arial, sans-serif;
+                        font-size: 12px;
+                        border-left: 1px solid #000;
+                        border-right: 1px solid #000;
+                        border-bottom: 1px solid #000;
+                        border-top: 1px solid #000;
+                    }
+
+                        .custom-grid th,
+                        .custom-grid td {
+                            padding: 4px;
+                            vertical-align: top;
+                            border-left: 1px solid #000;
+                            border-right: 1px solid #000;
+                            border-top: none;
+                            border-bottom: none;
+                        }
+
+                        .custom-grid th {
+                            background-color: #f2f2f2;
+                            border-bottom: 1px solid #000;
+                            border-top: 1px solid #000;
+                        }
+
+                        .custom-grid label {
+                            margin: 0;
+                            padding: 0;
+                            display: inline-block;
+                            font-size: 18px;
+                        }
+
+                    .auto-style1 {
+                        height: 20px;
+                    }
+                </style>
+
+                <table style="width: 100%;">
+                    <tr>
+                        <td rowspan="4" style="vertical-align: top">
+                            <asp:GridView ID="gridSalesInvoice" runat="server" CssClass="custom-grid" AutoGenerateColumns="False" Width="100%" OnRowDataBound="gridSalesInvoice_RowDataBound">
+                                <Columns>
+                                    <asp:TemplateField HeaderText="S.N" ItemStyle-Width="5%">
+                                        <ItemStyle Height="8%" />
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblSNo" runat="server" Text='<%# Container.DataItemIndex + 1 %>'></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="HS" ItemStyle-Width="4%">
+                                        <ItemStyle Height="8%" />
+                                        <HeaderStyle HorizontalAlign="Left" />
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblHSCode" runat="server"></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Particular" ItemStyle-Width="52%" HeaderStyle-HorizontalAlign="Left">
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("PRODUCT_NAME") %>' ID="lblProNAme" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Batch" Visible="false">
+                                        <ItemStyle Height="8%" Width="5%" />
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("BATCH_NO") %>' ID="lblBatchNo" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Exp Date" Visible="false">
+                                        <ItemStyle Height="8%" Width="9%" />
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("EXPIRY_DATE") %>' ID="lblExpDate" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Upper Qty" Visible="false">
+                                        <ItemStyle HorizontalAlign="Right" Height="8%" Width="5%" />
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("UPPER_QUANTITY") %>' ID="lblUQty" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Qty" ItemStyle-Width="10%">
+                                        <ItemStyle HorizontalAlign="Right" />
+                                        <HeaderStyle HorizontalAlign="Right" />
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("QUANTITY") %>' ID="lblQuantity" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Rate" ItemStyle-Width="10%">
+                                        <ItemStyle HorizontalAlign="Right" />
+                                        <HeaderStyle HorizontalAlign="Right" />
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("RATE") %>' ID="lblRate" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Amount" ItemStyle-Width="10%">
+                                        <ItemStyle HorizontalAlign="Right" />
+                                        <HeaderStyle HorizontalAlign="Right" />
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("TOTAL") %>' ID="lblTotal" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Sch.Disc" Visible="false">
+                                        <ItemStyle HorizontalAlign="Right" Height="8%" Width="5%" />
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblScheDisc" runat="server" Text='<%# Bind("SCHEME_DISCOUNT") %>'></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="Taxable Amount" Visible="false">
+                                        <ItemStyle HorizontalAlign="Right" Height="8%" Width="5%" />
+                                        <ItemTemplate>
+                                            <asp:Label Text='<%# Bind("TAXABLE_TOTAL") %>' ID="lblTaxableTotal" runat="server" />
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                </Columns>
+                            </asp:GridView>
+
+                        </td>
+                    </tr>
+                </table>
+                <table style="width: 100%; font-size: 12pt; border-collapse: collapse; border-top: 1px solid black;">
+                    <tr>
+                        <td style="width: 60%; vertical-align: top;">In words:
+                            Rs.
+                            <asp:Label ID="lblAmountInWord" runat="server" Style="font-size: 12pt"></asp:Label>
+                            <br />
+                        </td>
+                        <td style="width: 40%; vertical-align: top;" rowspan="3">
+                            <table style="width: 100%; border-collapse: collapse; border: none;">
+                                <tr>
+                                    <td style="padding-left: 3%">Sub Total</td>
+                                    <td style="text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblBillSubTotal" runat="server"></asp:Label></td>
+                                </tr>
+                                <tr>
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Discount
+                                        <asp:Label ID="lblBillDiscountPercent" runat="server" Text=""></asp:Label>
+                                        %</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblDiscount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr runat="server" id="trTaxableAmount">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Taxable amount</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblTaxableAmount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr id="trInvVat" runat="server">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">
+                                        <asp:Label ID="lblTaxType" runat="server" Text=""></asp:Label>
+                                        <asp:Label ID="lblTaxPercent" runat="server"></asp:Label>
+                                        % </td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblVATAmount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Total</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblBillAmount" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+
+                                <tr id="trInvRoundOff" runat="server" visible="false">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Round off</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblRoundoff" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+
+                                <tr id="trInvFreightCharge" runat="server">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Freight Charge</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblFreightCharge" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+
+                                <tr id="trNetAmount" runat="server" visible="true">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Net Amount</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblGTotal" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr id="trAdvanceBill" runat="server" visible="false">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Advance</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblAdvancePaidBill" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr id="trDueAmount" runat="server" visible="false">
+                                    <td style="border-top: 1px solid black; padding-left: 3%">Due</td>
+                                    <td style="border-top: 1px solid black; text-align: right; padding-right: 5px">
+                                        <asp:Label ID="lblDueBill" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="width: 60%; vertical-align: top;">
+                            <br />
+                            <table runat="server" id="divPO" visible="true">
+                                <tr>
+                                    <td>PO Number :
+                                        <asp:Label ID="lblPONumber" runat="server" Text=""></asp:Label>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 60%; vertical-align: top;">
+                            <span style="font-size: small">
+                                <br />
+                                * E.& O.E.            
+                                <br />
+                                <asp:Label ID="lblRemarks" runat="server" Text=""></asp:Label>
+                            </span>
+
+                        </td>
+                    </tr>
+                </table>
+                <table style="width: 100%; font-size: 12pt">
+                    <tr>
+                        <td colspan="2">
+                            <br />
+                            <br />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">............................</td>
+                        <td style="text-align: right;">
+                            <asp:Label ID="lblInvCreatedBy" runat="server" Text=""></asp:Label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">Received By</td>
+                        <td style="text-align: right;">For:
+                            <asp:Label ID="lblForCompanyName" runat="server" Text=""></asp:Label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-style: italic" colspan="2">
+                            <asp:Label Font-Size="12px" ID="Label4" runat="server" Text="Print Date Time:"></asp:Label>
+                            <asp:Label Font-Size="12px" ID="lblTime" runat="server"></asp:Label>
+                            &nbsp;<asp:Label Font-Size="12px" ID="Label2" runat="server" Text="Print By:"></asp:Label>
+                            <asp:Label Font-Size="12px" ID="lblPrintedBy" runat="server"></asp:Label>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+
+    <%-- PROFORMA INVOICE PRINT FORMAT --%>
+    <div id="printdetailProforma" runat="server" visible="false" style="margin-top: 1000px;">
+        <div id="print_div_proforma" style="width: 210mm; padding: 30px; box-sizing: border-box; margin: auto;">
+            <div id="bill_format_proforma" style="margin-bottom: 50px; box-sizing: border-box; padding: 5px; font-family: Calibri;">
+
+                <table style="width: 100%; border-collapse: collapse; font-size: 12pt;">
+                    <tr>
+                        <td style="text-align: Left; font-size: 26px; font-weight: 600; margin-bottom: 12px;">I N V O I C E
+                        </td>
+                        <td colspan="2" style="width: 100%; text-align: right">
+                            <asp:Image ID="imgn" runat="server" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 55%; border: 1px solid #000; padding: 6px; vertical-align: top;">
+                            <div style="font-weight: 700; font-size: 16px; text-transform: uppercase;">
+                                <asp:Label ID="lblProCompanyName" runat="server"></asp:Label>
+                            </div>
+                            <div>
+                                <asp:Label ID="lblProCompanyAddress" runat="server"></asp:Label>
+                            </div>
+                            <div>
+                                Company Registered No:
+                                <asp:Label ID="lblProCompanyRegNo" runat="server"></asp:Label>
+                            </div>
+                            <div>
+                                EXIM Code:
+                                <asp:Label ID="lblProEximCode" runat="server"></asp:Label>
+                            </div>
+                            <div>
+                                Email:
+                                <asp:Label ID="lblProCompanyEmail" runat="server"></asp:Label>
+                            </div>
+                        </td>
+                        <td style="width: 45%; border: 1px solid #000; border-left: none; padding: 6px; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td>Invoice No</td>
+                                    <td>:
+                                        <asp:Label ID="lblProInvoiceNo" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Issue Date</td>
+                                    <td>:
+                                        <asp:Label ID="lblProIssueDate" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Contract No</td>
+                                    <td>:
+                                        <asp:Label ID="lblProContractNo" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Contract Date</td>
+                                    <td>:
+                                        <asp:Label ID="lblProContractDate" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="width: 55%; border: 1px solid #000; border-top: none; padding: 6px; vertical-align: top;">
+                            <div style="text-decoration: underline; font-weight: 600;">Invoice To</div>
+                            <div>
+                                <asp:Label ID="lblProCustomerName" runat="server"></asp:Label>
+                            </div>
+                            <div>
+                                <asp:Label ID="lblProCustomerAddress" runat="server"></asp:Label>,<asp:Label ID="lblProCustomerCountry" runat="server"></asp:Label>
+                            </div>
+                        </td>
+                        <td style="width: 45%; border: 1px solid #000; border-left: none; border-top: none; padding: 6px; vertical-align: top;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <tr>
+                                    <td style="white-space: nowrap; width: 1%; padding-right: 8px;">Payment Currency</td>
+                                    <td>:
+            <asp:Label ID="lblProPaymentCurrency" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap; width: 1%; padding-right: 8px;">Terms</td>
+                                    <td>:
+            <asp:Label ID="lblProPaymentMode" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap; width: 1%; padding-right: 8px;">Shipment Type</td>
+                                    <td>:
+            <asp:Label ID="lblProShipmentType" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td style="white-space: nowrap; width: 1%; padding-right: 8px;">AWB No</td>
+                                    <td>:
+            <asp:Label ID="lblProShipmentNo" runat="server"></asp:Label>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+                </table>
+
+                <asp:GridView ID="gridProforma" runat="server" AutoGenerateColumns="False" GridLines="Both" ShowFooter="true"
+                    Width="100%" CellPadding="6" Style="border-collapse: collapse; border: 1px solid #000; font-size: 11pt; margin-top: -1px;">
+                    <HeaderStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" Font-Bold="true" />
+                    <RowStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                    <FooterStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" Font-Bold="true" />
+                    <Columns>
+                        <asp:TemplateField HeaderText="">
+                            <ItemStyle HorizontalAlign="Left" Width="4%" VerticalAlign="Top" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <HeaderStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <ItemTemplate>
+                                <asp:Label ID="lblProSN" runat="server" Text='<%# Container.DataItemIndex + 1 %>'></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="HS Code">
+                            <ItemStyle HorizontalAlign="Left" Width="3%" VerticalAlign="Top" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <HeaderStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <ItemTemplate>
+                                <asp:Label ID="lblProHS" runat="server" Text='<%# Bind("HS_CODE") %>'></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Category Code">
+                            <ItemStyle HorizontalAlign="Left" Width="8%" VerticalAlign="Top" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <HeaderStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <ItemTemplate>
+                                <asp:Label ID="lblProCategoryCode" runat="server" Text='<%# Bind("CATEGORY_CODE") %>'></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Particulars">
+                            <ItemStyle HorizontalAlign="Left" Width="45%" VerticalAlign="Top" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <HeaderStyle HorizontalAlign="Left" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <ItemTemplate>
+                                <asp:Label ID="lblProParticular" runat="server" Text='<%# Bind("PRODUCT_NAME") %>'></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Qty">
+                            <ItemStyle HorizontalAlign="Right" Width="10%" VerticalAlign="Top" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <HeaderStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <ItemTemplate>
+                                <asp:Label ID="lblProQty" runat="server" Text='<%# Bind("QUANTITY") %>'></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Rate">
+                            <ItemStyle HorizontalAlign="Right" Width="10%" VerticalAlign="Top" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <HeaderStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <ItemTemplate>
+                                <asp:Label ID="lblProRate" runat="server" Text='<%# Bind("RATE") %>'></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                        <asp:TemplateField HeaderText="Amount">
+                            <ItemStyle HorizontalAlign="Right" Width="15%" VerticalAlign="Top" BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <HeaderStyle BorderStyle="Solid" BorderWidth="1px" BorderColor="#000000" />
+                            <ItemTemplate>
+                                <asp:Label ID="lblProAmount" runat="server" Text='<%# Bind("TOTAL") %>'></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                    </Columns>
+                </asp:GridView>
+                <asp:HiddenField ID="hdnProSubTotal" runat="server" />
+                <asp:HiddenField ID="hdnProFreightCharge" runat="server" />
+                <asp:HiddenField ID="hdnProGrandTotal" runat="server" />
+
+                <div style="border: 1px solid #000; border-top: none; padding: 6px; font-size: 11pt;">
+                    <b>Amount in words:</b>
+                    <asp:Label ID="lblProAmountInWord" runat="server"></asp:Label>
+                </div>
+
+                <table style="width: 100%; font-size: 8pt; margin-top: 20px;">
+                    <tr>
+                        <td>
+
+
+                            <asp:Label ID="lblLocalRemarks" runat="server"></asp:Label>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td>
+                            <asp:Label ID="lblProRemarks" runat="server"></asp:Label>
+
+
+
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: right">For: 
+                            <asp:Label ID="lblProUserName" runat="server"></asp:Label>
+                        </td>
+                        <%--<td colspan="2">
+                            <br />
+                            <br />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="text-align: left;">............................</td>
+                        <td style="text-align: right;">For:
+                            <asp:Label ID="lblProForCompanyName" runat="server"></asp:Label>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="font-style: italic" colspan="2">
+                            Print Date Time:
+                            <asp:Label ID="lblProTime" runat="server"></asp:Label>
+                            &nbsp;Print By:
+                            <asp:Label ID="lblProPrintedBy" runat="server"></asp:Label>
+                        </td>--%>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <asp:Button ID="btnReset" runat="server" Text="" Style="display: none"
+        OnClick="btnReset_Click" CausesValidation="false" />
+
+    <div id="qrPopupOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999;">
+        <div style="background: #fff; width: 320px; margin: 80px auto; padding: 20px; border-radius: 6px; text-align: center;">
+            <h4>Scan to Pay</h4>
+            <div style="font-size: 18px; font-weight: bold; margin-bottom: 10px;">
+                Rs.
+                <asp:Label ID="lblQRAmount" runat="server" Text=""></asp:Label>
+            </div>
+            <asp:Image ID="imgQRPopup" runat="server" Style="max-width: 260px;" />
+            <p style="font-weight: bold; margin-top: 10px;">
+                <asp:Label ID="lblQRStatus" runat="server" Text=""></asp:Label>
+            </p>
+
+        </div>
+        <div class="form-group" runat="server" visible="false">
+            <label>Scan text (optional)</label>
+            <asp:TextBox ID="txtScan" runat="server" CssClass="form-control" placeholder="SCAN TO PAY" />
+        </div>
+    </div>
+    <script>
+        window.POS_APP_ROOT = '<%= ResolveUrl("~/") %>';
+    </script>
+    <script src="<%= ResolveUrl("~/js/PosLocalClient.js") %>"></script>
+
+
+    <script type="text/javascript">
+        //var qrPollTimer = null;
+        //var qrPollAttempts = 0;
+        //var QR_MAX_POLL_ATTEMPTS = 75;
+
+        function showQRPopup() {
+            document.getElementById('qrPopupOverlay').style.display = 'block';
+        }
+        function hideQRPopup() {
+            document.getElementById('qrPopupOverlay').style.display = 'none';
+            stopQRPolling();
+        }
+        function setQRStatusText(text) {
+            var el = document.getElementById('<%= lblQRStatus.ClientID %>');
+            if (el) el.innerText = text;
+        }
+        //function startQRPolling() {
+        //    stopQRPolling();
+        //    qrPollAttempts = 0;
+        //    qrPollTimer = setInterval(pollQROnce, 4000);
+        //}
+        //function stopQRPolling() {
+        //    if (qrPollTimer) { clearInterval(qrPollTimer); qrPollTimer = null; }
+        //}
+        //function pollQROnce() {
+        //    qrPollAttempts++;
+        //    if (qrPollAttempts > QR_MAX_POLL_ATTEMPTS) {
+        //        stopQRPolling();
+        //        setQRStatusText('Payment timed out.');
+        //        return;
+        //    }
+        //    PageMethods.CheckQRPaymentStatus(onQRStatusSuccess, onQRStatusError);
+        //}
+        //function onQRStatusSuccess(result) {
+        //    switch (result.Status) {
+        //        case 'PENDING':
+        //            setQRStatusText('Waiting for payment... ' + (result.Message || ''));
+        //            break;
+        //        case 'SUCCESS':
+        //            stopQRPolling();
+        //            setQRStatusText('Payment Successful! ' + (result.Message || ''));
+        //            setTimeout(hideQRPopup, 4000);
+        //            break;
+        //        case 'FAILED':
+        //            stopQRPolling();
+        //            setQRStatusText('Payment Failed. ' + (result.Message || ''));
+        //            break;
+        //        case 'NONE':
+        //            stopQRPolling();
+        //            break;
+        //    }
+        //}
+        //function onQRStatusError(err) {
+        //    setQRStatusText('Error checking status: ' + err.get_message());
+        //}
+    </script>
+</asp:Content>

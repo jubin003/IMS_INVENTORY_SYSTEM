@@ -1,0 +1,19 @@
+﻿.header, #side-menu, #menu, #setting, #control{
+	background-color:#94265e;
+	
+}
+#main-privacy > .privacy-container
+{
+	border-left:20px solid #94265e;
+}
+
+.calendar-title
+{
+	background-color:#94265e;
+
+}
+.holidaylist th
+{
+	background-color: #94265e;
+}
+
