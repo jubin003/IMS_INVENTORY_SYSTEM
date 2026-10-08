@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -28,13 +29,19 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             if (!string.IsNullOrEmpty(pkId))
                 LoadPurchaseOrder(pkId);
             else
-            {
-                string engdate = PGD.GetTodayDate("dd/mm/yyyy");
-                txtOrderDate.Text = PGD.GetNepaliDateFromEnglish(engdate,"dd/mm/yyyy");
-            }
-               
+                txtOrderDate.Text = GetTodayNepali();
         }
     }
+
+    private string GetTodayNepali()
+    {
+        string engdate = PGD.GetTodayDate("dd/mm/yyyy");
+        return PGD.GetNepaliDateFromEnglish(engdate, "dd/mm/yyyy");
+    }
+
+    // =====================================================
+    // CUSTOMER / ORDER INFO
+    // =====================================================
 
     private void LoadCustomer(DropDownList ddl)
     {
@@ -154,16 +161,28 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
          * PoEnt.PAYMENT_TERM = txtPaymentTerm.Text.Trim();
          *
          * PoSer.Save/Insert/Update(...)
-         *
-         * The exact call depends on your existing PR_PURCHASE_ORDERService.
          */
 
+        // Keep the delivery location if the user comes back from the Back button
+        string previousLocation = ddlCustomerLocation.SelectedValue;
+
         LoadCustomerLocation(customerId);
+
+        if (!string.IsNullOrEmpty(previousLocation) && ddlCustomerLocation.Items.FindByValue(previousLocation) != null)
+        {
+            ddlCustomerLocation.SelectedValue = previousLocation;
+            LoadLocationDetails(previousLocation);
+        }
+
         LoadProductTable();
 
         pnlPurchaseOrder.Visible = false;
         pnlDelivery.Visible = true;
     }
+
+    // =====================================================
+    // DELIVERY
+    // =====================================================
 
     private void LoadCustomerLocation(string customerId)
     {
@@ -183,8 +202,11 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
     protected void ddlCustomerLocation_SelectedIndexChanged(object sender, EventArgs e)
     {
-        string locationId = ddlCustomerLocation.SelectedValue;
+        LoadLocationDetails(ddlCustomerLocation.SelectedValue);
+    }
 
+    private void LoadLocationDetails(string locationId)
+    {
         if (string.IsNullOrEmpty(locationId))
         {
             ClearDeliveryDetails();
@@ -237,6 +259,10 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         lblDeliveryEmail.Text = "";
     }
 
+    // =====================================================
+    // PRODUCT GRID
+    // =====================================================
+
     private DataTable ProductTable
     {
         get
@@ -274,10 +300,10 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         LoadProductTable();
     }
 
+    // Remembers what the user picked in every row so the grid can be rebound without losing it.
+    // Unit is not stored: it is read-only and always derived from the selected product.
     private void SaveProductRows()
     {
-        DataTable dt = ProductTable;
-
         for (int i = 0; i < grdProducts.Rows.Count; i++)
         {
             GridViewRow row = grdProducts.Rows[i];
@@ -286,7 +312,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             DropDownList ddlSize = row.FindControl("ddlSize") as DropDownList;
             DropDownList ddlSwatchType = row.FindControl("ddlSwatchType") as DropDownList;
             DropDownList ddlSwatch = row.FindControl("ddlSwatch") as DropDownList;
-            DropDownList ddlUnit = row.FindControl("ddlUnit") as DropDownList;
             TextBox txtQuantity = row.FindControl("txtQuantity") as TextBox;
             TextBox txtDeliveryDate = row.FindControl("txtDeliveryDate") as TextBox;
 
@@ -294,10 +319,24 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             ViewState["Size_" + i] = ddlSize == null ? "" : ddlSize.SelectedValue;
             ViewState["SwatchType_" + i] = ddlSwatchType == null ? "" : ddlSwatchType.SelectedValue;
             ViewState["Swatch_" + i] = ddlSwatch == null ? "" : ddlSwatch.SelectedValue;
-            ViewState["Unit_" + i] = ddlUnit == null ? "" : ddlUnit.SelectedValue;
             ViewState["Quantity_" + i] = txtQuantity == null ? "" : txtQuantity.Text;
             ViewState["DeliveryDate_" + i] = txtDeliveryDate == null ? "" : txtDeliveryDate.Text;
         }
+    }
+
+    private void ClearProductState()
+    {
+        List<string> keys = new List<string>();
+
+        foreach (string key in ViewState.Keys)
+        {
+            if (key.StartsWith("Product_") || key.StartsWith("Size_") || key.StartsWith("SwatchType_")
+                || key.StartsWith("Swatch_") || key.StartsWith("Quantity_") || key.StartsWith("DeliveryDate_"))
+                keys.Add(key);
+        }
+
+        foreach (string key in keys)
+            ViewState.Remove(key);
     }
 
     protected void grdProducts_RowDataBound(object sender, GridViewRowEventArgs e)
@@ -309,24 +348,32 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         DropDownList ddlSize = e.Row.FindControl("ddlSize") as DropDownList;
         DropDownList ddlSwatchType = e.Row.FindControl("ddlSwatchType") as DropDownList;
         DropDownList ddlSwatch = e.Row.FindControl("ddlSwatch") as DropDownList;
-        DropDownList ddlUnit = e.Row.FindControl("ddlUnit") as DropDownList;
-
-        LoadProducts(ddlProduct);
-        LoadSizes(ddlSize);
-        LoadSwatchTypes(ddlSwatchType);
-        LoadSwatches(ddlSwatch, "");
-        LoadUnits(ddlUnit);
+        TextBox txtUnit = e.Row.FindControl("txtUnit") as TextBox;
+        TextBox txtQuantity = e.Row.FindControl("txtQuantity") as TextBox;
+        TextBox txtDeliveryDate = e.Row.FindControl("txtDeliveryDate") as TextBox;
 
         int index = e.Row.RowIndex;
 
+        // Product
+        LoadProducts(ddlProduct);
         SetSelectedValue(ddlProduct, ViewState["Product_" + index]);
-        SetSelectedValue(ddlSize, ViewState["Size_" + index]);
-        SetSelectedValue(ddlSwatchType, ViewState["SwatchType_" + index]);
-        SetSelectedValue(ddlSwatch, ViewState["Swatch_" + index]);
-        SetSelectedValue(ddlUnit, ViewState["Unit_" + index]);
 
-        TextBox txtQuantity = e.Row.FindControl("txtQuantity") as TextBox;
-        TextBox txtDeliveryDate = e.Row.FindControl("txtDeliveryDate") as TextBox;
+        // Unit (read-only, comes from the selected product)
+        if (txtUnit != null)
+            txtUnit.Text = GetProductUnitName(ddlProduct.SelectedValue);
+
+        // Size
+        LoadSizes(ddlSize);
+        SetSelectedValue(ddlSize, ViewState["Size_" + index]);
+
+        // Swatch type, then swatches filtered by that type
+        string swatchTypeId = Convert.ToString(ViewState["SwatchType_" + index]);
+
+        LoadSwatchTypes(ddlSwatchType);
+        SetSelectedValue(ddlSwatchType, swatchTypeId);
+
+        LoadSwatches(ddlSwatch, swatchTypeId);
+        SetSelectedValue(ddlSwatch, ViewState["Swatch_" + index]);
 
         if (txtQuantity != null)
             txtQuantity.Text = Convert.ToString(ViewState["Quantity_" + index]);
@@ -394,46 +441,51 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         ddl.Items.Insert(0, new ListItem("-- Select Swatch --", ""));
     }
 
-    private void LoadUnits(DropDownList ddl)
+    // Returns the unit name of a product (PRODUCT.UNIT_ID -> PRODUCT_UNIT.UNIT_NAME)
+    private string GetProductUnitName(string productId)
     {
-        PRODUCT_UNIT ent = new PRODUCT_UNIT();
-        PRODUCT_UNITService ser = new PRODUCT_UNITService();
+        if (string.IsNullOrEmpty(productId))
+            return "";
 
-        ddl.DataSource = ser.GetAll(ent);
-        ddl.DataTextField = "UNIT_NAME";
-        ddl.DataValueField = "PK_ID";
-        ddl.DataBind();
-        ddl.Items.Insert(0, new ListItem("-- Select Unit --", ""));
+        PRODUCT product = new PRODUCT();
+        product.PK_ID = productId;
+        product = (PRODUCT)new PRODUCTService().GetSingle(product);
+
+        if (product == null || string.IsNullOrEmpty(product.UNIT_ID))
+            return "";
+
+        PRODUCT_UNIT unit = new PRODUCT_UNIT();
+        unit.PK_ID = product.UNIT_ID;
+        unit = (PRODUCT_UNIT)new PRODUCT_UNITService().GetSingle(unit);
+
+        return unit == null ? "" : unit.UNIT_NAME;
     }
 
     protected void ddlProduct_SelectedIndexChanged(object sender, EventArgs e)
     {
         DropDownList ddlProduct = sender as DropDownList;
+
+        if (ddlProduct == null)
+            return;
+
         GridViewRow row = ddlProduct.NamingContainer as GridViewRow;
 
         if (row == null)
             return;
 
-        string productId = ddlProduct.SelectedValue;
+        TextBox txtUnit = row.FindControl("txtUnit") as TextBox;
 
-        DropDownList ddlUnit = row.FindControl("ddlUnit") as DropDownList;
-
-        if (!string.IsNullOrEmpty(productId))
-        {
-            PRODUCT ent = new PRODUCT();
-            ent.PK_ID = productId;
-
-            PRODUCTService ser = new PRODUCTService();
-            ent = (PRODUCT)ser.GetSingle(ent);
-
-            if (ent != null)
-                SetSelectedValue(ddlUnit, ent.UNIT_ID);
-        }
+        if (txtUnit != null)
+            txtUnit.Text = GetProductUnitName(ddlProduct.SelectedValue);
     }
 
     protected void ddlSwatchType_SelectedIndexChanged(object sender, EventArgs e)
     {
         DropDownList ddlSwatchType = sender as DropDownList;
+
+        if (ddlSwatchType == null)
+            return;
+
         GridViewRow row = ddlSwatchType.NamingContainer as GridViewRow;
 
         if (row == null)
@@ -441,9 +493,9 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
         DropDownList ddlSwatch = row.FindControl("ddlSwatch") as DropDownList;
 
-        SaveProductRows();
-
         LoadSwatches(ddlSwatch, ddlSwatchType.SelectedValue);
+
+        SaveProductRows();
     }
 
     private void SetSelectedValue(DropDownList ddl, object value)
@@ -456,6 +508,10 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         if (!string.IsNullOrEmpty(selectedValue) && ddl.Items.FindByValue(selectedValue) != null)
             ddl.SelectedValue = selectedValue;
     }
+
+    // =====================================================
+    // NAVIGATION / SAVE
+    // =====================================================
 
     protected void btnBack_Click(object sender, EventArgs e)
     {
@@ -501,9 +557,10 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
                 return;
             }
 
-            if (txtQuantity == null || string.IsNullOrWhiteSpace(txtQuantity.Text))
+            decimal qty;
+            if (txtQuantity == null || !decimal.TryParse(txtQuantity.Text.Trim(), out qty) || qty <= 0)
             {
-                HelperFunction.MsgBox(this, this.GetType(), "Quantity is required in row " + (i + 1) + ".");
+                HelperFunction.MsgBox(this, this.GetType(), "Enter a valid quantity in row " + (i + 1) + ".");
                 return;
             }
 
@@ -551,12 +608,16 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
          *      SIZE_ID = ddlSize.SelectedValue
          *      SWATCH_ID = ddlSwatch.SelectedValue
          *      QUANTITY = txtQuantity.Text
-         *      UNIT = ddlUnit.SelectedValue
+         *      UNIT = unit id of the product (PRODUCT.UNIT_ID), not txtUnit.Text
          *      STATUS = your initial status
          */
 
         HelperFunction.MsgBox(this, this.GetType(), "Purchase Order details are ready to be saved.");
     }
+
+    // =====================================================
+    // EDIT / CLEAR
+    // =====================================================
 
     private void LoadPurchaseOrder(string pkId)
     {
@@ -593,8 +654,9 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     private void ClearForm()
     {
         hfPK_ID.Value = "";
-        txtOrderDate.Text = PGD.GetTodayDate("dd/mm/yyyy");
+        txtOrderDate.Text = GetTodayNepali();
         txtPaymentTerm.Text = "";
+        txtRemarks.Text = "";
         ddlCustomer.SelectedIndex = 0;
 
         ClearCustomerDetails();
@@ -604,6 +666,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
         ClearDeliveryDetails();
 
+        ClearProductState();
         ProductTable = null;
         grdProducts.DataSource = null;
         grdProducts.DataBind();
