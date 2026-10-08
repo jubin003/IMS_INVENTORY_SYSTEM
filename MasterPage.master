@@ -32,7 +32,8 @@
     <link href="~/css/Custom-cs.css" rel="stylesheet" />
     <link href="~/css/sidebar.css" rel="stylesheet" />
     <link href="~/css/hmsPage.css" rel="stylesheet" />
-    <link href="~/css/ims-webform.css" rel="stylesheet" />
+    <link href="~/css/ims-base.css" rel="stylesheet" />
+    <link href="~/css/ims-form.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/css/bootstrap-modal.min.css" />
 
     <link href="~/css/animate.css" rel="stylesheet" />
