@@ -28,7 +28,11 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             if (!string.IsNullOrEmpty(pkId))
                 LoadPurchaseOrder(pkId);
             else
-                txtOrderDate.Text = PGD.GetTodayDate("dd/mm/yyyy");
+            {
+                string engdate = PGD.GetTodayDate("dd/mm/yyyy");
+                txtOrderDate.Text = PGD.GetNepaliDateFromEnglish(engdate,"dd/mm/yyyy");
+            }
+               
         }
     }
 
@@ -367,7 +371,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         PR_SWATCH_TYPEService ser = new PR_SWATCH_TYPEService();
 
         ddl.DataSource = ser.GetAll(ent);
-        ddl.DataTextField = "SWATCH_TYPE_NAME";
+        ddl.DataTextField = "SWATCH_NAME";
         ddl.DataValueField = "PK_ID";
         ddl.DataBind();
         ddl.Items.Insert(0, new ListItem("-- Select Type --", ""));
