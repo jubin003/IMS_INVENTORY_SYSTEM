@@ -183,3 +183,55 @@ textarea.form-control {
         padding: 14px 16px;
     }
 }
+
+/*Tabs Css for any pages*/
+.page-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 16px;
+    border-bottom: 1px solid #e2e8f0;
+    overflow-x: auto;
+}
+
+.page-tab {
+    appearance: none;
+    background-color: transparent;
+    color: #64748b;
+    border: none;
+    border-bottom: 2px solid transparent;
+    border-radius: 0;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 0.15s ease-in-out, border-color 0.15s ease-in-out, background-color 0.15s ease-in-out;
+}
+
+.page-tab:hover {
+    color: #0f172a;
+    background-color: #f8fafc;
+}
+
+.page-tab.active {
+    color: #0284c7;
+    border-bottom-color: #0284c7;
+    background-color: #ffffff;
+}
+
+.page-tab:focus {
+    outline: none;
+}
+
+@media (max-width: 600px) {
+    .page-tabs {
+        gap: 2px;
+    }
+
+    .page-tab {
+        flex-shrink: 0;
+        padding: 10px 14px;
+    }
+}
