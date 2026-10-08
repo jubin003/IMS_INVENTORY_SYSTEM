@@ -8,8 +8,10 @@ using Entity.Framework;
 
 public partial class Production_Customer_Location : System.Web.UI.Page
 {
-    CUSTOMER_LOCATION LEnt = new CUSTOMER_LOCATION();
-    CUSTOMER_LOCATIONService LSer = new CUSTOMER_LOCATIONService();
+    PR_CUSTOMER_LOCATION CLEnt = new PR_CUSTOMER_LOCATION();
+
+    PR_CUSTOMER_LOCATIONService CLSer = new PR_CUSTOMER_LOCATIONService();
+
     CUSTOMER CEnt = new CUSTOMER();
     CUSTOMERService CSer = new CUSTOMERService();
     EntityList theList = new EntityList();
@@ -25,11 +27,11 @@ public partial class Production_Customer_Location : System.Web.UI.Page
 
     protected void gridLoad()
     {
-        LEnt = new CUSTOMER_LOCATION();
-        theList = LSer.GetAll(LEnt);
+        CLEnt = new PR_CUSTOMER_LOCATION();
+        theList = CLSer.GetAll(CLEnt);
 
         if (theList.Count == 0)
-            theList.Add(LEnt);
+            theList.Add(CLEnt);
 
         gridDisplay.DataSource = theList;
         gridDisplay.DataBind();
@@ -51,23 +53,25 @@ public partial class Production_Customer_Location : System.Web.UI.Page
         DropDownList ddlCountry = (DropDownList)row.FindControl("ddlCountry");
         TextBox txtContactNumber = (TextBox)row.FindControl("txtContactNumberE");
         TextBox txtEmail = (TextBox)row.FindControl("txtEmailE");
+        TextBox txtContactPersonE = (TextBox)row.FindControl("txtContactPersonE");
 
         if (lblPK_ID == null || string.IsNullOrEmpty(lblPK_ID.Text))
             return;
 
-        LEnt = new CUSTOMER_LOCATION();
-        LEnt.PK_ID = lblPK_ID.Text;
-        LEnt = (CUSTOMER_LOCATION)LSer.GetSingle(LEnt);
+        CLEnt = new PR_CUSTOMER_LOCATION();
+        CLEnt.PK_ID = lblPK_ID.Text;
+        CLEnt = (PR_CUSTOMER_LOCATION)CLSer.GetSingle(CLEnt);
 
-        if (LEnt != null)
+        if (CLEnt != null)
         {
-            LEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
-            LEnt.ADDRESS = txtAddress.Text;
-            LEnt.COUNTRY_ID = ddlCountry.SelectedValue;
-            LEnt.CONTACT_NUMBER = txtContactNumber.Text;
-            LEnt.EMAIL_ID = txtEmail.Text;
+            CLEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
+            CLEnt.ADDRESS = txtAddress.Text;
+            CLEnt.COUNTRY_ID = ddlCountry.SelectedValue;
+            CLEnt.CONTACT_NUMBER = txtContactNumber.Text;
+            CLEnt.EMAIL_ID = txtEmail.Text;
+            CLEnt.CONTACT_PERSON = txtContactPersonE.Text;
 
-            LSer.Update(LEnt);
+            CLSer.Update(CLEnt);
         }
 
         gridDisplay.EditIndex = -1;
@@ -102,24 +106,24 @@ public partial class Production_Customer_Location : System.Web.UI.Page
                 DropDownList ddlCustomer = (DropDownList)e.Row.FindControl("ddlCustomer");
                 DropDownList ddlCountry = (DropDownList)e.Row.FindControl("ddlCountry");
 
-                LEnt = new CUSTOMER_LOCATION();
-                LEnt.PK_ID = lblPK_ID.Text;
-                LEnt = (CUSTOMER_LOCATION)LSer.GetSingle(LEnt);
+                CLEnt = new PR_CUSTOMER_LOCATION();
+                CLEnt.PK_ID = lblPK_ID.Text;
+                CLEnt = (PR_CUSTOMER_LOCATION)CLSer.GetSingle(CLEnt);
 
                 if (ddlCustomer != null)
                 {
                     LoadCustomer(ddlCustomer);
 
-                    if (LEnt != null && ddlCustomer.Items.FindByValue(LEnt.CUSTOMER_ID) != null)
-                        ddlCustomer.SelectedValue = LEnt.CUSTOMER_ID;
+                    if (CLEnt != null && ddlCustomer.Items.FindByValue(CLEnt.CUSTOMER_ID) != null)
+                        ddlCustomer.SelectedValue = CLEnt.CUSTOMER_ID;
                 }
 
                 if (ddlCountry != null)
                 {
                     LoadCountry(ddlCountry);
 
-                    if (LEnt != null && ddlCountry.Items.FindByValue(LEnt.COUNTRY_ID) != null)
-                        ddlCountry.SelectedValue = LEnt.COUNTRY_ID;
+                    if (CLEnt != null && ddlCountry.Items.FindByValue(CLEnt.COUNTRY_ID) != null)
+                        ddlCountry.SelectedValue = CLEnt.COUNTRY_ID;
                 }
             }
             else
@@ -160,6 +164,7 @@ public partial class Production_Customer_Location : System.Web.UI.Page
         DropDownList ddlCountry = (DropDownList)row.FindControl("ddlCountryH");
         TextBox txtContactNumber = (TextBox)row.FindControl("txtContactNumber");
         TextBox txtEmail = (TextBox)row.FindControl("txtEmail");
+        TextBox txtContactPerson = (TextBox)row.FindControl("txtContactPerson");
 
         if (string.IsNullOrEmpty(ddlCustomer.SelectedValue))
             HelperFunction.MsgBox(this, this.GetType(), "Customer can not be empty.");
@@ -169,14 +174,15 @@ public partial class Production_Customer_Location : System.Web.UI.Page
             HelperFunction.MsgBox(this, this.GetType(), "Country can not be empty.");
         else
         {
-            LEnt = new CUSTOMER_LOCATION();
-            LEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
-            LEnt.ADDRESS = txtAddress.Text;
-            LEnt.COUNTRY_ID = ddlCountry.SelectedValue;
-            LEnt.CONTACT_NUMBER = txtContactNumber.Text;
-            LEnt.EMAIL_ID = txtEmail.Text;
+            CLEnt = new PR_CUSTOMER_LOCATION();
+            CLEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
+            CLEnt.ADDRESS = txtAddress.Text;
+            CLEnt.COUNTRY_ID = ddlCountry.SelectedValue;
+            CLEnt.CONTACT_NUMBER = txtContactNumber.Text;
+            CLEnt.EMAIL_ID = txtEmail.Text;
+            CLEnt.CONTACT_PERSON = txtContactPerson.Text;
 
-            LSer.Insert(LEnt);
+            CLSer.Insert(CLEnt);
 
             HelperFunction.MsgBox(this, this.GetType(), "Inserted");
 

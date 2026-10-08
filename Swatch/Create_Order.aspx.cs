@@ -8,15 +8,16 @@ using Entity.Framework;
 
 public partial class Production_Purchase_Order : System.Web.UI.Page
 {
-    PURCHASE_ORDER PEnt = new PURCHASE_ORDER();
-    PURCHASE_ORDERService PSer = new PURCHASE_ORDERService();
+    PR_PURCHASE_ORDER PoEnt = new PR_PURCHASE_ORDER();
+    PR_PURCHASE_ORDERService PoSer = new PR_PURCHASE_ORDERService();
+
     CUSTOMER CEnt = new CUSTOMER();
     CUSTOMERService CSer = new CUSTOMERService();
     EntityList theList = new EntityList();
     PhyeGanDate PGD = new PhyeGanDate();
 
-    CUSTOMER_LOCATION ClEnt = new CUSTOMER_LOCATION();
-    CUSTOMER_LOCATIONService ClSer = new CUSTOMER_LOCATIONService();
+    PR_CUSTOMER_LOCATION ClEnt = new PR_CUSTOMER_LOCATION();
+    PR_CUSTOMER_LOCATIONService ClSer = new PR_CUSTOMER_LOCATIONService();
 
 
     protected void Page_Load(object sender, EventArgs e)
@@ -30,11 +31,11 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
     protected void gridLoad()
     {
-        PEnt = new PURCHASE_ORDER();
-        theList = PSer.GetAll(PEnt);
+        PoEnt = new PR_PURCHASE_ORDER();
+        theList = PoSer.GetAll(PoEnt);
 
         if (theList.Count == 0)
-            theList.Add(PEnt);
+            theList.Add(PoEnt);
 
         gridDisplay.DataSource = theList;
         gridDisplay.DataBind();
@@ -94,30 +95,27 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         if (string.IsNullOrEmpty(pkId))
             return;
 
-        PEnt = new PURCHASE_ORDER();
-        PEnt.PK_ID = pkId;
-        PEnt = (PURCHASE_ORDER)PSer.GetSingle(PEnt);
+        PoEnt = new PR_PURCHASE_ORDER();
+        PoEnt.PK_ID = pkId;
+        PoEnt = (PR_PURCHASE_ORDER)PoSer.GetSingle(PoEnt);
 
-        if (PEnt == null)
+        if (PoEnt == null)
             return;
 
         hfPK_ID.Value = pkId;
 
-        txtOrderNumber.Text = PEnt.ORDER_NUMBER;
-        txtOrderDate.Text = NepDate(PEnt.ORDER_DAY, PEnt.ORDER_MONTH, PEnt.ORDER_YEAR);
-        txtDispatchedDate.Text = NepDate(PEnt.DISPATCHED_DAY, PEnt.DISPATCHED_MONTH, PEnt.DISPATCHED_YEAR);
-        txtModeOfTransportationID.Text = PEnt.MODE_OF_TRANSPORTATION_ID;
+        txtOrderNumber.Text = PoEnt.ORDER_NUMBER;
+        txtOrderDate.Text = NepDate(PoEnt.ORDER_DAY, PoEnt.ORDER_MONTH, PoEnt.ORDER_YEAR);
 
-        txtDispatchedLocation.Text = PEnt.DISPATCHED_LOCATION;
-        txtPaymentTerm.Text = PEnt.PAYMENT_TERM;
+        txtPaymentTerm.Text = PoEnt.PAYMENT_TERM;
 
-        if (ddlCustomer.Items.FindByValue(PEnt.CUSTOMER_ID) != null)
-            ddlCustomer.SelectedValue = PEnt.CUSTOMER_ID;
+        if (ddlCustomer.Items.FindByValue(PoEnt.CUSTOMER_ID) != null)
+            ddlCustomer.SelectedValue = PoEnt.CUSTOMER_ID;
         else
             ddlCustomer.SelectedIndex = 0;
 
-        if (ddlStatus.Items.FindByValue(PEnt.STATUS) != null)
-            ddlStatus.SelectedValue = PEnt.STATUS;
+        if (ddlStatus.Items.FindByValue(PoEnt.STATUS) != null)
+            ddlStatus.SelectedValue = PoEnt.STATUS;
 
         lblFormTitle.Text = "Edit Purchase Order";
         btnSave.Text = "Update";
@@ -150,27 +148,16 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             return;
         }
 
-        string[] nepDateDis = null;
-        if (!string.IsNullOrWhiteSpace(txtDispatchedDate.Text))
-        {
-            nepDateDis = txtDispatchedDate.Text.Trim().Split('/');
-            if (nepDateDis.Length != 3)
-            {
-                HelperFunction.MsgBox(this, this.GetType(), "Dispatched Date must be in dd/mm/yyyy format.");
-                return;
-            }
-        }
-
         bool isEdit = !string.IsNullOrEmpty(hfPK_ID.Value);
 
-        PEnt = new PURCHASE_ORDER();
+        PoEnt = new PR_PURCHASE_ORDER();
 
         if (isEdit)
         {
-            PEnt.PK_ID = hfPK_ID.Value;
-            PEnt = (PURCHASE_ORDER)PSer.GetSingle(PEnt);
+            PoEnt.PK_ID = hfPK_ID.Value;
+            PoEnt = (PR_PURCHASE_ORDER)PoSer.GetSingle(PoEnt);
 
-            if (PEnt == null)
+            if (PoEnt == null)
             {
                 HelperFunction.MsgBox(this, this.GetType(), "Record not found.");
                 return;
@@ -178,7 +165,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         }
 
         EntityList theList = new EntityList();
-        theList = PSer.GetAll(PEnt);
+        theList = PoSer.GetAll(PoEnt);
         int id=0;
         foreach(PURCHASE_ORDER row in theList)
         {
@@ -188,36 +175,28 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
 
 
-        PEnt.CUSTOMER_ORDER_NUMBER = id.ToString();
-        PEnt.ORDER_NUMBER = txtOrderNumber.Text.Trim();
-        PEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
-        PEnt.MODE_OF_TRANSPORTATION_ID = txtModeOfTransportationID.Text.Trim();
-        PEnt.DISPATCHED_LOCATION = txtDispatchedLocation.Text.Trim();
-        PEnt.PAYMENT_TERM = txtPaymentTerm.Text.Trim();
-        PEnt.STATUS = ddlStatus.SelectedValue;
+        PoEnt.CUSTOMER_ORDER_NUMBER = id.ToString();
+        PoEnt.ORDER_NUMBER = txtOrderNumber.Text.Trim();
+        PoEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
 
-        PEnt.ORDER_DATE = PGD.GetEnglishDateFromNepali(txtOrderDate.Text.Trim(), "dd/mm/yyyy");
-        PEnt.ORDER_DAY = nepDate[0];
-        PEnt.ORDER_MONTH = nepDate[1];
-        PEnt.ORDER_YEAR = nepDate[2];
-        PEnt.ORDER_FISCAL_YEAR = PGD.checkFiscalYear(nepDate[1], nepDate[2]).ToString();
+        PoEnt.PAYMENT_TERM = txtPaymentTerm.Text.Trim();
+        PoEnt.STATUS = ddlStatus.SelectedValue;
 
-        if (nepDateDis != null)
-        {
-            PEnt.DISPATCHED_DATE = PGD.GetEnglishDateFromNepali(txtDispatchedDate.Text.Trim(), "dd/mm/yyyy");
-            PEnt.DISPATCHED_DAY = nepDateDis[0];
-            PEnt.DISPATCHED_MONTH = nepDateDis[1];
-            PEnt.DISPATCHED_YEAR = nepDateDis[2];
-        }
+        PoEnt.ORDER_DATE = PGD.GetEnglishDateFromNepali(txtOrderDate.Text.Trim(), "dd/mm/yyyy");
+        PoEnt.ORDER_DAY = nepDate[0];
+        PoEnt.ORDER_MONTH = nepDate[1];
+        PoEnt.ORDER_YEAR = nepDate[2];
+        PoEnt.ORDER_FISCAL_YEAR = PGD.checkFiscalYear(nepDate[1], nepDate[2]).ToString();
+        PoEnt.STATUS = ddlStatus.SelectedValue;
 
         if (isEdit)
         {
-            PSer.Update(PEnt);
+            PoSer.Update(PoEnt);
             HelperFunction.MsgBox(this, this.GetType(), "Updated");
         }
         else
         {
-            PSer.Insert(PEnt);
+            PoSer.Insert(PoEnt);
             HelperFunction.MsgBox(this, this.GetType(), "Inserted");
         }
 
@@ -237,9 +216,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
         txtOrderDate.Text = "";
         txtOrderNumber.Text = "";
-        txtDispatchedDate.Text = "";
-        txtModeOfTransportationID.Text = "";
-        txtDispatchedLocation.Text = "";
         txtPaymentTerm.Text = "";
 
         if (ddlCustomer.Items.Count > 0)
@@ -275,5 +251,15 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         if (d == "" || m == "" || y == "") return "";
 
         return d.PadLeft(2, '0') + "/" + m.PadLeft(2, '0') + "/" + y;
+    }
+
+    protected void btnDeliNext_Click(object sender, EventArgs e)
+    {
+        
+    }
+
+    protected void btnOrdDet_Click(object sender, EventArgs e)
+    {
+
     }
 }

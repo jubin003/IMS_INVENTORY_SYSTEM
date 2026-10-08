@@ -1,4 +1,4 @@
-﻿<%@ Page Title="Purchase Order Management" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Purchase_Order.aspx.cs" Inherits="Production_Purchase_Order" %>
+﻿<%@ Page Title="Purchase Order Management" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Create_Order.aspx.cs" Inherits="Production_Purchase_Order" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
 
@@ -72,20 +72,6 @@
                     <asp:DropDownList ID="ddlCustomer" runat="server" CssClass="form-control"></asp:DropDownList>
                 </div>
 
-                <div class="po-form-group">
-                    <label for="<%= txtDispatchedDate.ClientID %>">Dispatched Date</label>
-                    <asp:TextBox ID="txtDispatchedDate" runat="server" CssClass="form-control datepicker" placeholder="Select dispatch date..."></asp:TextBox>
-                </div>
-
-                <div class="po-form-group">
-                    <label for="<%= txtModeOfTransportationID.ClientID %>">Mode Of Transportation ID</label>
-                    <asp:TextBox ID="txtModeOfTransportationID" runat="server" CssClass="form-control" placeholder="Enter ID..."></asp:TextBox>
-                </div>
-
-                <div class="po-form-group">
-                    <label for="<%= txtDispatchedLocation.ClientID %>">Dispatched Location</label>
-                    <asp:TextBox ID="txtDispatchedLocation" runat="server" CssClass="form-control" placeholder="Enter location..."></asp:TextBox>
-                </div>
 
                 <div class="po-form-group">
                     <label for="<%= txtPaymentTerm.ClientID %>">Payment Term</label>
@@ -102,7 +88,7 @@
             </div>
 
             <div class="po-form-actions">
-                <asp:Button ID="btnSave" runat="server" Text="+ Add" CssClass="btn-add-primary" OnClick="btnSave_Click" />
+                <asp:Button ID="btnSave" runat="server" Text="+ Next" CssClass="btn-add-primary" OnClick="btnSave_Click" />
                 <asp:Button ID="btnClear" runat="server" Text="Clear" CssClass="btn-clear" OnClick="btnClear_Click" CausesValidation="false" />
             </div>
         </div>
@@ -171,29 +157,6 @@
                             </ItemTemplate>
                         </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Dispatched Date">
-                            <HeaderStyle CssClass="col-date" />
-                            <ItemStyle CssClass="col-date" />
-                            <ItemTemplate>
-                                <asp:Label ID="lblDispatchedDate" runat="server" Text='<%# NepDate(Eval("DISPATCHED_DAY"), Eval("DISPATCHED_MONTH"), Eval("DISPATCHED_YEAR")) %>'></asp:Label>
-                            </ItemTemplate>
-                        </asp:TemplateField>
-
-                        <asp:TemplateField HeaderText="Mode Of Transportation ID">
-                            <HeaderStyle CssClass="col-code" />
-                            <ItemStyle CssClass="col-code" />
-                            <ItemTemplate>
-                                <asp:Label ID="lblModeOfTransportationID" runat="server" Text='<%# Eval("MODE_OF_TRANSPORTATION_ID") %>'></asp:Label>
-                            </ItemTemplate>
-                        </asp:TemplateField>
-
-                        <asp:TemplateField HeaderText="Dispatched Location">
-                            <HeaderStyle CssClass="col-name" />
-                            <ItemStyle CssClass="col-name" />
-                            <ItemTemplate>
-                                <asp:Label ID="lblDispatchedLocation" runat="server" Text='<%# Eval("DISPATCHED_LOCATION") %>'></asp:Label>
-                            </ItemTemplate>
-                        </asp:TemplateField>
 
                         <asp:TemplateField HeaderText="Payment Term">
                             <HeaderStyle CssClass="col-name" />
@@ -230,6 +193,37 @@
             </div>
         </div>
 
+    </div>
+
+
+
+
+    <div id="delivery" visible="false">
+        <asp:Label ID="lblLocation" runat="server" CssClass="form-control"></asp:Label>
+        <asp:DropDownList runat="server" ID="ddltransport">
+            <asp:ListItem>
+            </asp:ListItem>
+        </asp:DropDownList>
+        <asp:TextBox runat="server" ID="txtDate" CssClass="datepicker"></asp:TextBox>
+        <asp:TextBox runat="server" ID="txtRemarks" CssClass="form-control"></asp:TextBox>
+        <asp:DropDownList runat="server" ID="ddlDeliStatus">
+            <asp:ListItem>
+
+            </asp:ListItem>
+        </asp:DropDownList>
+
+        <asp:Button runat="server" ID="btnDeliNext" Text="Next" OnClick="btnDeliNext_Click" CssClass="btn-success"/>
+    </div>
+
+
+    <div id="orderDetail" visible="false">
+        <asp:DropDownList runat="server" ID="ddlProb" CssClass="form-control">
+            <asp:ListItem></asp:ListItem>
+        </asp:DropDownList>
+        <asp:TextBox runat="server" ID="txtQty"></asp:TextBox>
+
+
+        <asp:Button runat="server" ID="btnOrdDet" Text="Next" OnClick="btnOrdDet_Click" />
     </div>
 
 </asp:Content>

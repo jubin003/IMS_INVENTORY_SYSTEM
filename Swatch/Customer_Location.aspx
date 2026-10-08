@@ -63,6 +63,26 @@
                             </EditItemTemplate>
                         </asp:TemplateField>
 
+                        <asp:TemplateField HeaderText="Contact Person">
+                            <HeaderStyle CssClass="col-name" />
+                            <ItemStyle CssClass="col-name font-semibold" />
+                            <HeaderTemplate>
+                                <div class="header-field-group">
+                                    <span class="header-label">Contact Person</span>
+                                    <asp:TextBox ID="txtContactPerson" runat="server" CssClass="form-control inline-select"></asp:TextBox>
+                                </div>
+                            </HeaderTemplate>
+                            <ItemTemplate>
+                                <asp:Label ID="lblContactPerson" runat="server" Text='<%# Bind("CONTACT_PERSON") %>'></asp:Label>
+                            </ItemTemplate>
+                            <EditItemTemplate>
+                                <asp:TextBox ID="txtContactPersonE" runat="server" CssClass="form-control edit-select"></asp:TextBox>
+                            </EditItemTemplate>
+                        </asp:TemplateField>
+
+
+
+
                         <asp:TemplateField HeaderText="Address">
                             <HeaderStyle CssClass="col-name" />
                             <ItemStyle CssClass="col-name" />
