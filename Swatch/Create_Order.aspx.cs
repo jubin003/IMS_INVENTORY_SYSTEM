@@ -41,8 +41,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         }
     }
 
-<<<<<<< HEAD
-=======
     private string GetTodayNepali()
     {
         string engdate = PGD.GetTodayDate("dd/mm/yyyy");
@@ -61,7 +59,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         ddlPaymentTerm.Items.Insert(0, "Select"); 
     }
 
->>>>>>> origin/main
     private void LoadCustomer(DropDownList ddl)
     {
         CEnt = new CUSTOMER();
@@ -163,7 +160,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
         string customerId = ddlCustomer.SelectedValue;
 
-<<<<<<< HEAD
         /*
          * CREATE/UPDATE PR_PURCHASE_ORDER HERE.
          *
@@ -186,7 +182,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
          */
 
         LoadCustomerLocation(customerId);
-=======
 
           PoEnt = new PR_PURCHASE_ORDER();
         EntityList thlisst = new EntityList();
@@ -211,31 +206,23 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         PoEnt.PAYMENT_TERM = ddlPaymentTerm.SelectedValue;
         PoEnt.ORDER_NUMBER = id.ToString();
         PoSer.Insert(PoEnt);
-         
 
-
-
->>>>>>> origin/main
         LoadProductTable();
 
         pnlPurchaseOrder.Visible = false;
         pnlDelivery.Visible = true;
     }
 
-<<<<<<< HEAD
     private void LoadCustomerLocation(string customerId)
     {
         PR_CUSTOMER_LOCATION ent = new PR_CUSTOMER_LOCATION();
         ent.CUSTOMER_ID = customerId;
-=======
+
     // =====================================================
     // DELIVERY
     // =====================================================
 
->>>>>>> origin/main
 
-
-<<<<<<< HEAD
         ddlCustomerLocation.DataSource = ser.GetAll(ent);
         ddlCustomerLocation.DataTextField = "ADDRESS";
         ddlCustomerLocation.DataValueField = "PK_ID";
@@ -248,8 +235,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     protected void ddlCustomerLocation_SelectedIndexChanged(object sender, EventArgs e)
     {
         string locationId = ddlCustomerLocation.SelectedValue;
-=======
->>>>>>> origin/main
 
         if (string.IsNullOrEmpty(locationId))
         {
@@ -557,19 +542,15 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             OdEnt.QUANTITY = txtQuantity.Text;
             OdEnt.STATUS = "1";
 
-<<<<<<< HEAD
             if (txtQuantity == null || string.IsNullOrWhiteSpace(txtQuantity.Text))
             {
                 HelperFunction.MsgBox(this, this.GetType(), "Quantity is required in row " + (i + 1) + ".");
                 return;
             }
-=======
             OdSer.Insert(OdEnt);
->>>>>>> origin/main
 
         }
 
-<<<<<<< HEAD
         /*
          * FINAL SAVE:
          *
@@ -602,18 +583,11 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
          *      UNIT = ddlUnit.SelectedValue
          *      STATUS = your initial status
          */
-=======
-      
->>>>>>> origin/main
 
         HelperFunction.MsgBox(this, this.GetType(), "Purchase Order details saved.");
     }
 
-<<<<<<< HEAD
-=======
 
-
->>>>>>> origin/main
     private void LoadPurchaseOrder(string pkId)
     {
         PoEnt = new PR_PURCHASE_ORDER();
@@ -649,14 +623,11 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     private void ClearForm()
     {
         hfPK_ID.Value = "";
-<<<<<<< HEAD
         txtOrderDate.Text = PGD.GetTodayDate("dd/mm/yyyy");
         txtPaymentTerm.Text = "";
-=======
         txtOrderDate.Text = GetTodayNepali();
         ddlPaymentTerm.SelectedIndex = 0;
         txtRemarks.Text = "";
->>>>>>> origin/main
         ddlCustomer.SelectedIndex = 0;
 
         ClearCustomerDetails();
