@@ -427,6 +427,29 @@
                                         </div>
                                     </HeaderTemplate>
 
+<<<<<<< HEAD
+                                    <asp:TemplateField>
+                                        <HeaderStyle CssClass="col-actions text-center" />
+                                        <ItemStyle CssClass="col-actions text-center" />
+                                        <HeaderTemplate>
+                                            <div class="header-action-group">
+                                                <asp:Button ID="btnAddDivision" runat="server" OnClick="btnAddDivision_Click" Text="+ Add" CssClass="btn-add-primary" />
+                                            </div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <div class="action-btn-group">
+                                                <asp:ImageButton ID="btnEdit" runat="server" ImageUrl="~/images/icons/edit.png" CommandName="edit" ToolTip="Edit Division" CssClass="btn-action-icon edit-icon" />
+                                                <asp:ImageButton ID="btnDelete" runat="server" ImageUrl="~/images/icons/deletes.png" CommandName="delete" ToolTip="Delete Division" CssClass="btn-action-icon delete-icon" OnClientClick="return confirm('Are you sure you want to delete this division?');" />
+                                            </div>
+                                        </ItemTemplate>
+                                        <EditItemTemplate>
+                                            <div class="action-btn-group">
+                                                <asp:ImageButton ID="btnUpdate" runat="server" CommandName="update" ImageUrl="~/images/icons/upload.png" ToolTip="Save Changes" CssClass="btn-action-icon update-icon" />
+                                                <asp:ImageButton ID="btnCancel" runat="server" CommandName="cancel" ImageUrl="~/images/icons/cancel.png" ToolTip="Cancel" CssClass="btn-action-icon cancel-icon" />
+                                            </div>
+                                        </EditItemTemplate>
+                                    </asp:TemplateField>
+=======
                                     <ItemTemplate>
                                         <asp:Label ID="Label5" runat="server"
                                             Text='<%# Eval("STATUS") %>'
@@ -434,6 +457,7 @@
                                         </asp:Label>
                                         <asp:Label ID="Label6" runat="server"></asp:Label>
                                     </ItemTemplate>
+>>>>>>> origin/main
 
                                     <EditItemTemplate>
                                         <asp:Label ID="Label7" runat="server"
@@ -551,6 +575,22 @@
                                     <HeaderStyle CssClass="col-name" />
                                     <ItemStyle CssClass="col-name font-semibold" />
 
+<<<<<<< HEAD
+                                    <asp:TemplateField>
+                                        <HeaderStyle CssClass="col-actions text-center" />
+                                        <ItemStyle CssClass="col-actions text-center" />
+                                        <HeaderTemplate>
+                                            <div class="header-action-group">
+                                                <asp:Button ID="btnMap" runat="server" OnClick="btnMap_Click" Text="Map" CssClass="btn-add-primary" />
+                                            </div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <div class="action-btn-group">
+                                                <asp:ImageButton ID="btnDelete" runat="server" ImageUrl="~/images/icons/deletes.png" CommandName="delete" ToolTip="Remove Mapping" CssClass="btn-action-icon delete-icon" OnClientClick="return confirm('Are you sure you want to remove this mapping?');" />
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+=======
                                     <HeaderTemplate>
                                         <div class="header-field-group">
                                             <span class="header-label">Division</span>
@@ -559,6 +599,7 @@
                                             </asp:DropDownList>
                                         </div>
                                     </HeaderTemplate>
+>>>>>>> origin/main
 
                                     <ItemTemplate>
                                         <asp:Label ID="lblDivisionID" runat="server"

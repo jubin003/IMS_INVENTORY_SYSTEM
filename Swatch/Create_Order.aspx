@@ -38,8 +38,8 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="<%= txtPaymentTerm.ClientID %>">Payment Term</label>
-                        <asp:TextBox ID="txtPaymentTerm" runat="server" CssClass="form-control" placeholder="Enter payment term..."></asp:TextBox>
+                        <label for="<%= ddlPaymentTerm.ClientID %>">Payment Term</label>
+                        <asp:DropDownList ID="ddlPaymentTerm" runat="server" CssClass="form-control" placeholder="Select payment term..."></asp:DropDownList>
                     </div>
                 </div>
 
@@ -91,10 +91,6 @@
                 </div>
 
                 <div class="form-grid form-grid-4">
-                    <div class="form-group">
-                        <label for="<%= ddlCustomerLocation.ClientID %>">Delivery Location *</label>
-                        <asp:DropDownList ID="ddlCustomerLocation" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomerLocation_SelectedIndexChanged"></asp:DropDownList>
-                    </div>
 
                     <div class="form-group">
                         <label for="<%= ddlTransportation.ClientID %>">Mode of Transportation *</label>
