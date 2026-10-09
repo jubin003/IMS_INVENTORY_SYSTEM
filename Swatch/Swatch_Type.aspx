@@ -19,18 +19,12 @@
 
         <div class="bs-card">
             <div class="card-toolbar">
-<%--                <div class="search-box-wrapper">
-                    <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
-                    </svg>
-                    <input type="text" id="clientSearchInput" class="form-control table-search-input" placeholder="Search swatch type..." onkeyup="filterSwatchTable()" />
-                </div>--%>
                 <div class="toolbar-stats">
                     <span class="badge-stat">Manage Swatch Types</span>
                 </div>
             </div>
 
-            <div class="table-responsive">
+            <div class="    ">
                 <asp:GridView ID="gridDisplay" runat="server" Width="100%" AutoGenerateColumns="False" CssClass="enterprise-grid" OnRowEditing="gridDisplay_RowEditing" OnRowUpdating="gridDisplay_RowUpdating" OnRowCancelingEdit="gridDisplay_RowCancelingEdit" AllowPaging="True" PageSize="20" EnableModelValidation="True" OnRowDataBound="gridDisplay_RowDataBound" GridLines="None">
                     <Columns>
 
