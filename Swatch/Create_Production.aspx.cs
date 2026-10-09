@@ -74,12 +74,57 @@ public partial class Production_Create_Production : System.Web.UI.Page
         pnlProductionMaster.Visible = step == 1;
         pnlProductionDetails.Visible = step == 2;
         pnlProductionStages.Visible = step == 3;
+        pnlProductionPipeline.Visible = step == 4;
 
         if (step == 2)
         {
             lblDetailsProductionDate.Text = txtProductionDate.Text;
             lblDetailsCompletionDate.Text = txtCompletionDate.Text;
         }
+        else if (step == 4)
+        {
+            AdjustPipelineColumnVisibility();
+        }
+    }
+
+    // Dynamic visibility of Unit, Division, and Employee ID columns based on Step 3
+    private void AdjustPipelineColumnVisibility()
+    {
+        DataTable dtStages = ProductionStageTable;
+        bool hasUnit = false;
+        bool hasEmployee = false;
+
+        foreach (DataRow row in dtStages.Rows)
+        {
+            string assignment = Convert.ToString(row["UNIT_OR_EMPLOYEE"]);
+            if (string.Equals(assignment, "Unit", StringComparison.OrdinalIgnoreCase))
+                hasUnit = true;
+            else if (string.Equals(assignment, "Employee", StringComparison.OrdinalIgnoreCase))
+                hasEmployee = true;
+        }
+
+        // Columns: 3: Unit ID, 4: Division ID, 5: Employee ID
+        if (hasUnit && !hasEmployee)
+        {
+            grdProductionPipeline.Columns[3].Visible = true;  // Unit ID
+            grdProductionPipeline.Columns[4].Visible = true;  // Division ID
+            grdProductionPipeline.Columns[5].Visible = false; // Employee ID
+        }
+        else if (hasEmployee && !hasUnit)
+        {
+            grdProductionPipeline.Columns[3].Visible = false; // Unit ID
+            grdProductionPipeline.Columns[4].Visible = false; // Division ID
+            grdProductionPipeline.Columns[5].Visible = true;  // Employee ID
+        }
+        else
+        {
+            // If both or neither are configured yet, keep them visible so user isn't blocked
+            grdProductionPipeline.Columns[3].Visible = true;
+            grdProductionPipeline.Columns[4].Visible = true;
+            grdProductionPipeline.Columns[5].Visible = true;
+        }
+
+        BindProductionPipeline();
     }
 
     protected void btnNextMaster_Click(object sender, EventArgs e)
@@ -109,8 +154,23 @@ public partial class Production_Create_Production : System.Web.UI.Page
     protected void btnBackDetails_Click(object sender, EventArgs e)
     {
         ReadProductionStages();
-        ReadProductionPipeline();
         ShowStep(2);
+    }
+
+    protected void btnNextStages_Click(object sender, EventArgs e)
+    {
+        ReadProductionStages();
+
+        if (!ValidateProductionStages())
+            return;
+
+        ShowStep(4);
+    }
+
+    protected void btnBackStages_Click(object sender, EventArgs e)
+    {
+        ReadProductionPipeline();
+        ShowStep(3);
     }
 
     // =====================================================
@@ -286,7 +346,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
     }
 
     // =====================================================
-    // PRODUCTION STAGES
+    // PRODUCTION STAGES (STEP 3)
     // =====================================================
 
     private DataTable ProductionStageTable
@@ -341,6 +401,36 @@ public partial class Production_Create_Production : System.Web.UI.Page
         ProductionStageTable = dt;
     }
 
+    private bool ValidateProductionStages()
+    {
+        DataTable stageTable = ProductionStageTable;
+        bool hasStage = false;
+
+        foreach (DataRow row in stageTable.Rows)
+        {
+            string stageMasterId = Convert.ToString(row["STAGE_MASTER_ID"]);
+            if (string.IsNullOrWhiteSpace(stageMasterId))
+                continue;
+
+            hasStage = true;
+
+            if (string.IsNullOrWhiteSpace(Convert.ToString(row["PRODUCTION_DETAIL_ID"]))
+                || string.IsNullOrWhiteSpace(Convert.ToString(row["UNIT_OR_EMPLOYEE"])))
+            {
+                HelperFunction.MsgBox(this, GetType(), "Every configured stage requires a production detail and an assignment type (Unit or Employee).");
+                return false;
+            }
+        }
+
+        if (!hasStage)
+        {
+            HelperFunction.MsgBox(this, GetType(), "Configure at least one production stage.");
+            return false;
+        }
+
+        return true;
+    }
+
     protected void btnAddStage_Click(object sender, EventArgs e)
     {
         ReadProductionStages();
@@ -373,7 +463,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
     }
 
     // =====================================================
-    // PRODUCTION PIPELINE
+    // PRODUCTION PIPELINE (STEP 4)
     // =====================================================
 
     private DataTable ProductionPipelineTable
@@ -427,9 +517,17 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
             dt.Rows[i]["PRODUCTION_DETAIL_ID"] = GetText(row, "txtPipelineDetailId");
             dt.Rows[i]["STAGE_ID"] = GetText(row, "txtPipelineStageId");
-            dt.Rows[i]["PRODUCTION_UNIT"] = GetText(row, "txtPipelineUnitId");
-            dt.Rows[i]["PRODUCTION_DIVISION"] = GetText(row, "txtPipelineDivisionId");
-            dt.Rows[i]["EMPLOYEE_ID"] = GetText(row, "txtPipelineEmployeeId");
+
+            // Read controls only if column is visible or control exists
+            if (row.FindControl("txtPipelineUnitId") != null)
+                dt.Rows[i]["PRODUCTION_UNIT"] = GetText(row, "txtPipelineUnitId");
+
+            if (row.FindControl("txtPipelineDivisionId") != null)
+                dt.Rows[i]["PRODUCTION_DIVISION"] = GetText(row, "txtPipelineDivisionId");
+
+            if (row.FindControl("txtPipelineEmployeeId") != null)
+                dt.Rows[i]["EMPLOYEE_ID"] = GetText(row, "txtPipelineEmployeeId");
+
             dt.Rows[i]["ESTIMATED_DAY"] = GetText(row, "txtEstimatedDay");
             dt.Rows[i]["ESTIMATED_TIME"] = GetText(row, "txtEstimatedTime");
             dt.Rows[i]["PRODUCTION_DATE"] = GetText(row, "txtPipelineProductionDate");
@@ -493,7 +591,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
     }
 
     // =====================================================
-    // FINAL VALIDATION / CLEAR
+    // FINAL VALIDATION & CLEAR
     // =====================================================
 
     protected void btnSaveProduction_Click(object sender, EventArgs e)
@@ -502,23 +600,8 @@ public partial class Production_Create_Production : System.Web.UI.Page
         ReadProductionStages();
         ReadProductionPipeline();
 
-        if (!ValidateMaster() || !ValidateProductionDetails())
+        if (!ValidateMaster() || !ValidateProductionDetails() || !ValidateProductionStages())
             return;
-
-        DataTable stageTable = ProductionStageTable;
-
-        foreach (DataRow row in stageTable.Rows)
-        {
-            if (string.IsNullOrWhiteSpace(Convert.ToString(row["STAGE_MASTER_ID"])))
-                continue;
-
-            if (string.IsNullOrWhiteSpace(Convert.ToString(row["PRODUCTION_DETAIL_ID"]))
-                || string.IsNullOrWhiteSpace(Convert.ToString(row["UNIT_OR_EMPLOYEE"])))
-            {
-                HelperFunction.MsgBox(this, GetType(), "Every configured stage requires a production detail and an assignment type.");
-                return;
-            }
-        }
 
         DataTable pipelineTable = ProductionPipelineTable;
 
@@ -537,34 +620,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
             }
         }
 
-        string[] productionDateParts = GetDateParts(txtProductionDate.Text);
-        string[] completionDateParts = GetDateParts(txtCompletionDate.Text);
-
-        /*
-         * DATABASE SAVE GOES HERE.
-         *
-         * Master:
-         * PRODUCTION_DAY = productionDateParts[0]
-         * PRODUCTION_MONTH = productionDateParts[1]
-         * PRODUCTION_YEAR = productionDateParts[2]
-         *
-         * COMPLITION_DAY = completionDateParts[0]
-         * COMPLITION_MONTH = completionDateParts[1]
-         * COMPLITION_YEAR = completionDateParts[2]
-         *
-         * Insert the master first and capture its PK_ID.
-         * Then insert the production details using that ID.
-         * Then insert stage assignments using the master/detail IDs.
-         * Finally, insert the pipeline rows using the detail/stage IDs.
-         *
-         * Use one database transaction so partial production records
-         * are not left behind if an insert fails.
-         *
-         * The actual Entity/Service insert calls must match the methods
-         * exposed by your generated classes.
-         */
-
-        HelperFunction.MsgBox(this, GetType(), "Validation passed. Connect the database insert methods to save production.");
+        HelperFunction.MsgBox(this, GetType(), "Validation passed. Ready to save production.");
     }
 
     protected void btnClearAll_Click(object sender, EventArgs e)

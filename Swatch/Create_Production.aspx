@@ -18,6 +18,7 @@
 
         <asp:HiddenField ID="hfProductionId" runat="server" />
 
+        <%-- ==================== STEP 1: PRODUCTION MASTER ==================== --%>
         <asp:Panel ID="pnlProductionMaster" runat="server">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -52,6 +53,7 @@
             </div>
         </asp:Panel>
 
+        <%-- ==================== STEP 2: PRODUCTION DETAILS ==================== --%>
         <asp:Panel ID="pnlProductionDetails" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -125,11 +127,12 @@
 
                 <div class="form-actions">
                     <asp:Button ID="btnBackMaster" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackMaster_Click" CausesValidation="false" />
-                    <asp:Button ID="btnNextDetails" runat="server" Text="Next: Stages & Pipeline" CssClass="btn-add-primary" OnClick="btnNextDetails_Click" />
+                    <asp:Button ID="btnNextDetails" runat="server" Text="Next: Production Stage" CssClass="btn-add-primary" OnClick="btnNextDetails_Click" />
                 </div>
             </div>
         </asp:Panel>
 
+        <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
         <asp:Panel ID="pnlProductionStages" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -181,12 +184,20 @@
                         </Columns>
                     </asp:GridView>
                 </div>
-            </div>
 
+                <div class="form-actions">
+                    <asp:Button ID="btnBackDetails" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackDetails_Click" CausesValidation="false" />
+                    <asp:Button ID="btnNextStages" runat="server" Text="Next: Pipeline Scheduling" CssClass="btn-add-primary" OnClick="btnNextStages_Click" />
+                </div>
+            </div>
+        </asp:Panel>
+
+        <%-- ==================== STEP 4: PRODUCTION PIPELINE ==================== --%>
+        <asp:Panel ID="pnlProductionPipeline" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
                     <div class="toolbar-stats">
-                        <asp:Label ID="lblPipelineTitle" runat="server" CssClass="badge-stat" Text="Production Pipeline"></asp:Label>
+                        <asp:Label ID="lblPipelineTitle" runat="server" CssClass="badge-stat" Text="Step 4: Production Pipeline"></asp:Label>
                     </div>
                     <asp:Button ID="btnAddPipeline" runat="server" Text="+ Add Pipeline Row" CssClass="btn-add-primary" OnClick="btnAddPipeline_Click" CausesValidation="false" />
                 </div>
@@ -207,21 +218,28 @@
                                     <asp:TextBox ID="txtPipelineStageId" runat="server" CssClass="form-control" Text='<%# Eval("STAGE_ID") %>' placeholder="Stage ID"></asp:TextBox>
                                 </ItemTemplate>
                             </asp:TemplateField>
+
+                            <%-- Index 3: Unit ID --%>
                             <asp:TemplateField HeaderText="Unit ID">
                                 <ItemTemplate>
                                     <asp:TextBox ID="txtPipelineUnitId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_UNIT") %>' placeholder="Unit ID"></asp:TextBox>
                                 </ItemTemplate>
                             </asp:TemplateField>
+
+                            <%-- Index 4: Division ID --%>
                             <asp:TemplateField HeaderText="Division ID">
                                 <ItemTemplate>
                                     <asp:TextBox ID="txtPipelineDivisionId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_DIVISION") %>' placeholder="Division ID"></asp:TextBox>
                                 </ItemTemplate>
                             </asp:TemplateField>
+
+                            <%-- Index 5: Employee ID --%>
                             <asp:TemplateField HeaderText="Employee ID">
                                 <ItemTemplate>
                                     <asp:TextBox ID="txtPipelineEmployeeId" runat="server" CssClass="form-control" Text='<%# Eval("EMPLOYEE_ID") %>' placeholder="Employee ID"></asp:TextBox>
                                 </ItemTemplate>
                             </asp:TemplateField>
+
                             <asp:TemplateField HeaderText="Estimated Days *">
                                 <ItemTemplate>
                                     <asp:TextBox ID="txtEstimatedDay" runat="server" CssClass="form-control" Text='<%# Eval("ESTIMATED_DAY") %>' placeholder="Days"></asp:TextBox>
@@ -271,7 +289,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <asp:Button ID="btnBackDetails" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackDetails_Click" CausesValidation="false" />
+                    <asp:Button ID="btnBackStages" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackStages_Click" CausesValidation="false" />
                     <asp:Button ID="btnSaveProduction" runat="server" Text="Save Production" CssClass="btn-add-primary" OnClick="btnSaveProduction_Click" />
                     <asp:Button ID="btnClearAll" runat="server" Text="Clear Form" CssClass="btn-clear" OnClick="btnClearAll_Click" CausesValidation="false" />
                 </div>
