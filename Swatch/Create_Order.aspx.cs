@@ -11,9 +11,17 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 {
     PR_PURCHASE_ORDER PoEnt = new PR_PURCHASE_ORDER();
     PR_PURCHASE_ORDERService PoSer = new PR_PURCHASE_ORDERService();
+    PR_ORDER_DETAIL OdEnt = new PR_ORDER_DETAIL();
+    PR_ORDER_DETAILService OdSer = new PR_ORDER_DETAILService();
     CUSTOMER CEnt = new CUSTOMER();
     CUSTOMERService CSer = new CUSTOMERService();
+
+    PR_MULTIPLE_DELIVERY MdEnt = new PR_MULTIPLE_DELIVERY();
+    PR_MULTIPLE_DELIVERYService MdSer = new PR_MULTIPLE_DELIVERYService();
+
     PhyeGanDate PGD = new PhyeGanDate();
+    PAYMENT_TYPE PtEnt = new PAYMENT_TYPE();
+    PAYMENT_TYPEService PtSer = new PAYMENT_TYPEService();
 
     protected void Page_Load(object sender, EventArgs e)
     {
@@ -21,6 +29,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         {
             LoadCustomer(ddlCustomer);
             LoadTransportation();
+            LoadPaymentTerm();
             pnlCustomerDetails.Visible = false;
             pnlDelivery.Visible = false;
 
@@ -39,9 +48,17 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         return PGD.GetNepaliDateFromEnglish(engdate, "dd/mm/yyyy");
     }
 
-    // =====================================================
-    // CUSTOMER / ORDER INFO
-    // =====================================================
+    private void LoadPaymentTerm()
+    {
+        PtEnt = new PAYMENT_TYPE();
+        PtEnt.SALES_PURCHASE = "P";
+        ddlPaymentTerm.DataSource = PtSer.GetAll(PtEnt);
+        ddlPaymentTerm.DataTextField = "PAYMENT_NAME";
+        ddlPaymentTerm.DataValueField = "PK_ID";
+        ddlPaymentTerm.DataBind();
+
+        ddlPaymentTerm.Items.Insert(0, "Select"); 
+    }
 
     private void LoadCustomer(DropDownList ddl)
     {
@@ -144,35 +161,33 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
         string customerId = ddlCustomer.SelectedValue;
 
-        /*
-         * CREATE/UPDATE PR_PURCHASE_ORDER HERE.
-         *
-         * After saving, hfPK_ID must contain the PR_PURCHASE_ORDER.PK_ID.
-         *
-         * Example:
-         *
-         * PoEnt = new PR_PURCHASE_ORDER();
-         * PoEnt.PK_ID = hfPK_ID.Value;
-         * PoEnt.CUSTOMER_ID = customerId;
-         * PoEnt.ORDER_DATE = txtOrderDate.Text.Trim();
-         * PoEnt.ORDER_DAY = nepDate[0];
-         * PoEnt.ORDER_MONTH = nepDate[1];
-         * PoEnt.ORDER_YEAR = nepDate[2];
-         * PoEnt.PAYMENT_TERM = txtPaymentTerm.Text.Trim();
-         *
-         * PoSer.Save/Insert/Update(...)
-         */
 
-        // Keep the delivery location if the user comes back from the Back button
-        string previousLocation = ddlCustomerLocation.SelectedValue;
-
-        LoadCustomerLocation(customerId);
-
-        if (!string.IsNullOrEmpty(previousLocation) && ddlCustomerLocation.Items.FindByValue(previousLocation) != null)
+          PoEnt = new PR_PURCHASE_ORDER();
+        EntityList thlisst = new EntityList();
+        thlisst = PoSer.GetAll(PoEnt);
+        string pid = "";
+        int id = 0;
+        foreach(PR_PURCHASE_ORDER row in thlisst)
         {
-            ddlCustomerLocation.SelectedValue = previousLocation;
-            LoadLocationDetails(previousLocation);
+            pid = row.PK_ID;
         }
+
+        int.TryParse(pid, out id);
+        id = id + 1;
+
+        PoEnt.CUSTOMER_ORDER_NUMBER = id.ToString();
+        PoEnt.CUSTOMER_ID = customerId;
+        PoEnt.ORDER_DATE = PGD.GetEnglishDateFromNepali(txtOrderDate.Text, "dd/mm/yyyy");
+        PoEnt.ORDER_DAY = nepDate[0];
+        PoEnt.ORDER_MONTH = nepDate[1];
+        PoEnt.ORDER_YEAR = nepDate[2];
+        PoEnt.ORDER_FISCAL_YEAR = PGD.checkFiscalYear(nepDate[1], nepDate[2]);
+        PoEnt.PAYMENT_TERM = ddlPaymentTerm.SelectedValue;
+        PoEnt.ORDER_NUMBER = id.ToString();
+        PoSer.Insert(PoEnt);
+         
+
+
 
         LoadProductTable();
 
@@ -184,26 +199,8 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     // DELIVERY
     // =====================================================
 
-    private void LoadCustomerLocation(string customerId)
-    {
-        PR_CUSTOMER_LOCATION ent = new PR_CUSTOMER_LOCATION();
-        ent.CUSTOMER_ID = customerId;
 
-        PR_CUSTOMER_LOCATIONService ser = new PR_CUSTOMER_LOCATIONService();
 
-        ddlCustomerLocation.DataSource = ser.GetAll(ent);
-        ddlCustomerLocation.DataTextField = "ADDRESS";
-        ddlCustomerLocation.DataValueField = "PK_ID";
-        ddlCustomerLocation.DataBind();
-        ddlCustomerLocation.Items.Insert(0, new ListItem("-- Select Delivery Location --", ""));
-
-        ClearDeliveryDetails();
-    }
-
-    protected void ddlCustomerLocation_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        LoadLocationDetails(ddlCustomerLocation.SelectedValue);
-    }
 
     private void LoadLocationDetails(string locationId)
     {
@@ -523,23 +520,8 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
     protected void btnFinalSave_Click(object sender, EventArgs e)
     {
-        if (string.IsNullOrEmpty(hfPK_ID.Value))
-        {
-            HelperFunction.MsgBox(this, this.GetType(), "Purchase Order ID is missing.");
-            return;
-        }
 
-        if (string.IsNullOrEmpty(ddlCustomerLocation.SelectedValue))
-        {
-            HelperFunction.MsgBox(this, this.GetType(), "Delivery Location can not be empty.");
-            return;
-        }
-
-        if (string.IsNullOrEmpty(ddlTransportation.SelectedValue))
-        {
-            HelperFunction.MsgBox(this, this.GetType(), "Mode of Transportation can not be empty.");
-            return;
-        }
+        MdEnt = new PR_MULTIPLE_DELIVERY();
 
         SaveProductRows();
 
@@ -548,76 +530,30 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             GridViewRow row = grdProducts.Rows[i];
 
             DropDownList ddlProduct = row.FindControl("ddlProduct") as DropDownList;
+            DropDownList ddlSize = row.FindControl("ddlSize") as DropDownList;
+            DropDownList ddlSwatchType = row.FindControl("ddlSwatchType") as DropDownList;
+            DropDownList ddlSwatch = row.FindControl("ddlSwatch") as DropDownList;
+            TextBox txtUnit = row.FindControl("txtUnit") as TextBox;
             TextBox txtQuantity = row.FindControl("txtQuantity") as TextBox;
             TextBox txtDeliveryDate = row.FindControl("txtDeliveryDate") as TextBox;
 
-            if (ddlProduct == null || string.IsNullOrEmpty(ddlProduct.SelectedValue))
-            {
-                HelperFunction.MsgBox(this, this.GetType(), "Product is required in row " + (i + 1) + ".");
-                return;
-            }
+            OdEnt.PRODUCT_ID = ddlProduct.SelectedValue;
+            OdEnt.SIZE_ID = ddlSize.SelectedValue;
+            OdEnt.SWATCH_ID = ddlSwatch.SelectedValue;
+            OdEnt.UNIT = txtUnit.Text;
+            OdEnt.QUANTITY = txtQuantity.Text;
+            OdEnt.STATUS = "1";
 
-            decimal qty;
-            if (txtQuantity == null || !decimal.TryParse(txtQuantity.Text.Trim(), out qty) || qty <= 0)
-            {
-                HelperFunction.MsgBox(this, this.GetType(), "Enter a valid quantity in row " + (i + 1) + ".");
-                return;
-            }
+            OdSer.Insert(OdEnt);
 
-            if (txtDeliveryDate == null || string.IsNullOrWhiteSpace(txtDeliveryDate.Text))
-            {
-                HelperFunction.MsgBox(this, this.GetType(), "Delivery Date is required in row " + (i + 1) + ".");
-                return;
-            }
-
-            string[] date = txtDeliveryDate.Text.Trim().Split('/');
-
-            if (date.Length != 3)
-            {
-                HelperFunction.MsgBox(this, this.GetType(), "Delivery Date must be in dd/mm/yyyy format in row " + (i + 1) + ".");
-                return;
-            }
         }
 
-        /*
-         * FINAL SAVE:
-         *
-         * 1. Read all product rows.
-         * 2. Group rows by Delivery Date.
-         * 3. For each unique Delivery Date:
-         *
-         *    Create PR_MULTIPLE_DELIVERY:
-         *      PURCHASE_ORDER_ID = hfPK_ID.Value
-         *      CUSOMTER_LOCATION_ID = ddlCustomerLocation.SelectedValue
-         *      MODE_OF_TRANSPORTATION_ID = ddlTransportation.SelectedValue
-         *      DELIVERY_DATE = row delivery date
-         *      DELIVERY_DAY = date[0]
-         *      DELIVERY_MONTH = date[1]
-         *      DELIVERY_YEAR = date[2]
-         *      STATUS = your initial status
-         *      REMARKS = txtRemarks.Text
-         *
-         *    Get the new delivery PK_ID.
-         *
-         * 4. For every product belonging to that delivery date:
-         *
-         *    Create PR_PURCHASE_ORDER_DETAIL:
-         *      MULTIPLE_DELIVERY_ID = delivery.PK_ID
-         *      SNO = row number
-         *      PRODUCT_ID = ddlProduct.SelectedValue
-         *      SIZE_ID = ddlSize.SelectedValue
-         *      SWATCH_ID = ddlSwatch.SelectedValue
-         *      QUANTITY = txtQuantity.Text
-         *      UNIT = unit id of the product (PRODUCT.UNIT_ID), not txtUnit.Text
-         *      STATUS = your initial status
-         */
+      
 
-        HelperFunction.MsgBox(this, this.GetType(), "Purchase Order details are ready to be saved.");
+        HelperFunction.MsgBox(this, this.GetType(), "Purchase Order details saved.");
     }
 
-    // =====================================================
-    // EDIT / CLEAR
-    // =====================================================
+
 
     private void LoadPurchaseOrder(string pkId)
     {
@@ -640,7 +576,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         }
 
         txtOrderDate.Text = NepDate(PoEnt.ORDER_DAY, PoEnt.ORDER_MONTH, PoEnt.ORDER_YEAR);
-        txtPaymentTerm.Text = PoEnt.PAYMENT_TERM;
+         ddlPaymentTerm.DataValueField = PoEnt.PAYMENT_TERM;
 
         lblFormTitle.Text = "Edit Purchase Order";
         btnNext.Text = "Next";
@@ -655,13 +591,11 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     {
         hfPK_ID.Value = "";
         txtOrderDate.Text = GetTodayNepali();
-        txtPaymentTerm.Text = "";
+        ddlPaymentTerm.SelectedIndex = 0;
         txtRemarks.Text = "";
         ddlCustomer.SelectedIndex = 0;
 
         ClearCustomerDetails();
-
-        ddlCustomerLocation.Items.Clear();
         ddlTransportation.SelectedIndex = 0;
 
         ClearDeliveryDetails();

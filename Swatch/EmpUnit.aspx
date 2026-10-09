@@ -318,7 +318,7 @@
                                         <ItemTemplate>
                                             <div class="action-btn-group">
                                                 <asp:ImageButton ID="btnEdit" runat="server" ImageUrl="~/images/icons/edit.png" CommandName="edit" ToolTip="Edit Division" CssClass="btn-action-icon edit-icon" />
-                                                <asp:ImageButton ID="btnDelete" runat="server" ImageUrl="~/images/icons/delete.png" CommandName="delete" ToolTip="Delete Division" CssClass="btn-action-icon delete-icon" OnClientClick="return confirm('Are you sure you want to delete this division?');" />
+                                                <asp:ImageButton ID="btnDelete" runat="server" ImageUrl="~/images/icons/deletes.png" CommandName="delete" ToolTip="Delete Division" CssClass="btn-action-icon delete-icon" OnClientClick="return confirm('Are you sure you want to delete this division?');" />
                                             </div>
                                         </ItemTemplate>
                                         <EditItemTemplate>
@@ -399,7 +399,7 @@
                                         </HeaderTemplate>
                                         <ItemTemplate>
                                             <div class="action-btn-group">
-                                                <asp:ImageButton ID="btnDelete" runat="server" ImageUrl="~/images/icons/delete.png" CommandName="delete" ToolTip="Remove Mapping" CssClass="btn-action-icon delete-icon" OnClientClick="return confirm('Are you sure you want to remove this mapping?');" />
+                                                <asp:ImageButton ID="btnDelete" runat="server" ImageUrl="~/images/icons/deletes.png" CommandName="delete" ToolTip="Remove Mapping" CssClass="btn-action-icon delete-icon" OnClientClick="return confirm('Are you sure you want to remove this mapping?');" />
                                             </div>
                                         </ItemTemplate>
                                     </asp:TemplateField>
