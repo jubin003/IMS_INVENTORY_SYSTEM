@@ -191,7 +191,7 @@
 
                             <asp:TemplateField HeaderText="Unit">
                                 <ItemTemplate>
-                                    <asp:DropDownList ID="ddlUnit" runat="server" CssClass="form-control"></asp:DropDownList>
+                                    <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" ReadOnly="true"></asp:TextBox>
                                 </ItemTemplate>
                             </asp:TemplateField>
 
