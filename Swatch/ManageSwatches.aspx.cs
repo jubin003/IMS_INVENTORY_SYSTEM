@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Web.UI;
@@ -10,41 +9,30 @@ using Entity.Framework;
 
 public partial class ManageSwatches : System.Web.UI.Page
 {
-    private Dictionary<string, PR_SWATCH_TYPE> _categoryCache = null;
-
     protected void Page_Load(object sender, EventArgs e)
     {
         if (!IsPostBack)
         {
             LoadFilterCategoryDropdown();
-            BindGrid(); // Grid will be hidden initially because filter is empty
-        }
-    }
 
-    private Dictionary<string, PR_SWATCH_TYPE> GetCategoryCache()
-    {
-        if (_categoryCache == null)
-        {
-            _categoryCache = new Dictionary<string, PR_SWATCH_TYPE>();
-            try
+            if (Request.QueryString["cat"] != null)
             {
-                PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
-                EntityList typeList = (EntityList)typeService.GetAll(new PR_SWATCH_TYPE());
-
-                if (typeList != null)
+                string catId = Request.QueryString["cat"].ToString();
+                if (ddlFilterCategory.Items.FindByValue(catId) != null)
                 {
-                    foreach (PR_SWATCH_TYPE type in typeList)
-                    {
-                        if (!_categoryCache.ContainsKey(type.PK_ID))
-                        {
-                            _categoryCache.Add(type.PK_ID, type);
-                        }
-                    }
+                    ddlFilterCategory.SelectedValue = catId;
+                }
+
+                if (Request.QueryString["success"] == "1")
+                {
+                    lblMessage.Text = "Swatch added successfully!";
+                    lblMessage.CssClass = "text-success";
                 }
             }
-            catch { /* Fail silently, fallback handles it */ }
+
+            BindGrid();
+            PopulateHeaderDropdowns();
         }
-        return _categoryCache;
     }
 
     protected string GetCategoryName(object categoryId)
@@ -52,9 +40,26 @@ public partial class ManageSwatches : System.Web.UI.Page
         if (categoryId == null || string.IsNullOrEmpty(categoryId.ToString())) return "-";
 
         string id = categoryId.ToString();
-        Dictionary<string, PR_SWATCH_TYPE> cache = GetCategoryCache();
 
-        if (cache.ContainsKey(id)) return cache[id].SWATCH_NAME;
+        try
+        {
+            PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
+            EntityList typeList = (EntityList)typeService.GetAll(new PR_SWATCH_TYPE());
+
+            if (typeList != null)
+            {
+                foreach (PR_SWATCH_TYPE type in typeList)
+                {
+                    if (type.PK_ID == id)
+                    {
+                        return type.SWATCH_NAME;
+                    }
+                }
+            }
+        }
+        catch
+        {
+        }
 
         return id;
     }
@@ -89,7 +94,6 @@ public partial class ManageSwatches : System.Web.UI.Page
         BindGrid();
         PopulateHeaderDropdowns();
 
-        // Auto-select the chosen category in the "Add New" header row for convenience
         if (gvSwatches.HeaderRow != null && !string.IsNullOrEmpty(ddlFilterCategory.SelectedValue))
         {
             DropDownList ddlHeaderSwatchType = gvSwatches.HeaderRow.FindControl("ddlHeaderSwatchType") as DropDownList;
@@ -106,7 +110,6 @@ public partial class ManageSwatches : System.Web.UI.Page
         {
             if (string.IsNullOrEmpty(ddlFilterCategory.SelectedValue))
             {
-                // No category selected: clear and hide the grid
                 gvSwatches.DataSource = null;
                 gvSwatches.DataBind();
                 gvSwatches.Visible = false;
@@ -139,6 +142,11 @@ public partial class ManageSwatches : System.Web.UI.Page
             if (ddlHeaderSwatchType != null)
             {
                 LoadCategoryDropdown(ddlHeaderSwatchType);
+
+                if (!string.IsNullOrEmpty(ddlFilterCategory.SelectedValue) && ddlHeaderSwatchType.Items.FindByValue(ddlFilterCategory.SelectedValue) != null)
+                {
+                    ddlHeaderSwatchType.SelectedValue = ddlFilterCategory.SelectedValue;
+                }
             }
         }
     }
@@ -173,7 +181,7 @@ public partial class ManageSwatches : System.Web.UI.Page
         if (pkId == null || string.IsNullOrEmpty(pkId.ToString()))
             return ResolveUrl("~/images/profile.png");
 
-        string virtualPath = string.Format("~/images/swatch/{0}.jpg", pkId.ToString());
+        string virtualPath = string.Format("~/images/swatches/{0}.jpg", pkId.ToString());
         string physicalPath = Server.MapPath(virtualPath);
 
         if (File.Exists(physicalPath))
@@ -209,39 +217,39 @@ public partial class ManageSwatches : System.Web.UI.Page
             PR_SWATCHService swatchService = new PR_SWATCHService();
             swatchService.Insert(newSwatch);
 
-            // SAVE IMAGE AFTER INSERT (Relies on newSwatch.PK_ID being populated by the ORM/Service)
+            string generatedId = "";
+            EntityList allSwatches = (EntityList)swatchService.GetAll(new PR_SWATCH());
+            if (allSwatches != null)
+            {
+                foreach (PR_SWATCH row in allSwatches)
+                {
+                    generatedId = row.PK_ID;
+                }
+            }
+
             FileUpload fuAddImage = headerRow.FindControl("fuAddImage") as FileUpload;
-            if (fuAddImage != null && fuAddImage.HasFile)
+            if (fuAddImage != null && fuAddImage.HasFile && !string.IsNullOrEmpty(generatedId))
             {
                 try
                 {
-                    string savePath = Server.MapPath("~/images/swatch/" + newSwatch.PK_ID + ".jpg");
+                    string folderPath = Server.MapPath("~/images/swatches/");
+                    if (!Directory.Exists(folderPath))
+                    {
+                        Directory.CreateDirectory(folderPath);
+                    }
+
+                    string savePath = Path.Combine(folderPath, generatedId + ".jpg");
                     fuAddImage.SaveAs(savePath);
                 }
                 catch (Exception imgEx)
                 {
-                    lblMessage.Text = "Swatch added, but image failed to save: " + imgEx.Message;
-                    lblMessage.CssClass = "text-warning";
+                    Session["ImgError"] = "Swatch added, but image failed to save: " + imgEx.Message;
                 }
             }
-            else
-            {
-                lblMessage.Text = "Swatch added successfully!";
-                lblMessage.CssClass = "text-success";
-            }
 
-            BindGrid();
-            PopulateHeaderDropdowns();
-
-            // Re-select the filter category in the header row after rebinding
-            if (gvSwatches.HeaderRow != null && !string.IsNullOrEmpty(ddlFilterCategory.SelectedValue))
-            {
-                DropDownList rebindDdlHeader = gvSwatches.HeaderRow.FindControl("ddlHeaderSwatchType") as DropDownList;
-                if (rebindDdlHeader != null && rebindDdlHeader.Items.FindByValue(ddlFilterCategory.SelectedValue) != null)
-                {
-                    rebindDdlHeader.SelectedValue = ddlFilterCategory.SelectedValue;
-                }
-            }
+            string catId = ddlFilterCategory.SelectedValue;
+            Response.Redirect("ManageSwatches.aspx?cat=" + catId + "&success=1", false);
+            Context.ApplicationInstance.CompleteRequest();
         }
         catch (Exception ex)
         {
@@ -318,14 +326,13 @@ public partial class ManageSwatches : System.Web.UI.Page
             PR_SWATCHService swatchService = new PR_SWATCHService();
             swatchService.Update(updateEntity);
 
-            // SAVE IMAGE AFTER UPDATE
             FileUpload fuEditImage = row.FindControl("fuEditImage") as FileUpload;
             if (fuEditImage != null && fuEditImage.HasFile)
             {
                 try
                 {
-                    string savePath = Server.MapPath("~/images/swatch/" + id + ".jpg");
-                    fuEditImage.SaveAs(savePath); // Overwrites automatically
+                    string savePath = Server.MapPath("~/images/swatches/" + id + ".jpg");
+                    fuEditImage.SaveAs(savePath);
                 }
                 catch (Exception imgEx)
                 {
@@ -361,11 +368,10 @@ public partial class ManageSwatches : System.Web.UI.Page
             PR_SWATCHService swatchService = new PR_SWATCHService();
             swatchService.Delete(deleteEntity);
 
-            // OPTIONAL: Delete the physical image file if it exists
-            string physicalPath = Server.MapPath("~/images/swatch/" + id + ".jpg");
+            string physicalPath = Server.MapPath("~/images/swatches/" + id + ".jpg");
             if (File.Exists(physicalPath))
             {
-                try { File.Delete(physicalPath); } catch { /* Ignore file lock issues */ }
+                try { File.Delete(physicalPath); } catch { }
             }
 
             lblMessage.Text = "Swatch deleted successfully!";

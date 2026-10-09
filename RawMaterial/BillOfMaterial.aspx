@@ -103,18 +103,18 @@
                                     <asp:TemplateField HeaderText="Actions" ItemStyle-HorizontalAlign="Center" HeaderStyle-Width="140px">
                                         <ItemTemplate>
                                             <asp:LinkButton ID="btnEditRow" runat="server" CommandName="Edit" CssClass="text-primary mr-2" style="text-decoration:none; font-weight:bold; margin-right: 8px;" CausesValidation="false">
-                                                <i class="fa fa-pencil"></i> Edit
+                                                <i class="fa fa-pencil"></i> 
                                             </asp:LinkButton>
                                             <asp:LinkButton ID="btnDeleteRow" runat="server" CommandName="Delete" CssClass="text-danger" style="text-decoration:none; font-weight:bold;" CausesValidation="false">
-                                                <i class="fa fa-trash"></i> Remove
+                                                <i class="fa fa-trash"></i> 
                                             </asp:LinkButton>
                                         </ItemTemplate>
                                         <EditItemTemplate>
                                             <asp:LinkButton ID="btnUpdateRow" runat="server" CommandName="Update" CssClass="text-success mr-2" style="text-decoration:none; font-weight:bold; margin-right: 8px;" CausesValidation="false">
-                                                <i class="fa fa-check"></i> Update
+                                                <i class="fa fa-check"></i>
                                             </asp:LinkButton>
                                             <asp:LinkButton ID="btnCancelRow" runat="server" CommandName="Cancel" CssClass="text-muted" style="text-decoration:none; font-weight:bold;" CausesValidation="false">
-                                                <i class="fa fa-times"></i> Cancel
+                                                <i class="fa fa-times"></i> 
                                             </asp:LinkButton>
                                         </EditItemTemplate>
                                     </asp:TemplateField>
