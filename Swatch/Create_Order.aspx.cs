@@ -367,7 +367,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         PR_SWATCH_TYPEService ser = new PR_SWATCH_TYPEService();
 
         ddl.DataSource = ser.GetAll(ent);
-        ddl.DataTextField = "SWATCH_TYPE_NAME";
+        ddl.DataTextField = "SWATCH_NAME";
         ddl.DataValueField = "PK_ID";
         ddl.DataBind();
         ddl.Items.Insert(0, new ListItem("-- Select Type --", ""));

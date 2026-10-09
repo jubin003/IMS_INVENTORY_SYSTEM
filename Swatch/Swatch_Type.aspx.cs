@@ -10,8 +10,8 @@ using Entity.Framework;
 
 public partial class Production_Swatch_Type : System.Web.UI.Page
 {
-    SWATCH_TYPE SEnt = new SWATCH_TYPE();
-    SWATCH_TYPEService SSer = new SWATCH_TYPEService();
+    PR_SWATCH_TYPE SEnt = new PR_SWATCH_TYPE();
+    PR_SWATCH_TYPEService SSer = new PR_SWATCH_TYPEService();
     EntityList theList = new EntityList();
 
 
@@ -26,7 +26,7 @@ public partial class Production_Swatch_Type : System.Web.UI.Page
 
     protected void gridLoad()
     {
-        SEnt = new SWATCH_TYPE();
+        SEnt = new PR_SWATCH_TYPE();
 
         EntityList EList = new EntityList();
 
@@ -69,11 +69,11 @@ public partial class Production_Swatch_Type : System.Web.UI.Page
             (DropDownList)row.FindControl("ddlStatus");
 
 
-        SEnt = new SWATCH_TYPE();
+        SEnt = new PR_SWATCH_TYPE();
 
         SEnt.PK_ID = lblPK_ID.Text;
 
-        SEnt = (SWATCH_TYPE)SSer.GetSingle(SEnt);
+        SEnt = (PR_SWATCH_TYPE)SSer.GetSingle(SEnt);
 
 
         if (SEnt != null)
@@ -190,7 +190,7 @@ public partial class Production_Swatch_Type : System.Web.UI.Page
         }
         else
         {
-            SEnt = new SWATCH_TYPE();
+            SEnt = new PR_SWATCH_TYPE();
 
             SEnt.SWATCH_NAME = txtSwatchName.Text;
             SEnt.SWATCH_CODE = txtSwatchCode.Text;
