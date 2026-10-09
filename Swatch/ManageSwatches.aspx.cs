@@ -9,6 +9,9 @@ using Entity.Framework;
 
 public partial class ManageSwatches : System.Web.UI.Page
 {
+    PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
+    PR_SWATCHService swatchService = new PR_SWATCHService();
+
     protected void Page_Load(object sender, EventArgs e)
     {
         if (!IsPostBack)
@@ -22,86 +25,32 @@ public partial class ManageSwatches : System.Web.UI.Page
                 {
                     ddlFilterCategory.SelectedValue = catId;
                 }
-
-                if (Request.QueryString["success"] == "1")
-                {
-                    lblMessage.Text = "Swatch added successfully!";
-                    lblMessage.CssClass = "text-success";
-                }
             }
 
             BindGrid();
-            PopulateHeaderDropdowns();
         }
-    }
-
-    protected string GetCategoryName(object categoryId)
-    {
-        if (categoryId == null || string.IsNullOrEmpty(categoryId.ToString())) return "-";
-
-        string id = categoryId.ToString();
-
-        try
-        {
-            PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
-            EntityList typeList = (EntityList)typeService.GetAll(new PR_SWATCH_TYPE());
-
-            if (typeList != null)
-            {
-                foreach (PR_SWATCH_TYPE type in typeList)
-                {
-                    if (type.PK_ID == id)
-                    {
-                        return type.SWATCH_NAME;
-                    }
-                }
-            }
-        }
-        catch
-        {
-        }
-
-        return id;
     }
 
     private void LoadFilterCategoryDropdown()
     {
         try
         {
-            PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
             EntityList typeList = (EntityList)typeService.GetAll(new PR_SWATCH_TYPE());
-
-            ddlFilterCategory.Items.Clear();
-            ddlFilterCategory.Items.Add(new ListItem("-- Select a Category to View Swatches --", ""));
-
-            if (typeList != null)
-            {
-                foreach (PR_SWATCH_TYPE type in typeList)
-                {
-                    ddlFilterCategory.Items.Add(new ListItem(type.SWATCH_NAME, type.PK_ID));
-                }
-            }
+            ddlFilterCategory.DataSource = typeList;
+            ddlFilterCategory.DataTextField = "SWATCH_NAME";
+            ddlFilterCategory.DataValueField = "PK_ID";
+            ddlFilterCategory.DataBind();
+            ddlFilterCategory.Items.Insert(0, new ListItem("-- Select a Category to View Swatches --", ""));
         }
         catch (Exception ex)
         {
-            lblMessage.Text = "Error loading filters: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
+            HelperFunction.MsgBox(this, this.GetType(), "Error loading filters: " + ex.Message);
         }
     }
 
     protected void ddlFilterCategory_SelectedIndexChanged(object sender, EventArgs e)
     {
         BindGrid();
-        PopulateHeaderDropdowns();
-
-        if (gvSwatches.HeaderRow != null && !string.IsNullOrEmpty(ddlFilterCategory.SelectedValue))
-        {
-            DropDownList ddlHeaderSwatchType = gvSwatches.HeaderRow.FindControl("ddlHeaderSwatchType") as DropDownList;
-            if (ddlHeaderSwatchType != null && ddlHeaderSwatchType.Items.FindByValue(ddlFilterCategory.SelectedValue) != null)
-            {
-                ddlHeaderSwatchType.SelectedValue = ddlFilterCategory.SelectedValue;
-            }
-        }
     }
 
     private void BindGrid()
@@ -113,66 +62,66 @@ public partial class ManageSwatches : System.Web.UI.Page
                 gvSwatches.DataSource = null;
                 gvSwatches.DataBind();
                 gvSwatches.Visible = false;
+                phSearchWrapper.Visible = false; // Hide search box if no category selected
                 return;
             }
+
+            phSearchWrapper.Visible = true; // Show search box when category is selected
 
             PR_SWATCH searchEntity = new PR_SWATCH();
             searchEntity.SWATCH_TYPE_ID = ddlFilterCategory.SelectedValue;
 
-            PR_SWATCHService swatchService = new PR_SWATCHService();
-            gvSwatches.DataSource = swatchService.GetAll(searchEntity);
+            EntityList swatchList = (EntityList)swatchService.GetAll(searchEntity);
+
+            if (swatchList == null || swatchList.Count == 0)
+            {
+                swatchList = new EntityList();
+                PR_SWATCH dummy = new PR_SWATCH();
+                dummy.PK_ID = "";
+                dummy.SWATCH_NAME = "";
+                dummy.SWATCH_TYPE_ID = ddlFilterCategory.SelectedValue;
+                dummy.STATUS = "1";
+                swatchList.Add(dummy);
+            }
+
+            gvSwatches.DataSource = swatchList;
             gvSwatches.DataBind();
             gvSwatches.Visible = true;
         }
         catch (Exception ex)
         {
-            lblMessage.Text = "Error loading grid: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
+            HelperFunction.MsgBox(this, this.GetType(), "Error loading grid: " + ex.Message);
         }
     }
 
-    private void PopulateHeaderDropdowns()
+    protected void gvSwatches_RowDataBound(object sender, GridViewRowEventArgs e)
     {
-        if (!gvSwatches.Visible) return;
-
-        Control headerRow = gvSwatches.HeaderRow;
-        if (headerRow != null)
+        // Register btnAdd as a full postback trigger for file upload
+        if (e.Row.RowType == DataControlRowType.Header)
         {
-            DropDownList ddlHeaderSwatchType = headerRow.FindControl("ddlHeaderSwatchType") as DropDownList;
-            if (ddlHeaderSwatchType != null)
+            Button btnAdd = e.Row.FindControl("btnAdd") as Button;
+            if (btnAdd != null)
             {
-                LoadCategoryDropdown(ddlHeaderSwatchType);
-
-                if (!string.IsNullOrEmpty(ddlFilterCategory.SelectedValue) && ddlHeaderSwatchType.Items.FindByValue(ddlFilterCategory.SelectedValue) != null)
-                {
-                    ddlHeaderSwatchType.SelectedValue = ddlFilterCategory.SelectedValue;
-                }
+                ScriptManager.GetCurrent(this).RegisterPostBackControl(btnAdd);
             }
         }
-    }
-
-    private void LoadCategoryDropdown(DropDownList ddl)
-    {
-        try
+        else if (e.Row.RowType == DataControlRowType.DataRow)
         {
-            PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
-            EntityList typeList = (EntityList)typeService.GetAll(new PR_SWATCH_TYPE());
+            string pkId = DataBinder.Eval(e.Row.DataItem, "PK_ID") != null
+                            ? DataBinder.Eval(e.Row.DataItem, "PK_ID").ToString()
+                            : "";
 
-            ddl.Items.Clear();
-            ddl.Items.Add(new ListItem("", ""));
-
-            if (typeList != null)
+            if (string.IsNullOrEmpty(pkId))
             {
-                foreach (PR_SWATCH_TYPE type in typeList)
-                {
-                    ddl.Items.Add(new ListItem(type.SWATCH_NAME, type.PK_ID));
-                }
+                e.Row.Visible = false;
             }
-        }
-        catch (Exception ex)
-        {
-            lblMessage.Text = "Error loading categories: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
+
+            // Register btnUpdate as full postback trigger when row is in edit mode
+            LinkButton btnUpdate = e.Row.FindControl("btnUpdate") as LinkButton;
+            if (btnUpdate != null)
+            {
+                ScriptManager.GetCurrent(this).RegisterPostBackControl(btnUpdate);
+            }
         }
     }
 
@@ -197,33 +146,31 @@ public partial class ManageSwatches : System.Web.UI.Page
         if (headerRow == null) return;
 
         TextBox txtSwatchName = headerRow.FindControl("txtSwatchName") as TextBox;
-        DropDownList ddlHeaderSwatchType = headerRow.FindControl("ddlHeaderSwatchType") as DropDownList;
         DropDownList ddlHeaderStatus = headerRow.FindControl("ddlHeaderStatus") as DropDownList;
 
-        if (txtSwatchName == null || ddlHeaderSwatchType == null || string.IsNullOrEmpty(txtSwatchName.Text.Trim()) || string.IsNullOrEmpty(ddlHeaderSwatchType.SelectedValue))
+        if (txtSwatchName == null || string.IsNullOrEmpty(txtSwatchName.Text.Trim()) || string.IsNullOrEmpty(ddlFilterCategory.SelectedValue))
         {
-            lblMessage.Text = "Please fill in all required fields.";
-            lblMessage.CssClass = "text-danger";
+            HelperFunction.MsgBox(this, this.GetType(), "Please enter a swatch name.");
             return;
         }
 
         try
         {
             PR_SWATCH newSwatch = new PR_SWATCH();
-            newSwatch.SWATCH_TYPE_ID = ddlHeaderSwatchType.SelectedValue;
+            // Automatically uses currently selected filter category
+            newSwatch.SWATCH_TYPE_ID = ddlFilterCategory.SelectedValue;
             newSwatch.SWATCH_NAME = txtSwatchName.Text.Trim();
             newSwatch.STATUS = ddlHeaderStatus != null ? ddlHeaderStatus.SelectedValue : "1";
 
-            PR_SWATCHService swatchService = new PR_SWATCHService();
             swatchService.Insert(newSwatch);
 
-            string generatedId = "";
-            EntityList allSwatches = (EntityList)swatchService.GetAll(new PR_SWATCH());
-            if (allSwatches != null)
+            string generatedId = newSwatch.PK_ID;
+            if (string.IsNullOrEmpty(generatedId))
             {
-                foreach (PR_SWATCH row in allSwatches)
+                EntityList allSwatches = (EntityList)swatchService.GetAll(new PR_SWATCH());
+                if (allSwatches != null && allSwatches.Count > 0)
                 {
-                    generatedId = row.PK_ID;
+                    generatedId = ((PR_SWATCH)allSwatches[allSwatches.Count - 1]).PK_ID;
                 }
             }
 
@@ -241,20 +188,15 @@ public partial class ManageSwatches : System.Web.UI.Page
                     string savePath = Path.Combine(folderPath, generatedId + ".jpg");
                     fuAddImage.SaveAs(savePath);
                 }
-                catch (Exception imgEx)
-                {
-                    Session["ImgError"] = "Swatch added, but image failed to save: " + imgEx.Message;
-                }
+                catch { }
             }
 
-            string catId = ddlFilterCategory.SelectedValue;
-            Response.Redirect("ManageSwatches.aspx?cat=" + catId + "&success=1", false);
-            Context.ApplicationInstance.CompleteRequest();
+            HelperFunction.MsgBox(this, this.GetType(), "Swatch added successfully!");
+            BindGrid();
         }
         catch (Exception ex)
         {
-            lblMessage.Text = "Error saving swatch: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
+            HelperFunction.MsgBox(this, this.GetType(), "Error saving swatch: " + ex.Message);
         }
     }
 
@@ -262,38 +204,16 @@ public partial class ManageSwatches : System.Web.UI.Page
     {
         gvSwatches.EditIndex = e.NewEditIndex;
         BindGrid();
-        PopulateHeaderDropdowns();
 
         GridViewRow row = gvSwatches.Rows[e.NewEditIndex];
-
-        DropDownList ddlEditSwatchType = row.FindControl("ddlEditSwatchType") as DropDownList;
         DropDownList ddlEditStatus = row.FindControl("ddlEditStatus") as DropDownList;
-
-        if (ddlEditSwatchType != null)
-        {
-            LoadCategoryDropdown(ddlEditSwatchType);
-
-            object typeIdObj = gvSwatches.DataKeys[e.NewEditIndex].Values["SWATCH_TYPE_ID"];
-            if (typeIdObj != null)
-            {
-                string currentTypeId = typeIdObj.ToString();
-                if (ddlEditSwatchType.Items.FindByValue(currentTypeId) != null)
-                {
-                    ddlEditSwatchType.SelectedValue = currentTypeId;
-                }
-            }
-        }
 
         if (ddlEditStatus != null)
         {
             object statusObj = gvSwatches.DataKeys[e.NewEditIndex].Values["STATUS"];
-            if (statusObj != null)
+            if (statusObj != null && ddlEditStatus.Items.FindByValue(statusObj.ToString()) != null)
             {
-                string currentStatus = statusObj.ToString();
-                if (ddlEditStatus.Items.FindByValue(currentStatus) != null)
-                {
-                    ddlEditStatus.SelectedValue = currentStatus;
-                }
+                ddlEditStatus.SelectedValue = statusObj.ToString();
             }
         }
     }
@@ -302,8 +222,6 @@ public partial class ManageSwatches : System.Web.UI.Page
     {
         gvSwatches.EditIndex = -1;
         BindGrid();
-        PopulateHeaderDropdowns();
-        lblMessage.Text = "";
     }
 
     protected void gvSwatches_RowUpdating(object sender, GridViewUpdateEventArgs e)
@@ -314,16 +232,13 @@ public partial class ManageSwatches : System.Web.UI.Page
             GridViewRow row = gvSwatches.Rows[e.RowIndex];
 
             TextBox txtName = row.FindControl("txtSwatchName") as TextBox;
-            DropDownList ddlEditSwatchType = row.FindControl("ddlEditSwatchType") as DropDownList;
             DropDownList ddlEditStatus = row.FindControl("ddlEditStatus") as DropDownList;
 
             PR_SWATCH updateEntity = new PR_SWATCH();
             updateEntity.PK_ID = id;
             if (txtName != null) updateEntity.SWATCH_NAME = txtName.Text.Trim();
-            if (ddlEditSwatchType != null) updateEntity.SWATCH_TYPE_ID = ddlEditSwatchType.SelectedValue;
             if (ddlEditStatus != null) updateEntity.STATUS = ddlEditStatus.SelectedValue;
 
-            PR_SWATCHService swatchService = new PR_SWATCHService();
             swatchService.Update(updateEntity);
 
             FileUpload fuEditImage = row.FindControl("fuEditImage") as FileUpload;
@@ -334,26 +249,16 @@ public partial class ManageSwatches : System.Web.UI.Page
                     string savePath = Server.MapPath("~/images/swatches/" + id + ".jpg");
                     fuEditImage.SaveAs(savePath);
                 }
-                catch (Exception imgEx)
-                {
-                    lblMessage.Text = "Swatch updated, but image failed to save: " + imgEx.Message;
-                    lblMessage.CssClass = "text-warning";
-                }
-            }
-            else
-            {
-                lblMessage.Text = "Swatch updated successfully!";
-                lblMessage.CssClass = "text-success";
+                catch { }
             }
 
+            HelperFunction.MsgBox(this, this.GetType(), "Swatch updated successfully!");
             gvSwatches.EditIndex = -1;
             BindGrid();
-            PopulateHeaderDropdowns();
         }
         catch (Exception ex)
         {
-            lblMessage.Text = "Error updating swatch: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
+            HelperFunction.MsgBox(this, this.GetType(), "Error updating swatch: " + ex.Message);
         }
     }
 
@@ -365,7 +270,6 @@ public partial class ManageSwatches : System.Web.UI.Page
             PR_SWATCH deleteEntity = new PR_SWATCH();
             deleteEntity.PK_ID = id;
 
-            PR_SWATCHService swatchService = new PR_SWATCHService();
             swatchService.Delete(deleteEntity);
 
             string physicalPath = Server.MapPath("~/images/swatches/" + id + ".jpg");
@@ -374,16 +278,12 @@ public partial class ManageSwatches : System.Web.UI.Page
                 try { File.Delete(physicalPath); } catch { }
             }
 
-            lblMessage.Text = "Swatch deleted successfully!";
-            lblMessage.CssClass = "text-success";
-
+            HelperFunction.MsgBox(this, this.GetType(), "Swatch deleted successfully!");
             BindGrid();
-            PopulateHeaderDropdowns();
         }
         catch (Exception ex)
         {
-            lblMessage.Text = "Error deleting swatch: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
+            HelperFunction.MsgBox(this, this.GetType(), "Error deleting swatch: " + ex.Message);
         }
     }
 }
