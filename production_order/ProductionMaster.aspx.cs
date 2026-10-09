@@ -23,7 +23,6 @@ public partial class ProductionMaster : System.Web.UI.Page
             EntityList poList = (EntityList)poService.GetAll(new PR_PURCHASE_ORDER());
 
             ddlCustomerPO.DataSource = poList;
-            //ddlCustomerPO.DataTextField = "PO_NUMBER";
             ddlCustomerPO.DataTextField = "CUSTOMER_ORDER_NUMBER";
             ddlCustomerPO.DataValueField = "PK_ID";
             ddlCustomerPO.DataBind();
@@ -55,23 +54,54 @@ public partial class ProductionMaster : System.Web.UI.Page
             masterObj.CUSTOMER_PO_ID = ddlCustomerPO.SelectedValue;
             masterObj.STATUS = ddlStatus.SelectedValue;
 
-            // Force English (Gregorian) parsing and formatting using InvariantCulture
-            DateTime prodDate;
-            if (DateTime.TryParse(txtProductionDate.Text, CultureInfo.InvariantCulture, DateTimeStyles.None, out prodDate))
+            if (!string.IsNullOrWhiteSpace(txtProductionDate.Text))
             {
-                masterObj.PRODUCTION_DATE = prodDate.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
-                masterObj.PRODUCTION_DAY = prodDate.Day.ToString(CultureInfo.InvariantCulture);
-                masterObj.PRODUCTION_MONTH = prodDate.Month.ToString(CultureInfo.InvariantCulture);
-                masterObj.PRODUCTION_YEAR = prodDate.Year.ToString(CultureInfo.InvariantCulture);
+                string rawProdDate = txtProductionDate.Text.Trim();
+                char[] delimiters = new char[] { '/', '-' };
+                string[] prodParts = rawProdDate.Split(delimiters);
+
+                if (prodParts.Length == 3)
+                {
+                    if (prodParts[0].Length == 4)
+                    {
+                        masterObj.PRODUCTION_YEAR = prodParts[0];
+                        masterObj.PRODUCTION_MONTH = prodParts[1];
+                        masterObj.PRODUCTION_DAY = prodParts[2];
+                    }
+                    else
+                    {
+                        masterObj.PRODUCTION_DAY = prodParts[0];
+                        masterObj.PRODUCTION_MONTH = prodParts[1];
+                        masterObj.PRODUCTION_YEAR = prodParts[2];
+                    }
+                }
+
+                masterObj.PRODUCTION_DATE = ConvertDateToEnglish(rawProdDate);
             }
 
-            DateTime compDate;
-            if (DateTime.TryParse(txtCompletionDate.Text, CultureInfo.InvariantCulture, DateTimeStyles.None, out compDate))
+            if (!string.IsNullOrWhiteSpace(txtCompletionDate.Text))
             {
-                masterObj.COMPLITION_DATE = compDate.ToString("dd-MM-yy", CultureInfo.InvariantCulture);
-                masterObj.COMPLITION_DAY = compDate.Day.ToString(CultureInfo.InvariantCulture);
-                masterObj.COMPLITION_MONTH = compDate.Month.ToString(CultureInfo.InvariantCulture);
-                masterObj.COMPLITION_YEAR = compDate.Year.ToString(CultureInfo.InvariantCulture);
+                string rawCompDate = txtCompletionDate.Text.Trim();
+                char[] delimiters = new char[] { '/', '-' };
+                string[] compParts = rawCompDate.Split(delimiters);
+
+                if (compParts.Length == 3)
+                {
+                    if (compParts[0].Length == 4)
+                    {
+                        masterObj.COMPLITION_YEAR = compParts[0];
+                        masterObj.COMPLITION_MONTH = compParts[1];
+                        masterObj.COMPLITION_DAY = compParts[2];
+                    }
+                    else
+                    {
+                        masterObj.COMPLITION_DAY = compParts[0];
+                        masterObj.COMPLITION_MONTH = compParts[1];
+                        masterObj.COMPLITION_YEAR = compParts[2];
+                    }
+                }
+
+                masterObj.COMPLITION_DATE = ConvertDateToEnglish(rawCompDate);
             }
 
             masterService.Insert(masterObj);
@@ -84,6 +114,24 @@ public partial class ProductionMaster : System.Web.UI.Page
         {
             lblMessage.Text = "Error saving data: " + ex.Message;
             lblMessage.CssClass = "text-danger status-inactive";
+        }
+    }
+
+    private string ConvertDateToEnglish(string inputDate)
+    {
+        try
+        {
+            DateTime dt;
+            if (DateTime.TryParse(inputDate, CultureInfo.InvariantCulture, DateTimeStyles.None, out dt))
+            {
+                return dt.ToString("dd-MM-yyyy", CultureInfo.InvariantCulture);
+            }
+
+            return inputDate;
+        }
+        catch
+        {
+            return inputDate;
         }
     }
 
