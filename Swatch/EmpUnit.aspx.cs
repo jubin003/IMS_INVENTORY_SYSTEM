@@ -42,9 +42,9 @@ public partial class Swatch_EmpUnit : System.Web.UI.Page
     {
         mvEmp.ActiveViewIndex = index;
 
-        btnTabUnit.CssClass = "emp-tab" + (index == 0 ? " active" : "");
-        btnTabDivision.CssClass = "emp-tab" + (index == 1 ? " active" : "");
-        btnTabMap.CssClass = "emp-tab" + (index == 2 ? " active" : "");
+        btnTabUnit.CssClass = "btn-view-primary" + (index == 0 ? " active" : "");
+        btnTabDivision.CssClass = "btn-view-primary" + (index == 1 ? " active" : "");
+        btnTabMap.CssClass = "btn-view-primary" + (index == 2 ? " active" : "");
 
         if (index == 0)
         {
