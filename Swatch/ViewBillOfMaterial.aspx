@@ -1,125 +1,178 @@
 ﻿<%@ Page Title="View Bill of Materials" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="ViewBillOfMaterial.aspx.cs" Inherits="ViewBillOfMaterial" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
-    
     <link href="css/ims-webform.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-
-    <style>
-        .select2-container .select2-selection--single {
-            height: 34px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 4px 12px;
-        }
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 32px;
-        }
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 24px;
-            color: #333;
-        }
-    </style>
 
     <asp:UpdatePanel ID="UpdatePanel1" runat="server">
         <ContentTemplate>
-            <div class="container-fluid" style="margin-top: 15px;">
-                
-                <!-- Page Header -->
-                <div class="row" style="margin-bottom: 20px;">
-                    <div class="col-md-6">
-                        <h2 style="margin: 0; color: #0f172a; font-weight: bold;">Bill of Materials List</h2>
+            <div class="imsv5-container">
+                <div class="imsv5-page-header">
+                    <div class="imsv5-title-block">
+                        <nav class="imsv5-breadcrumb" aria-label="Breadcrumb">
+                            <span>Production</span>
+                            <svg class="imsv5-icon-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                            <span class="active">Bill of Materials</span>
+                        </nav>
+                        <h1 class="imsv5-page-title">Bill of Materials List</h1>
+                        <p class="imsv5-page-subtitle">View, search, and manage existing product recipes.</p>
                     </div>
-                    <div class="col-md-6 text-right">
-                        <a href="BillOfMaterial.aspx" class="btn btn-primary">
-                            <i class="fa fa-plus"></i> Create New BOM
-                        </a>
+                    <div>
+                        <a href="BillOfMaterial.aspx" class="btn-enterprise-outline"><i class="fa fa-plus"></i> Create New BOM</a>
                     </div>
                 </div>
 
-                <!-- Filter Card -->
-                <div class="bs-card mb-4">
-                    <div class="panel-body" style="padding: 20px;">
-                        <div class="row">
-                            <div class="col-md-6 form-group">
-                                <label style="font-weight: bold; color: #475569;">Filter by Finished Product</label>
-                                <asp:DropDownList ID="ddlFinishedProductFilter" runat="server" CssClass="form-control chosen-select"></asp:DropDownList>
+                <%-- PANEL 1: MASTER BOM LIST --%>
+                <asp:Panel ID="pnlMasterView" runat="server">
+                    <div class="bs-card">
+                        <div class="card-toolbar" style="flex-direction: column; align-items: flex-start; gap: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                <div class="toolbar-stats"><span class="badge-stat">Manage BOM Recipes</span></div>
+                                <asp:Label ID="lblMessage" runat="server" CssClass="badge-stat" />
                             </div>
-                            <!-- Using an empty label ensures the button perfectly aligns with the dropdown -->
-                            <div class="col-md-3 form-group">
-                                <label>&nbsp;</label>
-                                <asp:Button ID="btnFilter" runat="server" Text="Search" CssClass="btn btn-primary btn-block" OnClick="btnFilter_Click" />
-                            </div>
-                            <div class="col-md-3 form-group">
-                                <label>&nbsp;</label>
-                                <asp:Button ID="btnReset" runat="server" Text="Reset" CssClass="btn btn-default btn-block" OnClick="btnReset_Click" />
+
+                            <%-- REAL-TIME SEARCH BAR DIRECTLY BELOW TEXT --%>
+                            <div class="search-box-wrapper" style="width: 100%; max-width: 380px;">
+                                <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+                                </svg>
+                                <input type="text" id="bomSearchInput" class="table-search-input" placeholder="Search product name or code..." onkeyup="filterBOMTable()" autocomplete="off" />
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <asp:Label ID="lblMessage" runat="server" CssClass="mb-3 d-block font-weight-bold"></asp:Label>
-
-                <!-- Master BOM Table -->
-                <div class="table-responsive" style="margin-bottom: 30px;">
-                    <asp:GridView ID="gvBOMMaster" runat="server" AutoGenerateColumns="false" GridLines="None" 
-                        CssClass="table table-bordered table-hover table-striped" OnRowCommand="gvBOMMaster_RowCommand">
-                        <HeaderStyle BackColor="#f8fafc" ForeColor="#475569" Font-Bold="true" />
-                        <Columns>
-                            <asp:BoundField DataField="FINISHED_PRODUCT_ID" HeaderText="Product ID" Visible="false" />
-                            <asp:BoundField DataField="PRODUCT_CODE" HeaderText="Product Code" ItemStyle-Font-Bold="true" />
-                            <asp:BoundField DataField="PRODUCT_NAME" HeaderText="Finished Product Name" />
-                            <asp:BoundField DataField="INGREDIENT_COUNT" HeaderText="Raw Materials Count" ItemStyle-HorizontalAlign="Center" HeaderStyle-HorizontalAlign="Center" />
-                            
-                            <%-- Added ItemStyle-Wrap="false" to prevent buttons from stacking --%>
-                            <asp:TemplateField HeaderText="Actions" ItemStyle-HorizontalAlign="Center" ItemStyle-Wrap="false">
-                                <ItemTemplate>
-                                    <asp:LinkButton ID="btnView" runat="server" CommandName="ViewDetails" 
-                                        CommandArgument='<%# Eval("FINISHED_PRODUCT_ID") %>' CssClass="btn btn-sm btn-info" style="color:white; margin-right:4px;">
-                                        <i class="fa fa-eye"></i> View Recipe
-                                    </asp:LinkButton>
-                                    <a href='BillOfMaterial.aspx?id=<%# Eval("FINISHED_PRODUCT_ID") %>' class="btn btn-sm btn-warning" style="color:black; margin-right:4px;">
-                                        <i class="fa fa-edit"></i> Edit
-                                    </a>
-                                    <asp:LinkButton ID="btnDelete" runat="server" CommandName="DeleteBOM" 
-                                        CommandArgument='<%# Eval("FINISHED_PRODUCT_ID") %>' 
-                                        OnClientClick="return confirm('Are you sure you want to delete this BOM recipe?');"
-                                        CssClass="btn btn-sm btn-danger">
-                                        <i class="fa fa-trash"></i> Delete
-                                    </asp:LinkButton>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                        </Columns>
-                        <EmptyDataTemplate>
-                            <div class="text-center text-muted" style="padding: 30px; background-color: #f9f9f9; border-radius: 4px;">
-                                No Bill of Materials found.
-                            </div>
-                        </EmptyDataTemplate>
-                    </asp:GridView>
-                </div>
-
-                <!-- Recipe Detail Drawer / Panel -->
-                <asp:Panel ID="pnlDetails" runat="server" Visible="false" CssClass="bs-card" style="border: 1px solid #17a2b8; border-radius: 8px;">
-                    <div class="panel-body" style="padding: 20px;">
-                        
-                        <!-- Header with floating layout to ensure right-alignment of button -->
-                        <div style="margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 10px;">
-                            <h4 style="margin: 0; float: left; color: #334155; padding-top: 5px;">
-                                Recipe Breakdown: <asp:Label ID="lblDetailProductName" runat="server" ForeColor="#0284c7" Font-Bold="true"></asp:Label>
-                            </h4>
-                            <asp:Button ID="btnCloseDetails" runat="server" Text="Close Details" CssClass="btn btn-default btn-sm pull-right" OnClick="btnCloseDetails_Click" />
-                            <div style="clear: both;"></div> <!-- Clears the float -->
-                        </div>
-                        
                         <div class="table-responsive">
-                            <asp:GridView ID="gvRecipeDetails" runat="server" AutoGenerateColumns="false" GridLines="None" CssClass="table table-bordered table-striped">
-                                <HeaderStyle BackColor="#f8fafc" ForeColor="#475569" Font-Bold="true" />
+                            <asp:GridView ID="gvBOMMaster" runat="server" Width="100%" AutoGenerateColumns="false" GridLines="None" CssClass="enterprise-grid" OnRowCommand="gvBOMMaster_RowCommand">
                                 <Columns>
-                                    <asp:BoundField DataField="MATERIAL_CODE" HeaderText="Material Code" />
-                                    <asp:BoundField DataField="MATERIAL_NAME" HeaderText="Raw Material Name" ItemStyle-Font-Bold="true" />
-                                    <asp:BoundField DataField="UNIT" HeaderText="Unit" ItemStyle-HorizontalAlign="Center" HeaderStyle-HorizontalAlign="Center" />
-                                    <asp:BoundField DataField="QUANTITY" HeaderText="Required Quantity" ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right" />
+                                    <%-- SN COLUMN --%>
+                                    <asp:TemplateField HeaderText="SN">
+                                        <HeaderStyle Width="50px" CssClass="col-sn" />
+                                        <ItemStyle Width="50px" CssClass="text-center col-sn" />
+                                        <ItemTemplate>
+                                            <span class="row-sn-text"><%# Container.DataItemIndex + 1 %></span>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:BoundField DataField="FINISHED_PRODUCT_ID" HeaderText="Product ID" Visible="false" />
+
+                                    <%-- PRODUCT CODE COLUMN --%>
+                                    <asp:BoundField DataField="PRODUCT_CODE" HeaderText="PRODUCT CODE" 
+                                        HeaderStyle-Width="120px" 
+                                        ItemStyle-Width="120px" 
+                                        HeaderStyle-CssClass="col-code" 
+                                        ItemStyle-CssClass="col-code font-semibold" />
+
+                                    <%-- FINISHED PRODUCT NAME COLUMN (Takes up remaining flex space) --%>
+                                    <asp:TemplateField HeaderText="FINISHED PRODUCT NAME">
+                                        <HeaderStyle CssClass="col-name" />
+                                        <ItemStyle CssClass="col-name font-semibold" />
+                                        <ItemTemplate>
+                                            <div class="cell-entity">
+                                                <span class="entity-bullet"></span>
+                                                <span style="color: #0f172a !important;"><%# Eval("PRODUCT_NAME") %></span>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <%-- RAW MATERIAL COUNT COLUMN (Centered) --%>
+                                    <asp:TemplateField HeaderText="RAW MATERIAL COUNT">
+                                        <HeaderStyle Width="190px" HorizontalAlign="Center" />
+                                        <ItemStyle Width="190px" HorizontalAlign="Center" />
+                                        <HeaderTemplate>
+                                            <div style="text-align: center !important; font-weight: 700; color: #475569; width: 100%;">
+                                                RAW MATERIAL COUNT
+                                            </div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <div style="text-align: center !important; width: 100%;">
+                                                <span class="cell-rate" style="font-weight: 700; color: #0f172a;"><%# Eval("INGREDIENT_COUNT") %></span>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <%-- ACTIONS COLUMN --%>
+                                    <asp:TemplateField HeaderText="ACTIONS">
+                                        <HeaderStyle Width="110px" CssClass="col-actions text-center" />
+                                        <ItemStyle Width="110px" CssClass="col-actions text-center" />
+                                        <ItemTemplate>
+                                            <div class="action-btn-group" style="justify-content: center !important;">
+                                                <asp:ImageButton ID="btnViewDetails" runat="server" CommandName="ViewDetails" CommandArgument='<%# Eval("FINISHED_PRODUCT_ID") %>' ImageUrl="~/images/icons/view.png" ToolTip="View Recipe" CssClass="btn-action-icon view-icon" CausesValidation="false" />
+                                                <asp:ImageButton ID="btnEdit" runat="server" CommandName="EditBOM" CommandArgument='<%# Eval("FINISHED_PRODUCT_ID") %>' ImageUrl="~/images/icons/edit.png" ToolTip="Edit BOM" CssClass="btn-action-icon edit-icon" CausesValidation="false" />
+                                                <asp:ImageButton ID="btnDelete" runat="server" CommandName="DeleteBOM" CommandArgument='<%# Eval("FINISHED_PRODUCT_ID") %>' ImageUrl="~/images/icons/deletes.png" ToolTip="Delete Recipe" CssClass="btn-action-icon delete-icon" CausesValidation="false" OnClientClick="return confirm('Are you sure you want to delete this BOM recipe?');" />
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
                                 </Columns>
+                                <EmptyDataTemplate>
+                                    <div class="card-toolbar"><span class="badge-stat">No Bill of Materials found.</span></div>
+                                </EmptyDataTemplate>
+                                <PagerStyle CssClass="gridview-pager" />
+                            </asp:GridView>
+                        </div>
+                    </div>
+                </asp:Panel>
+
+                <%-- PANEL 2: RECIPE BREAKDOWN DETAILS --%>
+                <asp:Panel ID="pnlDetails" runat="server" Visible="false">
+                    <div class="bs-card">
+                        <div class="card-toolbar">
+                            <div class="toolbar-stats">
+                                <span class="badge-stat">Recipe Breakdown: <asp:Label ID="lblDetailProductName" runat="server" Font-Bold="true" ForeColor="#0284c7" /></span>
+                            </div>
+                            <div>
+                                <asp:Button ID="btnCloseDetails" runat="server" Text="← Back to Recipes" CssClass="btn-clear" OnClick="btnCloseDetails_Click" CausesValidation="false" />
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <asp:GridView ID="gvRecipeDetails" runat="server" Width="100%" AutoGenerateColumns="false" GridLines="None" CssClass="enterprise-grid">
+                                <Columns>
+                                    <asp:TemplateField HeaderText="SN">
+                                        <HeaderStyle Width="50px" CssClass="col-sn" />
+                                        <ItemStyle Width="50px" CssClass="text-center col-sn" />
+                                        <ItemTemplate><span class="row-sn-text"><%# Container.DataItemIndex + 1 %></span></ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:BoundField DataField="MATERIAL_CODE" HeaderText="MATERIAL CODE" HeaderStyle-Width="130px" ItemStyle-Width="130px" HeaderStyle-CssClass="col-code" ItemStyle-CssClass="col-code font-semibold" />
+
+                                    <asp:TemplateField HeaderText="RAW MATERIAL NAME">
+                                        <HeaderStyle CssClass="col-name" />
+                                        <ItemStyle CssClass="col-name font-semibold" />
+                                        <ItemTemplate>
+                                            <div class="cell-entity">
+                                                <span class="entity-bullet"></span>
+                                                <span style="color: #0f172a !important;"><%# Eval("MATERIAL_NAME") %></span>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="UNIT">
+                                        <HeaderStyle Width="90px" HorizontalAlign="Center" />
+                                        <ItemStyle Width="90px" HorizontalAlign="Center" />
+                                        <HeaderTemplate>
+                                            <div style="text-align: center !important; font-weight: 700; color: #475569;">UNIT</div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <div style="text-align: center !important;">
+                                                <span style="color: #475569; font-weight: 600;"><%# Eval("UNIT") %></span>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+
+                                    <asp:TemplateField HeaderText="REQUIRED QUANTITY">
+                                        <HeaderStyle Width="180px" HorizontalAlign="Right" />
+                                        <ItemStyle Width="180px" HorizontalAlign="Right" />
+                                        <HeaderTemplate>
+                                            <div style="text-align: right !important; padding-right: 20px !important; white-space: nowrap !important; font-weight: 700; color: #475569;">REQUIRED QUANTITY</div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <div style="text-align: right !important; padding-right: 20px !important;">
+                                                <span class="cell-rate" style="font-weight: 700; color: #0f172a;"><%# Eval("QUANTITY") %></span>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                </Columns>
+                                <EmptyDataTemplate>
+                                    <div class="card-toolbar"><span class="badge-stat">No raw materials found in this recipe.</span></div>
+                                </EmptyDataTemplate>
                             </asp:GridView>
                         </div>
                     </div>
@@ -128,24 +181,29 @@
         </ContentTemplate>
     </asp:UpdatePanel>
 
-    <!-- Select2 Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script type="text/javascript">
-        function initializeSelect2() {
-            $('.chosen-select').select2({
-                width: '100%',
-                placeholder: "-- All Finished Products --",
-                allowClear: true
-            });
+        function filterBOMTable() {
+            var input = document.getElementById("bomSearchInput");
+            if (!input) return;
+            var filter = input.value.toLowerCase();
+            var grid = document.getElementById("<%= gvBOMMaster.ClientID %>");
+            if (!grid) return;
+            var rows = grid.getElementsByTagName("tr");
+
+            // Loop rows skipping table header
+            for (var i = 1; i < rows.length; i++) {
+                if (rows[i].classList.contains("gridview-pager")) continue;
+
+                var codeCol = rows[i].getElementsByTagName("td")[1];
+                var nameCol = rows[i].getElementsByTagName("td")[2];
+
+                if (codeCol && nameCol) {
+                    var codeText = (codeCol.textContent || codeCol.innerText).toLowerCase();
+                    var nameText = (nameCol.textContent || nameCol.innerText).toLowerCase();
+
+                    rows[i].style.display = (codeText.indexOf(filter) > -1 || nameText.indexOf(filter) > -1) ? "" : "none";
+                }
+            }
         }
-
-        $(document).ready(function () {
-            initializeSelect2();
-        });
-
-        var prm = Sys.WebForms.PageRequestManager.getInstance();
-        prm.add_endRequest(function () {
-            initializeSelect2();
-        });
     </script>
 </asp:Content>
