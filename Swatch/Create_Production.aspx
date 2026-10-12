@@ -37,8 +37,11 @@
                         <asp:TextBox ID="txtCompletionDate" runat="server" CssClass="form-control datepicker" placeholder="Select completion date..."></asp:TextBox>
                     </div>
                     <div class="form-group">
-                        <label for="<%= txtProductionType.ClientID %>">Production Type *</label>
-                        <asp:TextBox ID="txtProductionType" runat="server" CssClass="form-control" placeholder="Enter production type..."></asp:TextBox>
+                        <%--<label for="<%= txtProductionType.ClientID %>">Production Type *</label>
+                        <asp:TextBox ID="txtProductionType" runat="server" CssClass="form-control" placeholder="Enter production type..."></asp:TextBox>--%>
+                        <label>Production Type <span class="text-danger">*</span></label>
+                        <asp:DropDownList ID="ddlProductionType" runat="server" CssClass="form-control">
+                        </asp:DropDownList>
                     </div>
 
                     <!-- Customer Selection -->
@@ -51,16 +54,16 @@
                     <!-- Customer Order Dropdown -->
                     <div class="form-group">
                         <label for="<%= ddlCustomerOrder.ClientID %>">Customer Order (PO) *</label>
-                        <asp:DropDownList ID="ddlCustomerOrder" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomerOrder_SelectedIndexChanged">
+                        <asp:DropDownList ID="ddlCustomerOrder" runat="server" CssClass="form-control">
                             <asp:ListItem Text="-- Select Customer First --" Value=""></asp:ListItem>
                         </asp:DropDownList>
                     </div>
 
                     <!-- Selected PO Reference -->
-                    <div class="form-group">
+<%--                    <div class="form-group">
                         <label for="<%= txtCustomerPOId.ClientID %>">Customer PO ID *</label>
                         <asp:TextBox ID="txtCustomerPOId" runat="server" CssClass="form-control" placeholder="Selected Customer PO ID..."></asp:TextBox>
-                    </div>
+                    </div>--%>
                 </div>
 
                 <div class="form-actions">
@@ -71,6 +74,7 @@
         </asp:Panel>
 
         <%-- ==================== STEP 2: PRODUCTION DETAILS ==================== --%>
+        
         <asp:Panel ID="pnlProductionDetails" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -81,8 +85,10 @@
 
                 <div class="form-grid form-grid-3">
                     <div class="form-group">
-                        <label for="<%= txtMultipleDeliveryId.ClientID %>">Multiple Delivery ID *</label>
-                        <asp:TextBox ID="txtMultipleDeliveryId" runat="server" CssClass="form-control" placeholder="Enter delivery ID..."></asp:TextBox>
+                        <label for="<%= ddlMultipleDelivery.ClientID %>">Multiple Delivery Date *</label>
+                        <asp:DropDownList ID="ddlMultipleDelivery" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlMultipleDelivery_SelectedIndexChanged">
+                            <asp:ListItem Text="-- Select Delivery Date --" Value=""></asp:ListItem>
+                        </asp:DropDownList>
                     </div>
                     <div class="form-group">
                         <label>Production Date</label>
@@ -93,6 +99,27 @@
                         <asp:Label ID="lblDetailsCompletionDate" runat="server" CssClass="form-control form-readonly"></asp:Label>
                     </div>
                 </div>
+
+                <%-- Expandable Read-Only Table for Selected Delivery Details --%>
+                <asp:Panel ID="pnlSelectedDeliveryInfo" runat="server" Visible="false">
+                    <div class="card-toolbar">
+                        <div class="toolbar-stats">
+                            <span class="badge-stat">Selected Delivery Information</span>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <asp:GridView ID="grdSelectedDelivery" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None">
+                            <Columns>
+                                <asp:BoundField DataField="PK_ID" HeaderText="Delivery ID" />
+                                <asp:BoundField DataField="DELIVERY_DATE" HeaderText="Delivery Date" />
+                                <asp:BoundField DataField="MODE_OF_TRANSPORTATION_ID" HeaderText="Mode of Transportation" />
+                                <asp:BoundField DataField="CUSOMTER_LOCATION_ID" HeaderText="Customer Location ID" />
+                                <asp:BoundField DataField="REMARKS" HeaderText="Remarks" />
+                                <asp:BoundField DataField="STATUS" HeaderText="Status" />
+                            </Columns>
+                        </asp:GridView>
+                    </div>
+                </asp:Panel>
 
                 <div class="card-toolbar">
                     <div class="toolbar-stats">
