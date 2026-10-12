@@ -12,7 +12,7 @@ public partial class BillOfMaterial : System.Web.UI.Page
     {
         if (!IsPostBack)
         {
-            LoadDropdowns();
+            LoadFinishedProductsDropdown();
             BindGrid();
 
             if (!string.IsNullOrEmpty(Request.QueryString["id"]))
@@ -21,16 +21,32 @@ public partial class BillOfMaterial : System.Web.UI.Page
                 if (ddlFinishedProduct.Items.FindByValue(finishedId) != null)
                 {
                     ddlFinishedProduct.SelectedValue = finishedId;
-                    LoadExistingBOM(finishedId);
+                    SelectFinishedProduct(finishedId);
                 }
+            }
+            else
+            {
+                pnlRawMaterials.Visible = false;
             }
         }
     }
 
     private void BindGrid()
     {
-        gvBOMDetails.DataSource = BOMTable;
-        gvBOMDetails.DataBind();
+        DataTable dt = BOMTable;
+        if (dt.Rows.Count == 0)
+        {
+            DataTable dummyTable = dt.Clone();
+            dummyTable.Rows.Add(dummyTable.NewRow());
+            gvBOMDetails.DataSource = dummyTable;
+            gvBOMDetails.DataBind();
+            gvBOMDetails.Rows[0].Visible = false;
+        }
+        else
+        {
+            gvBOMDetails.DataSource = dt;
+            gvBOMDetails.DataBind();
+        }
     }
 
     private Dictionary<string, string> GetUnitDictionary()
@@ -44,9 +60,10 @@ public partial class BillOfMaterial : System.Web.UI.Page
 
             if (allUnits != null)
             {
-                foreach (Entity.Components.PRODUCT_UNIT u in allUnits)
+                for (int i = 0; i < allUnits.Count; i++)
                 {
-                    if (!unitNames.ContainsKey(u.PK_ID))
+                    Entity.Components.PRODUCT_UNIT u = (Entity.Components.PRODUCT_UNIT)allUnits[i];
+                    if (u != null && !unitNames.ContainsKey(u.PK_ID))
                     {
                         unitNames.Add(u.PK_ID, u.UNIT_NAME);
                     }
@@ -58,13 +75,11 @@ public partial class BillOfMaterial : System.Web.UI.Page
         return unitNames;
     }
 
-    private void LoadDropdowns()
+    private void LoadFinishedProductsDropdown()
     {
         try
         {
             PRODUCTService prodService = new PRODUCTService();
-            Dictionary<string, string> unitNames = GetUnitDictionary();
-
             PRODUCT finishedFilter = new PRODUCT();
             finishedFilter.PRODUCT_TYPE_ID = "2";
             EntityList finishedList = (EntityList)prodService.GetAll(finishedFilter);
@@ -74,27 +89,123 @@ public partial class BillOfMaterial : System.Web.UI.Page
             ddlFinishedProduct.DataValueField = "PK_ID";
             ddlFinishedProduct.DataBind();
             ddlFinishedProduct.Items.Insert(0, new ListItem("-- Select Finished Product --", ""));
-
-            PRODUCT rawFilter = new PRODUCT();
-            rawFilter.PRODUCT_TYPE_ID = "3";
-            EntityList rawList = (EntityList)prodService.GetAll(rawFilter);
-
-            ddlRawMaterial.Items.Clear();
-            ddlRawMaterial.Items.Add(new ListItem("-- Select Raw Material --", ""));
-
-            if (rawList != null)
-            {
-                foreach (PRODUCT p in rawList)
-                {
-                    ddlRawMaterial.Items.Add(new ListItem(p.PRODUCT_NAME, p.PK_ID));
-                }
-            }
         }
         catch (Exception ex)
         {
             lblMessage.Text = "Error loading products: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
         }
+    }
+
+    private void LoadRawMaterialDropdown(DropDownList ddl)
+    {
+        PRODUCTService prodService = new PRODUCTService();
+        PRODUCT rawFilter = new PRODUCT();
+        rawFilter.PRODUCT_TYPE_ID = "3";
+        EntityList rawList = (EntityList)prodService.GetAll(rawFilter);
+
+        ddl.Items.Clear();
+        ddl.Items.Add(new ListItem("-- Select Raw Material --", ""));
+
+        if (rawList != null)
+        {
+            for (int i = 0; i < rawList.Count; i++)
+            {
+                PRODUCT p = (PRODUCT)rawList[i];
+                if (p != null && p.PRODUCT_TYPE_ID == "3")
+                {
+                    ddl.Items.Add(new ListItem(p.PRODUCT_NAME, p.PK_ID));
+                }
+            }
+        }
+    }
+
+    protected void gvBOMDetails_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.Header)
+        {
+            DropDownList ddlRaw = (DropDownList)e.Row.FindControl("ddlRawMaterialH");
+            if (ddlRaw != null && ddlRaw.Items.Count <= 1)
+            {
+                LoadRawMaterialDropdown(ddlRaw);
+            }
+        }
+    }
+
+    protected void ddlRawMaterialH_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        DropDownList ddlRaw = (DropDownList)sender;
+        GridViewRow headerRow = gvBOMDetails.HeaderRow;
+
+        if (headerRow != null)
+        {
+            Label lblUnitH = (Label)headerRow.FindControl("lblUnitH");
+            string selectedMaterialId = ddlRaw.SelectedValue;
+
+            if (lblUnitH != null)
+            {
+                if (string.IsNullOrEmpty(selectedMaterialId))
+                {
+                    lblUnitH.Text = "-";
+                }
+                else
+                {
+                    PRODUCTService prodService = new PRODUCTService();
+                    PRODUCT pFilter = new PRODUCT();
+                    pFilter.PK_ID = selectedMaterialId;
+                    EntityList res = (EntityList)prodService.GetAll(pFilter);
+
+                    if (res != null && res.Count > 0)
+                    {
+                        PRODUCT selectedProd = (PRODUCT)res[0];
+                        Dictionary<string, string> units = GetUnitDictionary();
+
+                        if (!string.IsNullOrEmpty(selectedProd.UNIT_ID) && units.ContainsKey(selectedProd.UNIT_ID))
+                            lblUnitH.Text = units[selectedProd.UNIT_ID];
+                        else
+                            lblUnitH.Text = selectedProd.UNIT_ID ?? "-";
+                    }
+                    else
+                    {
+                        lblUnitH.Text = "-";
+                    }
+                }
+            }
+        }
+    }
+
+    protected void btnAddMaterial_Click(object sender, EventArgs e)
+    {
+        GridViewRow headerRow = gvBOMDetails.HeaderRow;
+        if (headerRow == null) return;
+
+        DropDownList ddlRaw = (DropDownList)headerRow.FindControl("ddlRawMaterialH");
+        Label lblUnitH = (Label)headerRow.FindControl("lblUnitH");
+        TextBox txtQtyH = (TextBox)headerRow.FindControl("txtQtyH");
+
+        if (ddlRaw == null || string.IsNullOrEmpty(ddlRaw.SelectedValue) || txtQtyH == null || string.IsNullOrEmpty(txtQtyH.Text.Trim()))
+        {
+            lblMessage.Text = "Please select a material and enter a valid quantity.";
+            return;
+        }
+
+        for (int i = 0; i < BOMTable.Rows.Count; i++)
+        {
+            if (BOMTable.Rows[i]["MATERIAL_ID"].ToString() == ddlRaw.SelectedValue)
+            {
+                lblMessage.Text = "This material is already in the recipe.";
+                return;
+            }
+        }
+
+        DataRow newRow = BOMTable.NewRow();
+        newRow["MATERIAL_ID"] = ddlRaw.SelectedValue;
+        newRow["MATERIAL_NAME"] = ddlRaw.SelectedItem.Text;
+        newRow["UNIT"] = lblUnitH != null ? lblUnitH.Text : "-";
+        newRow["QTY"] = txtQtyH.Text.Trim();
+
+        BOMTable.Rows.Add(newRow);
+        BindGrid();
+        lblMessage.Text = "";
     }
 
     protected void ddlFinishedProduct_SelectedIndexChanged(object sender, EventArgs e)
@@ -102,14 +213,21 @@ public partial class BillOfMaterial : System.Web.UI.Page
         string finishedId = ddlFinishedProduct.SelectedValue;
         if (!string.IsNullOrEmpty(finishedId))
         {
-            LoadExistingBOM(finishedId);
+            SelectFinishedProduct(finishedId);
         }
         else
         {
+            pnlRawMaterials.Visible = false;
             BOMTable.Rows.Clear();
             BindGrid();
             lblMessage.Text = "";
         }
+    }
+
+    private void SelectFinishedProduct(string finishedProductId)
+    {
+        pnlRawMaterials.Visible = true;
+        LoadExistingBOM(finishedProductId);
     }
 
     private void LoadExistingBOM(string finishedProductId)
@@ -133,17 +251,22 @@ public partial class BillOfMaterial : System.Web.UI.Page
 
             if (rawList != null)
             {
-                foreach (PRODUCT p in rawList)
+                for (int i = 0; i < rawList.Count; i++)
                 {
-                    if (!materialLookup.ContainsKey(p.PK_ID))
+                    PRODUCT p = (PRODUCT)rawList[i];
+                    if (p != null && p.PRODUCT_TYPE_ID == "3")
                     {
-                        materialLookup.Add(p.PK_ID, p);
+                        if (!materialLookup.ContainsKey(p.PK_ID))
+                        {
+                            materialLookup.Add(p.PK_ID, p);
+                        }
                     }
                 }
             }
 
-            foreach (PR_BILL_OF_MATERIAL item in existingBoms)
+            for (int i = 0; i < existingBoms.Count; i++)
             {
+                PR_BILL_OF_MATERIAL item = (PR_BILL_OF_MATERIAL)existingBoms[i];
                 DataRow dr = BOMTable.NewRow();
                 dr["MATERIAL_ID"] = item.MATERIAL_ID;
 
@@ -151,15 +274,10 @@ public partial class BillOfMaterial : System.Web.UI.Page
                 if (materialLookup.TryGetValue(item.MATERIAL_ID, out matObj))
                 {
                     dr["MATERIAL_NAME"] = matObj.PRODUCT_NAME;
-
                     if (!string.IsNullOrEmpty(matObj.UNIT_ID) && unitNames.ContainsKey(matObj.UNIT_ID))
-                    {
                         dr["UNIT"] = unitNames[matObj.UNIT_ID];
-                    }
                     else
-                    {
                         dr["UNIT"] = matObj.UNIT_ID ?? "-";
-                    }
                 }
                 else
                 {
@@ -171,72 +289,14 @@ public partial class BillOfMaterial : System.Web.UI.Page
                 BOMTable.Rows.Add(dr);
             }
 
-            lblMessage.Text = "Existing BOM loaded (" + existingBoms.Count.ToString() + " item(s)). Modifying and saving will update this recipe.";
-            lblMessage.CssClass = "text-primary";
+            lblMessage.Text = "Existing BOM loaded (" + existingBoms.Count.ToString() + " item(s)).";
         }
         else
         {
             lblMessage.Text = "No existing recipe found for this product. You can create a new one.";
-            lblMessage.CssClass = "text-secondary";
         }
 
         BindGrid();
-    }
-
-    protected void btnAddMaterial_Click(object sender, EventArgs e)
-    {
-        if (string.IsNullOrEmpty(ddlRawMaterial.SelectedValue) || string.IsNullOrEmpty(txtQty.Text.Trim()))
-        {
-            lblMessage.Text = "Please select a material and enter a valid quantity.";
-            lblMessage.CssClass = "text-danger";
-            return;
-        }
-
-        foreach (DataRow row in BOMTable.Rows)
-        {
-            if (row["MATERIAL_ID"].ToString() == ddlRawMaterial.SelectedValue)
-            {
-                lblMessage.Text = "This material is already in the recipe.";
-                lblMessage.CssClass = "text-danger";
-                return;
-            }
-        }
-
-        PRODUCTService prodService = new PRODUCTService();
-        PRODUCT pFilter = new PRODUCT();
-        pFilter.PK_ID = ddlRawMaterial.SelectedValue;
-        EntityList res = (EntityList)prodService.GetAll(pFilter);
-
-        string unitDisplay = "-";
-        if (res != null && res.Count > 0)
-        {
-            PRODUCT selectedProd = (PRODUCT)res[0];
-            Dictionary<string, string> unitNames = GetUnitDictionary();
-
-            if (!string.IsNullOrEmpty(selectedProd.UNIT_ID) && unitNames.ContainsKey(selectedProd.UNIT_ID))
-            {
-                unitDisplay = unitNames[selectedProd.UNIT_ID];
-            }
-            else
-            {
-                unitDisplay = selectedProd.UNIT_ID ?? "-";
-            }
-        }
-
-        string cleanMaterialName = ddlRawMaterial.SelectedItem.Text;
-
-        DataRow newRow = BOMTable.NewRow();
-        newRow["MATERIAL_ID"] = ddlRawMaterial.SelectedValue;
-        newRow["MATERIAL_NAME"] = cleanMaterialName;
-        newRow["UNIT"] = unitDisplay;
-        newRow["QTY"] = txtQty.Text.Trim();
-
-        BOMTable.Rows.Add(newRow);
-        BindGrid();
-
-        ddlRawMaterial.SelectedIndex = 0;
-        txtQty.Text = "";
-        lblMessage.Text = "";
     }
 
     protected void gvBOMDetails_RowEditing(object sender, GridViewEditEventArgs e)
@@ -259,14 +319,11 @@ public partial class BillOfMaterial : System.Web.UI.Page
         if (txtEditQty != null)
         {
             string newQty = txtEditQty.Text.Trim();
-
             if (string.IsNullOrEmpty(newQty))
             {
                 lblMessage.Text = "Quantity cannot be empty.";
-                lblMessage.CssClass = "text-danger";
                 return;
             }
-
             BOMTable.Rows[e.RowIndex]["QTY"] = newQty;
         }
 
@@ -287,14 +344,12 @@ public partial class BillOfMaterial : System.Web.UI.Page
         if (string.IsNullOrEmpty(ddlFinishedProduct.SelectedValue))
         {
             lblMessage.Text = "Please select a finished product.";
-            lblMessage.CssClass = "text-danger";
             return;
         }
 
         if (BOMTable.Rows.Count == 0)
         {
             lblMessage.Text = "Please add at least one raw material to the BOM.";
-            lblMessage.CssClass = "text-danger";
             return;
         }
 
@@ -307,34 +362,27 @@ public partial class BillOfMaterial : System.Web.UI.Page
             delFilter.FINISHED_PRODUCT_ID = finishedProductId;
             bomService.Delete(delFilter);
 
-            foreach (DataRow row in BOMTable.Rows)
+            for (int i = 0; i < BOMTable.Rows.Count; i++)
             {
+                DataRow row = BOMTable.Rows[i];
                 PR_BILL_OF_MATERIAL bomEntity = new PR_BILL_OF_MATERIAL();
                 bomEntity.FINISHED_PRODUCT_ID = finishedProductId;
                 bomEntity.MATERIAL_ID = row["MATERIAL_ID"].ToString();
                 bomEntity.QUANTITY = row["QTY"].ToString();
-
                 bomService.Insert(bomEntity);
             }
 
-            ResetForm();
+            BOMTable.Rows.Clear();
+            BindGrid();
+            ddlFinishedProduct.SelectedIndex = 0;
+            pnlRawMaterials.Visible = false;
+
             lblMessage.Text = "Bill of Materials saved successfully!";
-            lblMessage.CssClass = "text-success";
         }
         catch (Exception ex)
         {
             lblMessage.Text = "Error saving BOM: " + ex.Message;
-            lblMessage.CssClass = "text-danger";
         }
-    }
-
-    private void ResetForm()
-    {
-        BOMTable.Rows.Clear();
-        BindGrid();
-        if (ddlFinishedProduct.Items.Count > 0) ddlFinishedProduct.SelectedIndex = 0;
-        if (ddlRawMaterial.Items.Count > 0) ddlRawMaterial.SelectedIndex = 0;
-        txtQty.Text = "";
     }
 
     private DataTable BOMTable

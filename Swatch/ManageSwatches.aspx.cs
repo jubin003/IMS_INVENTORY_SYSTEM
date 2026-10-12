@@ -50,6 +50,7 @@ public partial class ManageSwatches : System.Web.UI.Page
 
     protected void ddlFilterCategory_SelectedIndexChanged(object sender, EventArgs e)
     {
+        gvSwatches.EditIndex = -1;
         BindGrid();
     }
 
@@ -61,12 +62,13 @@ public partial class ManageSwatches : System.Web.UI.Page
             {
                 gvSwatches.DataSource = null;
                 gvSwatches.DataBind();
-                gvSwatches.Visible = false;
-                phSearchWrapper.Visible = false; // Hide search box if no category selected
+                pnlSwatchesGrid.Visible = false;
+                phSearchWrapper.Visible = false;
                 return;
             }
 
-            phSearchWrapper.Visible = true; // Show search box when category is selected
+            pnlSwatchesGrid.Visible = true;
+            phSearchWrapper.Visible = true;
 
             PR_SWATCH searchEntity = new PR_SWATCH();
             searchEntity.SWATCH_TYPE_ID = ddlFilterCategory.SelectedValue;
@@ -86,7 +88,6 @@ public partial class ManageSwatches : System.Web.UI.Page
 
             gvSwatches.DataSource = swatchList;
             gvSwatches.DataBind();
-            gvSwatches.Visible = true;
         }
         catch (Exception ex)
         {
@@ -117,7 +118,7 @@ public partial class ManageSwatches : System.Web.UI.Page
             }
 
             // Register btnUpdate as full postback trigger when row is in edit mode
-            LinkButton btnUpdate = e.Row.FindControl("btnUpdate") as LinkButton;
+            ImageButton btnUpdate = e.Row.FindControl("btnUpdate") as ImageButton;
             if (btnUpdate != null)
             {
                 ScriptManager.GetCurrent(this).RegisterPostBackControl(btnUpdate);
@@ -157,7 +158,6 @@ public partial class ManageSwatches : System.Web.UI.Page
         try
         {
             PR_SWATCH newSwatch = new PR_SWATCH();
-            // Automatically uses currently selected filter category
             newSwatch.SWATCH_TYPE_ID = ddlFilterCategory.SelectedValue;
             newSwatch.SWATCH_NAME = txtSwatchName.Text.Trim();
             newSwatch.STATUS = ddlHeaderStatus != null ? ddlHeaderStatus.SelectedValue : "1";
@@ -231,11 +231,13 @@ public partial class ManageSwatches : System.Web.UI.Page
             string id = gvSwatches.DataKeys[e.RowIndex].Value.ToString();
             GridViewRow row = gvSwatches.Rows[e.RowIndex];
 
-            TextBox txtName = row.FindControl("txtSwatchName") as TextBox;
+            TextBox txtName = row.FindControl("txtSwatchNameE") as TextBox;
             DropDownList ddlEditStatus = row.FindControl("ddlEditStatus") as DropDownList;
 
             PR_SWATCH updateEntity = new PR_SWATCH();
             updateEntity.PK_ID = id;
+            updateEntity = (PR_SWATCH)swatchService.GetSingle(updateEntity);
+
             if (txtName != null) updateEntity.SWATCH_NAME = txtName.Text.Trim();
             if (ddlEditStatus != null) updateEntity.STATUS = ddlEditStatus.SelectedValue;
 
@@ -261,29 +263,5 @@ public partial class ManageSwatches : System.Web.UI.Page
             HelperFunction.MsgBox(this, this.GetType(), "Error updating swatch: " + ex.Message);
         }
     }
-
-    protected void gvSwatches_RowDeleting(object sender, GridViewDeleteEventArgs e)
-    {
-        try
-        {
-            string id = gvSwatches.DataKeys[e.RowIndex].Value.ToString();
-            PR_SWATCH deleteEntity = new PR_SWATCH();
-            deleteEntity.PK_ID = id;
-
-            swatchService.Delete(deleteEntity);
-
-            string physicalPath = Server.MapPath("~/images/swatches/" + id + ".jpg");
-            if (File.Exists(physicalPath))
-            {
-                try { File.Delete(physicalPath); } catch { }
-            }
-
-            HelperFunction.MsgBox(this, this.GetType(), "Swatch deleted successfully!");
-            BindGrid();
-        }
-        catch (Exception ex)
-        {
-            HelperFunction.MsgBox(this, this.GetType(), "Error deleting swatch: " + ex.Message);
-        }
-    }
+   
 }
