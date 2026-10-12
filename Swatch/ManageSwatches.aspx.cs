@@ -231,12 +231,13 @@ public partial class ManageSwatches : System.Web.UI.Page
             string id = gvSwatches.DataKeys[e.RowIndex].Value.ToString();
             GridViewRow row = gvSwatches.Rows[e.RowIndex];
 
-            // Maps to txtSwatchNameE from the EditItemTemplate in ManageSwatches.aspx
             TextBox txtName = row.FindControl("txtSwatchNameE") as TextBox;
             DropDownList ddlEditStatus = row.FindControl("ddlEditStatus") as DropDownList;
 
             PR_SWATCH updateEntity = new PR_SWATCH();
             updateEntity.PK_ID = id;
+            updateEntity = (PR_SWATCH)swatchService.GetSingle(updateEntity);
+
             if (txtName != null) updateEntity.SWATCH_NAME = txtName.Text.Trim();
             if (ddlEditStatus != null) updateEntity.STATUS = ddlEditStatus.SelectedValue;
 
@@ -262,29 +263,5 @@ public partial class ManageSwatches : System.Web.UI.Page
             HelperFunction.MsgBox(this, this.GetType(), "Error updating swatch: " + ex.Message);
         }
     }
-
-    protected void gvSwatches_RowDeleting(object sender, GridViewDeleteEventArgs e)
-    {
-        try
-        {
-            string id = gvSwatches.DataKeys[e.RowIndex].Value.ToString();
-            PR_SWATCH deleteEntity = new PR_SWATCH();
-            deleteEntity.PK_ID = id;
-
-            swatchService.Delete(deleteEntity);
-
-            string physicalPath = Server.MapPath("~/images/swatches/" + id + ".jpg");
-            if (File.Exists(physicalPath))
-            {
-                try { File.Delete(physicalPath); } catch { }
-            }
-
-            HelperFunction.MsgBox(this, this.GetType(), "Swatch deleted successfully!");
-            BindGrid();
-        }
-        catch (Exception ex)
-        {
-            HelperFunction.MsgBox(this, this.GetType(), "Error deleting swatch: " + ex.Message);
-        }
-    }
+   
 }
