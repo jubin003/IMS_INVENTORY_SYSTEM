@@ -40,9 +40,26 @@
                         <label for="<%= txtProductionType.ClientID %>">Production Type *</label>
                         <asp:TextBox ID="txtProductionType" runat="server" CssClass="form-control" placeholder="Enter production type..."></asp:TextBox>
                     </div>
+
+                    <!-- Customer Selection -->
+                    <div class="form-group">
+                        <label for="<%= ddlCustomer.ClientID %>">Customer *</label>
+                        <asp:DropDownList ID="ddlCustomer" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomer_SelectedIndexChanged">
+                        </asp:DropDownList>
+                    </div>
+
+                    <!-- Customer Order Dropdown -->
+                    <div class="form-group">
+                        <label for="<%= ddlCustomerOrder.ClientID %>">Customer Order (PO) *</label>
+                        <asp:DropDownList ID="ddlCustomerOrder" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomerOrder_SelectedIndexChanged">
+                            <asp:ListItem Text="-- Select Customer First --" Value=""></asp:ListItem>
+                        </asp:DropDownList>
+                    </div>
+
+                    <!-- Selected PO Reference -->
                     <div class="form-group">
                         <label for="<%= txtCustomerPOId.ClientID %>">Customer PO ID *</label>
-                        <asp:TextBox ID="txtCustomerPOId" runat="server" CssClass="form-control" placeholder="Enter customer PO ID..."></asp:TextBox>
+                        <asp:TextBox ID="txtCustomerPOId" runat="server" CssClass="form-control" placeholder="Selected Customer PO ID..."></asp:TextBox>
                     </div>
                 </div>
 
@@ -195,7 +212,7 @@
         <%-- ==================== STEP 4: PRODUCTION PIPELINE ==================== --%>
         <asp:Panel ID="pnlProductionPipeline" runat="server" Visible="false">
             
-            <%-- Pipeline Table 1: Unit Pipeline (Displays Unit ID and Division ID) --%>
+            <%-- Pipeline Table 1: Unit Pipeline --%>
             <asp:Panel ID="pnlPipelineUnit" runat="server" Visible="false">
                 <div class="bs-card">
                     <div class="card-toolbar">
@@ -281,7 +298,7 @@
                 </div>
             </asp:Panel>
 
-            <%-- Pipeline Table 2: Employee Pipeline (Displays Employee ID, hides Unit and Division ID) --%>
+            <%-- Pipeline Table 2: Employee Pipeline --%>
             <asp:Panel ID="pnlPipelineEmployee" runat="server" Visible="false">
                 <div class="bs-card">
                     <div class="card-toolbar">
