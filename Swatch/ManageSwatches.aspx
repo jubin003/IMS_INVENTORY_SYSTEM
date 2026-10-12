@@ -73,7 +73,6 @@
                                 OnRowEditing="gvSwatches_RowEditing" 
                                 OnRowCancelingEdit="gvSwatches_RowCancelingEdit" 
                                 OnRowUpdating="gvSwatches_RowUpdating" 
-                                OnRowDeleting="gvSwatches_RowDeleting" 
                                 OnRowDataBound="gvSwatches_RowDataBound">
                                 <Columns>
                                     <%-- Serial Number --%>
@@ -166,7 +165,6 @@
                                         <ItemTemplate>
                                             <div class="action-btn-group">
                                                 <asp:ImageButton ID="btnEdit" runat="server" CommandName="Edit" ImageUrl="~/images/icons/edit.png" ToolTip="Edit Swatch" CssClass="btn-action-icon edit-icon" CausesValidation="false" />
-                                                <asp:ImageButton ID="btnDelete" runat="server" CommandName="Delete" ImageUrl="~/images/icons/deletes.png" ToolTip="Delete Swatch" CssClass="btn-action-icon delete-icon" CausesValidation="false" OnClientClick="return confirm('Are you sure you want to delete this swatch?');" />
                                             </div>
                                         </ItemTemplate>
                                         <EditItemTemplate>
