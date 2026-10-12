@@ -6,30 +6,33 @@ using Entity.Framework;
 using System.Globalization;
 
 public partial class ProductionMaster : System.Web.UI.Page
-{   
-
-
-    PR_PURCHASE_ORDERService poService = new PR_PURCHASE_ORDERService();
-    PR_PURCHASE_ORDER PoEnt = new PR_PURCHASE_ORDER();
+{
     protected void Page_Load(object sender, EventArgs e)
     {
         if (!IsPostBack)
         {
-            LoadPurchaseOrder();
+            LoadDropdowns();
         }
     }
 
-    private void LoadPurchaseOrder()
+    private void LoadDropdowns()
     {
-            PoEnt = new PR_PURCHASE_ORDER();
-            EntityList poList =poService.GetAll(PoEnt);
-    
+        try
+        {
+            PR_PURCHASE_ORDERService poService = new PR_PURCHASE_ORDERService();
+            EntityList poList = (EntityList)poService.GetAll(new PR_PURCHASE_ORDER());
+
             ddlCustomerPO.DataSource = poList;
             ddlCustomerPO.DataTextField = "CUSTOMER_ORDER_NUMBER";
             ddlCustomerPO.DataValueField = "PK_ID";
             ddlCustomerPO.DataBind();
             ddlCustomerPO.Items.Insert(0, new ListItem("-- Select PO --", ""));
-
+        }
+        catch (Exception ex)
+        {
+            lblMessage.Text = "Error loading form data: " + ex.Message;
+            lblMessage.CssClass = "text-danger";
+        }
     }
 
     protected void btnSaveMaster_Click(object sender, EventArgs e)
