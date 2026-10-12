@@ -18,6 +18,7 @@
 
         <asp:HiddenField ID="hfProductionId" runat="server" />
 
+        <%-- ==================== STEP 1: PRODUCTION MASTER ==================== --%>
         <asp:Panel ID="pnlProductionMaster" runat="server">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -41,12 +42,14 @@
                         </asp:DropDownList>
                     </div>
 
+                    <!-- Customer Selection -->
                     <div class="form-group">
                         <label for="<%= ddlCustomer.ClientID %>">Customer *</label>
                         <asp:DropDownList ID="ddlCustomer" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomer_SelectedIndexChanged">
                         </asp:DropDownList>
                     </div>
 
+                    <!-- Customer Order Dropdown -->
                     <div class="form-group">
                         <label for="<%= ddlCustomerOrder.ClientID %>">Customer Order (PO) *</label>
                         <asp:DropDownList ID="ddlCustomerOrder" runat="server" CssClass="form-control">
@@ -62,6 +65,7 @@
             </div>
         </asp:Panel>
 
+        <%-- ==================== STEP 2: PRODUCTION DETAILS ==================== --%>
         <asp:Panel ID="pnlProductionDetails" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -87,6 +91,7 @@
                     </div>
                 </div>
 
+                <%-- Expandable Read-Only Table for Selected Delivery Details --%>
                 <asp:Panel ID="pnlSelectedDeliveryInfo" runat="server" Visible="false">
                     <div class="card-toolbar">
                         <div class="toolbar-stats">
@@ -109,6 +114,7 @@
                     </div>
                 </asp:Panel>
 
+                <%-- Production Products Panel (Hidden until a Delivery Date is selected) --%>
                 <asp:Panel ID="pnlProductionProducts" runat="server" Visible="false">
                     <div class="card-toolbar">
                         <div class="toolbar-stats">
@@ -169,66 +175,6 @@
             </div>
         </asp:Panel>
 
-<<<<<<< HEAD
-        <asp:Panel ID="pnlProductionStages" runat="server" Visible="false">
-            <div class="bs-card">
-                <div class="card-toolbar">
-                    <div class="toolbar-stats">
-                        <asp:Label ID="lblStageTitle" runat="server" CssClass="badge-stat" Text="Step 3: Production Stage"></asp:Label>
-                    </div>
-                    <asp:Button ID="btnAddStage" runat="server" Text="+ Add Stage" CssClass="btn-add-primary" OnClick="btnAddStage_Click" CausesValidation="false" />
-                </div>
-
-                <div class="table-responsive">
-                    <asp:GridView ID="grdProductionStages" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionStages_RowCommand">
-                        <Columns>
-                            <asp:TemplateField HeaderText="SN">
-                                <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Production Detail ID *">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtStageDetailId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_DETAIL_ID") %>' placeholder="Detail ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Stage Master ID *">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtStageMasterId" runat="server" CssClass="form-control" Text='<%# Eval("STAGE_MASTER_ID") %>' placeholder="Stage ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Unit or Employee *">
-                                <ItemTemplate>
-                                    <asp:DropDownList ID="ddlStageAssignmentType" runat="server" CssClass="form-control" SelectedValue='<%# Eval("UNIT_OR_EMPLOYEE") %>'>
-                                        <asp:ListItem Text="Select..." Value=""></asp:ListItem>
-                                        <asp:ListItem Text="Unit" Value="Unit"></asp:ListItem>
-                                        <asp:ListItem Text="Employee" Value="Employee"></asp:ListItem>
-                                    </asp:DropDownList>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Status">
-                                <ItemTemplate>
-                                    <asp:DropDownList ID="ddlStageStatus" runat="server" CssClass="form-control" SelectedValue='<%# Eval("STATUS") %>'>
-                                        <asp:ListItem Text="Pending" Value="Pending"></asp:ListItem>
-                                        <asp:ListItem Text="In Progress" Value="In Progress"></asp:ListItem>
-                                        <asp:ListItem Text="Completed" Value="Completed"></asp:ListItem>
-                                    </asp:DropDownList>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Action">
-                                <ItemTemplate>
-                                    <asp:LinkButton ID="btnRemoveStage" runat="server" Text="Remove" CommandName="RemoveStage" CommandArgument='<%# Container.DataItemIndex %>' CssClass="btn-clear" CausesValidation="false"></asp:LinkButton>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                        </Columns>
-                    </asp:GridView>
-                </div>
-
-                <div class="form-actions">
-                    <asp:Button ID="btnBackDetails" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackDetails_Click" CausesValidation="false" />
-                    <asp:Button ID="btnNextStages" runat="server" Text="Next: Pipeline Scheduling" CssClass="btn-add-primary" OnClick="btnNextStages_Click" />
-                </div>
-            </div>
-        </asp:Panel>
-=======
         <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
         <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
 <asp:Panel ID="pnlProductionStages" runat="server" Visible="false">
@@ -323,8 +269,9 @@
 
         <%-- ==================== STEP 4: PRODUCTION PIPELINE ==================== --%>
         <%-- ==================== STEP 4: PRODUCTION PIPELINE ==================== --%>
->>>>>>> origin/main
         <asp:Panel ID="pnlProductionPipeline" runat="server" Visible="false">
+            
+            <%-- Pipeline Table 1: Unit Pipeline --%>
             <asp:Panel ID="pnlPipelineUnit" runat="server" Visible="false">
                 <div class="bs-card">
                     <div class="card-toolbar">
@@ -392,6 +339,7 @@
                 </div>
             </asp:Panel>
 
+            <%-- Pipeline Table 2: Employee Pipeline --%>
             <asp:Panel ID="pnlPipelineEmployee" runat="server" Visible="false">
                 <div class="bs-card">
                     <div class="card-toolbar">
