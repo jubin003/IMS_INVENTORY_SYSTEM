@@ -37,8 +37,6 @@
                         <asp:TextBox ID="txtCompletionDate" runat="server" CssClass="form-control datepicker" placeholder="Select completion date..."></asp:TextBox>
                     </div>
                     <div class="form-group">
-                        <%--<label for="<%= txtProductionType.ClientID %>">Production Type *</label>
-                        <asp:TextBox ID="txtProductionType" runat="server" CssClass="form-control" placeholder="Enter production type..."></asp:TextBox>--%>
                         <label>Production Type <span class="text-danger">*</span></label>
                         <asp:DropDownList ID="ddlProductionType" runat="server" CssClass="form-control">
                         </asp:DropDownList>
@@ -58,12 +56,6 @@
                             <asp:ListItem Text="-- Select Customer First --" Value=""></asp:ListItem>
                         </asp:DropDownList>
                     </div>
-
-                    <!-- Selected PO Reference -->
-<%--                    <div class="form-group">
-                        <label for="<%= txtCustomerPOId.ClientID %>">Customer PO ID *</label>
-                        <asp:TextBox ID="txtCustomerPOId" runat="server" CssClass="form-control" placeholder="Selected Customer PO ID..."></asp:TextBox>
-                    </div>--%>
                 </div>
 
                 <div class="form-actions">
@@ -74,7 +66,6 @@
         </asp:Panel>
 
         <%-- ==================== STEP 2: PRODUCTION DETAILS ==================== --%>
-        
         <asp:Panel ID="pnlProductionDetails" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -110,10 +101,12 @@
                     <div class="table-responsive">
                         <asp:GridView ID="grdSelectedDelivery" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None">
                             <Columns>
-                                <asp:BoundField DataField="PK_ID" HeaderText="Delivery ID" />
+                                <asp:TemplateField HeaderText="SN">
+                                    <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
+                                </asp:TemplateField>
                                 <asp:BoundField DataField="DELIVERY_DATE" HeaderText="Delivery Date" />
                                 <asp:BoundField DataField="MODE_OF_TRANSPORTATION_ID" HeaderText="Mode of Transportation" />
-                                <asp:BoundField DataField="CUSOMTER_LOCATION_ID" HeaderText="Customer Location ID" />
+                                <asp:BoundField DataField="CUSOMTER_LOCATION_ID" HeaderText="Customer Location" />
                                 <asp:BoundField DataField="REMARKS" HeaderText="Remarks" />
                                 <asp:BoundField DataField="STATUS" HeaderText="Status" />
                             </Columns>
@@ -121,53 +114,59 @@
                     </div>
                 </asp:Panel>
 
-                <div class="card-toolbar">
-                    <div class="toolbar-stats">
-                        <asp:Label ID="lblProductTitle" runat="server" CssClass="badge-stat" Text="Production Products"></asp:Label>
+                <%-- Production Products Panel (Hidden until a Delivery Date is selected) --%>
+                <asp:Panel ID="pnlProductionProducts" runat="server" Visible="false">
+                    <div class="card-toolbar">
+                        <div class="toolbar-stats">
+                            <asp:Label ID="lblProductTitle" runat="server" CssClass="badge-stat" Text="Production Products"></asp:Label>
+                        </div>
+                        <asp:Button ID="btnAddProduct" runat="server" Text="+ Add Product" CssClass="btn-add-primary" OnClick="btnAddProduct_Click" CausesValidation="false" />
                     </div>
-                    <asp:Button ID="btnAddProduct" runat="server" Text="+ Add Product" CssClass="btn-add-primary" OnClick="btnAddProduct_Click" CausesValidation="false" />
-                </div>
 
-                <div class="table-responsive">
-                    <asp:GridView ID="grdProductionDetails" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionDetails_RowCommand">
-                        <Columns>
-                            <asp:TemplateField HeaderText="SN">
-                                <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Product ID *">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtProductId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCT_ID") %>' placeholder="Product ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Size ID">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtSizeId" runat="server" CssClass="form-control" Text='<%# Eval("SIZE_ID") %>' placeholder="Size ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Swatch ID">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtSwatchId" runat="server" CssClass="form-control" Text='<%# Eval("SWATCH_ID") %>' placeholder="Swatch ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Quantity *">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>' placeholder="Quantity"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Unit">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" Text='<%# Eval("UNIT") %>' placeholder="Unit ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Action">
-                                <ItemStyle CssClass="text-center" />
-                                <ItemTemplate>
-                                    <asp:LinkButton ID="btnRemoveProduct" runat="server" Text="Remove" CommandName="RemoveProduct" CommandArgument='<%# Container.DataItemIndex %>' CssClass="btn-clear" CausesValidation="false"></asp:LinkButton>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                        </Columns>
-                    </asp:GridView>
-                </div>
+                    <div class="table-responsive">
+                        <asp:GridView ID="grdProductionDetails" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionDetails_RowCommand">
+                            <Columns>
+                                <asp:TemplateField HeaderText="SN">
+                                    <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Product *">
+                                    <ItemTemplate>
+                                        <asp:HiddenField ID="hfProductId" runat="server" Value='<%# Eval("PRODUCT_ID") %>' />
+                                        <asp:TextBox ID="txtProductName" runat="server" CssClass="form-control form-readonly" Text='<%# Eval("PRODUCT_NAME") %>' ReadOnly="true" placeholder="Product Name"></asp:TextBox>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Size">
+                                    <ItemTemplate>
+                                        <asp:HiddenField ID="hfSizeId" runat="server" Value='<%# Eval("SIZE_ID") %>' />
+                                        <asp:TextBox ID="txtSizeName" runat="server" CssClass="form-control form-readonly" Text='<%# Eval("SIZE_NAME") %>' ReadOnly="true" placeholder="Size"></asp:TextBox>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Swatch">
+                                    <ItemTemplate>
+                                        <asp:HiddenField ID="hfSwatchId" runat="server" Value='<%# Eval("SWATCH_ID") %>' />
+                                        <asp:TextBox ID="txtSwatchName" runat="server" CssClass="form-control form-readonly" Text='<%# Eval("SWATCH_NAME") %>' ReadOnly="true" placeholder="Swatch"></asp:TextBox>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Quantity *">
+                                    <ItemTemplate>
+                                        <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>' placeholder="Quantity"></asp:TextBox>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Unit">
+                                    <ItemTemplate>
+                                        <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" Text='<%# Eval("UNIT") %>' placeholder="Unit ID"></asp:TextBox>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Action">
+                                    <ItemStyle CssClass="text-center" />
+                                    <ItemTemplate>
+                                        <asp:LinkButton ID="btnRemoveProduct" runat="server" Text="Remove" CommandName="RemoveProduct" CommandArgument='<%# Container.DataItemIndex %>' CssClass="btn-clear" CausesValidation="false"></asp:LinkButton>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
+                    </div>
+                </asp:Panel>
 
                 <div class="form-actions">
                     <asp:Button ID="btnBackMaster" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackMaster_Click" CausesValidation="false" />
