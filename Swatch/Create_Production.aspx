@@ -120,7 +120,7 @@
                         <div class="toolbar-stats">
                             <asp:Label ID="lblProductTitle" runat="server" CssClass="badge-stat" Text="Production Products"></asp:Label>
                         </div>
-                        <asp:Button ID="btnAddProduct" runat="server" Text="+ Add Product" CssClass="btn-add-primary" OnClick="btnAddProduct_Click" CausesValidation="false" />
+                        <%--<asp:Button ID="btnAddProduct" runat="server" Text="+ Add Product" CssClass="btn-add-primary" OnClick="btnAddProduct_Click" CausesValidation="false" />--%>
                     </div>
 
                     <div class="table-responsive">
@@ -176,65 +176,98 @@
         </asp:Panel>
 
         <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
-        <asp:Panel ID="pnlProductionStages" runat="server" Visible="false">
-            <div class="bs-card">
-                <div class="card-toolbar">
-                    <div class="toolbar-stats">
-                        <asp:Label ID="lblStageTitle" runat="server" CssClass="badge-stat" Text="Step 3: Production Stage"></asp:Label>
-                    </div>
-                    <asp:Button ID="btnAddStage" runat="server" Text="+ Add Stage" CssClass="btn-add-primary" OnClick="btnAddStage_Click" CausesValidation="false" />
-                </div>
-
-                <div class="table-responsive">
-                    <asp:GridView ID="grdProductionStages" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionStages_RowCommand">
-                        <Columns>
-                            <asp:TemplateField HeaderText="SN">
-                                <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Production Detail ID *">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtStageDetailId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_DETAIL_ID") %>' placeholder="Detail ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Stage Master ID *">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtStageMasterId" runat="server" CssClass="form-control" Text='<%# Eval("STAGE_MASTER_ID") %>' placeholder="Stage ID"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Unit or Employee *">
-                                <ItemTemplate>
-                                    <asp:DropDownList ID="ddlStageAssignmentType" runat="server" CssClass="form-control" SelectedValue='<%# Eval("UNIT_OR_EMPLOYEE") %>'>
-                                        <asp:ListItem Text="Select..." Value=""></asp:ListItem>
-                                        <asp:ListItem Text="Unit" Value="Unit"></asp:ListItem>
-                                        <asp:ListItem Text="Employee" Value="Employee"></asp:ListItem>
-                                    </asp:DropDownList>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Status">
-                                <ItemTemplate>
-                                    <asp:DropDownList ID="ddlStageStatus" runat="server" CssClass="form-control" SelectedValue='<%# Eval("STATUS") %>'>
-                                        <asp:ListItem Text="Pending" Value="Pending"></asp:ListItem>
-                                        <asp:ListItem Text="In Progress" Value="In Progress"></asp:ListItem>
-                                        <asp:ListItem Text="Completed" Value="Completed"></asp:ListItem>
-                                    </asp:DropDownList>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                            <asp:TemplateField HeaderText="Action">
-                                <ItemTemplate>
-                                    <asp:LinkButton ID="btnRemoveStage" runat="server" Text="Remove" CommandName="RemoveStage" CommandArgument='<%# Container.DataItemIndex %>' CssClass="btn-clear" CausesValidation="false"></asp:LinkButton>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-                        </Columns>
-                    </asp:GridView>
-                </div>
-
-                <div class="form-actions">
-                    <asp:Button ID="btnBackDetails" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackDetails_Click" CausesValidation="false" />
-                    <asp:Button ID="btnNextStages" runat="server" Text="Next: Pipeline Scheduling" CssClass="btn-add-primary" OnClick="btnNextStages_Click" />
-                </div>
+        <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
+<asp:Panel ID="pnlProductionStages" runat="server" Visible="false">
+    <div class="bs-card">
+        <div class="card-toolbar">
+            <div class="toolbar-stats">
+                <asp:Label ID="lblStageTitle" runat="server" CssClass="badge-stat" Text="Step 3: Production Stage"></asp:Label>
             </div>
-        </asp:Panel>
+            <asp:Button ID="btnAddStage" runat="server" Text="+ Add Stage" CssClass="btn-add-primary" OnClick="btnAddStage_Click" CausesValidation="false" />
+        </div>
 
+        <%-- Context Header showing Order Number from PR_PURCHASE_ORDER --%>
+        <div class="form-grid form-grid-3" style="margin-bottom: 15px;">
+            <div class="form-group">
+                <label>Customer Order (ORDER_NUMBER)</label>
+                <asp:Label ID="lblStageOrderNumber" runat="server" CssClass="form-control form-readonly"></asp:Label>
+            </div>
+            <div class="form-group">
+                <label>Production Date</label>
+                <asp:Label ID="lblStageProductionDate" runat="server" CssClass="form-control form-readonly"></asp:Label>
+            </div>
+            <div class="form-group">
+                <label>Completion Date</label>
+                <asp:Label ID="lblStageCompletionDate" runat="server" CssClass="form-control form-readonly"></asp:Label>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <asp:GridView ID="grdProductionStages" runat="server" AutoGenerateColumns="False" 
+                CssClass="enterprise-grid" GridLines="None" 
+                OnRowCommand="grdProductionStages_RowCommand" 
+                OnRowDataBound="grdProductionStages_RowDataBound">
+                <Columns>
+                    <asp:TemplateField HeaderText="SN">
+                        <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
+                    </asp:TemplateField>
+
+                    <%-- Product / Production Detail Dropdown (Populated from Step 2) --%>
+                    <asp:TemplateField HeaderText="Product *">
+                        <ItemTemplate>
+                            <asp:HiddenField ID="hfStageDetailId" runat="server" Value='<%# Eval("PRODUCTION_DETAIL_ID") %>' />
+                            <asp:HiddenField ID="hfStageProductId" runat="server" Value='<%# Eval("PRODUCT_ID") %>' />
+                            <asp:DropDownList ID="ddlStageProduct" runat="server" CssClass="form-control">
+                            </asp:DropDownList>
+                        </ItemTemplate>
+                    </asp:TemplateField>
+
+                    <%-- Stage Master Dropdown (Populated from PR_STAGE_MASTER) --%>
+                    <asp:TemplateField HeaderText="Stage *">
+                        <ItemTemplate>
+                            <asp:HiddenField ID="hfStageMasterId" runat="server" Value='<%# Eval("STAGE_MASTER_ID") %>' />
+                            <asp:DropDownList ID="ddlStageMaster" runat="server" CssClass="form-control">
+                            </asp:DropDownList>
+                        </ItemTemplate>
+                    </asp:TemplateField>
+
+                    <asp:TemplateField HeaderText="Unit or Employee *">
+                        <ItemTemplate>
+                            <asp:DropDownList ID="ddlStageAssignmentType" runat="server" CssClass="form-control" SelectedValue='<%# Eval("UNIT_OR_EMPLOYEE") %>'>
+                                <asp:ListItem Text="Select..." Value=""></asp:ListItem>
+                                <asp:ListItem Text="Unit" Value="Unit"></asp:ListItem>
+                                <asp:ListItem Text="Employee" Value="Employee"></asp:ListItem>
+                            </asp:DropDownList>
+                        </ItemTemplate>
+                    </asp:TemplateField>
+
+                    <asp:TemplateField HeaderText="Status">
+                        <ItemTemplate>
+                            <asp:DropDownList ID="ddlStageStatus" runat="server" CssClass="form-control" SelectedValue='<%# Eval("STATUS") %>'>
+                                <asp:ListItem Text="Pending" Value="Pending"></asp:ListItem>
+                                <asp:ListItem Text="In Progress" Value="In Progress"></asp:ListItem>
+                                <asp:ListItem Text="Completed" Value="Completed"></asp:ListItem>
+                            </asp:DropDownList>
+                        </ItemTemplate>
+                    </asp:TemplateField>
+
+                    <asp:TemplateField HeaderText="Action">
+                        <ItemTemplate>
+                            <asp:LinkButton ID="btnRemoveStage" runat="server" Text="Remove" CommandName="RemoveStage" CommandArgument='<%# Container.DataItemIndex %>' CssClass="btn-clear" CausesValidation="false"></asp:LinkButton>
+                        </ItemTemplate>
+                    </asp:TemplateField>
+                </Columns>
+            </asp:GridView>
+        </div>
+
+        <div class="form-actions">
+            <asp:Button ID="btnBackDetails" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackDetails_Click" CausesValidation="false" />
+            <asp:Button ID="btnNextStages" runat="server" Text="Next: Pipeline Scheduling" CssClass="btn-add-primary" OnClick="btnNextStages_Click" />
+        </div>
+    </div>
+</asp:Panel>
+
+        <%-- ==================== STEP 4: PRODUCTION PIPELINE ==================== --%>
         <%-- ==================== STEP 4: PRODUCTION PIPELINE ==================== --%>
         <asp:Panel ID="pnlProductionPipeline" runat="server" Visible="false">
             
@@ -249,29 +282,40 @@
                     </div>
 
                     <div class="table-responsive">
-                        <asp:GridView ID="grdProductionPipelineUnit" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionPipelineUnit_RowCommand">
+                        <asp:GridView ID="grdProductionPipelineUnit" runat="server" AutoGenerateColumns="False" 
+                            CssClass="enterprise-grid" GridLines="None" 
+                            OnRowCommand="grdProductionPipelineUnit_RowCommand"
+                            OnRowDataBound="grdProductionPipelineUnit_RowDataBound">
                             <Columns>
                                 <asp:TemplateField HeaderText="SN">
                                     <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Production Detail ID *">
+                                <asp:TemplateField HeaderText="Product (Production Detail) *">
                                     <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineDetailId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_DETAIL_ID") %>' placeholder="Detail ID"></asp:TextBox>
+                                        <asp:HiddenField ID="hfPipelineDetailId" runat="server" Value='<%# Eval("PRODUCTION_DETAIL_ID") %>' />
+                                        <asp:DropDownList ID="ddlPipelineDetail" runat="server" CssClass="form-control">
+                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Stage ID *">
+                                <asp:TemplateField HeaderText="Stage *">
                                     <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineStageId" runat="server" CssClass="form-control" Text='<%# Eval("STAGE_ID") %>' placeholder="Stage ID"></asp:TextBox>
+                                        <asp:HiddenField ID="hfPipelineStageId" runat="server" Value='<%# Eval("STAGE_ID") %>' />
+                                        <asp:DropDownList ID="ddlPipelineStage" runat="server" CssClass="form-control">
+                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Unit ID *">
+                                <asp:TemplateField HeaderText="Unit *">
                                     <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineUnitId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_UNIT") %>' placeholder="Unit ID"></asp:TextBox>
+                                        <asp:HiddenField ID="hfPipelineUnitId" runat="server" Value='<%# Eval("PRODUCTION_UNIT") %>' />
+                                        <asp:DropDownList ID="ddlPipelineUnit" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlPipelineUnit_SelectedIndexChanged">
+                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Division ID *">
+                                <asp:TemplateField HeaderText="Division *">
                                     <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineDivisionId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_DIVISION") %>' placeholder="Division ID"></asp:TextBox>
+                                        <asp:HiddenField ID="hfPipelineDivisionId" runat="server" Value='<%# Eval("PRODUCTION_DIVISION") %>' />
+                                        <asp:DropDownList ID="ddlPipelineDivision" runat="server" CssClass="form-control">
+                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Estimated Days *">
@@ -282,35 +326,6 @@
                                 <asp:TemplateField HeaderText="Estimated Time">
                                     <ItemTemplate>
                                         <asp:TextBox ID="txtEstimatedTime" runat="server" CssClass="form-control" Text='<%# Eval("ESTIMATED_TIME") %>' placeholder="HH:mm"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Production Date *">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineProductionDate" runat="server" CssClass="form-control datepicker" Text='<%# Eval("PRODUCTION_DATE") %>' placeholder="Date"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Production Time">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineProductionTime" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_TIME") %>' placeholder="HH:mm"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Completion Date *">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineCompletionDate" runat="server" CssClass="form-control datepicker" Text='<%# Eval("COMPLETION_DATE") %>' placeholder="Date"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Completion Time">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineCompletionTime" runat="server" CssClass="form-control" Text='<%# Eval("COMPLETION_TIME") %>' placeholder="HH:mm"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Status">
-                                    <ItemTemplate>
-                                        <asp:DropDownList ID="ddlPipelineStatus" runat="server" CssClass="form-control" SelectedValue='<%# Eval("STATUS") %>'>
-                                            <asp:ListItem Text="Pending" Value="Pending"></asp:ListItem>
-                                            <asp:ListItem Text="In Progress" Value="In Progress"></asp:ListItem>
-                                            <asp:ListItem Text="Completed" Value="Completed"></asp:ListItem>
-                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Action">
@@ -335,24 +350,33 @@
                     </div>
 
                     <div class="table-responsive">
-                        <asp:GridView ID="grdProductionPipelineEmployee" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionPipelineEmployee_RowCommand">
+                        <asp:GridView ID="grdProductionPipelineEmployee" runat="server" AutoGenerateColumns="False" 
+                            CssClass="enterprise-grid" GridLines="None" 
+                            OnRowCommand="grdProductionPipelineEmployee_RowCommand"
+                            OnRowDataBound="grdProductionPipelineEmployee_RowDataBound">
                             <Columns>
                                 <asp:TemplateField HeaderText="SN">
                                     <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Production Detail ID *">
+                                <asp:TemplateField HeaderText="Product (Production Detail) *">
                                     <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineDetailId" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_DETAIL_ID") %>' placeholder="Detail ID"></asp:TextBox>
+                                        <asp:HiddenField ID="hfPipelineDetailId" runat="server" Value='<%# Eval("PRODUCTION_DETAIL_ID") %>' />
+                                        <asp:DropDownList ID="ddlPipelineDetail" runat="server" CssClass="form-control">
+                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Stage ID *">
+                                <asp:TemplateField HeaderText="Stage *">
                                     <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineStageId" runat="server" CssClass="form-control" Text='<%# Eval("STAGE_ID") %>' placeholder="Stage ID"></asp:TextBox>
+                                        <asp:HiddenField ID="hfPipelineStageId" runat="server" Value='<%# Eval("STAGE_ID") %>' />
+                                        <asp:DropDownList ID="ddlPipelineStage" runat="server" CssClass="form-control">
+                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Employee ID *">
+                                <asp:TemplateField HeaderText="Employee *">
                                     <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineEmployeeId" runat="server" CssClass="form-control" Text='<%# Eval("EMPLOYEE_ID") %>' placeholder="Employee ID"></asp:TextBox>
+                                        <asp:HiddenField ID="hfPipelineEmployeeId" runat="server" Value='<%# Eval("EMPLOYEE_ID") %>' />
+                                        <asp:DropDownList ID="ddlPipelineEmployee" runat="server" CssClass="form-control">
+                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Estimated Days *">
@@ -363,35 +387,6 @@
                                 <asp:TemplateField HeaderText="Estimated Time">
                                     <ItemTemplate>
                                         <asp:TextBox ID="txtEstimatedTime" runat="server" CssClass="form-control" Text='<%# Eval("ESTIMATED_TIME") %>' placeholder="HH:mm"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Production Date *">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineProductionDate" runat="server" CssClass="form-control datepicker" Text='<%# Eval("PRODUCTION_DATE") %>' placeholder="Date"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Production Time">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineProductionTime" runat="server" CssClass="form-control" Text='<%# Eval("PRODUCTION_TIME") %>' placeholder="HH:mm"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Completion Date *">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineCompletionDate" runat="server" CssClass="form-control datepicker" Text='<%# Eval("COMPLETION_DATE") %>' placeholder="Date"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Completion Time">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtPipelineCompletionTime" runat="server" CssClass="form-control" Text='<%# Eval("COMPLETION_TIME") %>' placeholder="HH:mm"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Status">
-                                    <ItemTemplate>
-                                        <asp:DropDownList ID="ddlPipelineStatus" runat="server" CssClass="form-control" SelectedValue='<%# Eval("STATUS") %>'>
-                                            <asp:ListItem Text="Pending" Value="Pending"></asp:ListItem>
-                                            <asp:ListItem Text="In Progress" Value="In Progress"></asp:ListItem>
-                                            <asp:ListItem Text="Completed" Value="Completed"></asp:ListItem>
-                                        </asp:DropDownList>
                                     </ItemTemplate>
                                 </asp:TemplateField>
                                 <asp:TemplateField HeaderText="Action">
@@ -406,10 +401,11 @@
             </asp:Panel>
 
             <div class="form-actions">
-                <asp:Button ID="btnBackStages" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackStages_Click" CausesValidation="false" />
-                <asp:Button ID="btnSaveProduction" runat="server" Text="Save Production" CssClass="btn-add-primary" OnClick="btnSaveProduction_Click" />
-                <asp:Button ID="btnClearAll" runat="server" Text="Clear Form" CssClass="btn-clear" OnClick="btnClearAll_Click" CausesValidation="false" />
+                <asp:Button ID="Button1" runat="server" Text="Back" CssClass="btn-clear" OnClick="btnBackStages_Click" CausesValidation="false" />
+                <asp:Button ID="Button2" runat="server" Text="Save Production" CssClass="btn-add-primary" OnClick="btnSaveProduction_Click" />
+                <asp:Button ID="Button3" runat="server" Text="Clear Form" CssClass="btn-clear" OnClick="btnClearAll_Click" CausesValidation="false" />
             </div>
         </asp:Panel>
+
     </div>
 </asp:Content>
