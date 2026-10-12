@@ -139,10 +139,6 @@ public partial class ViewBillOfMaterial : System.Web.UI.Page
         {
             Response.Redirect("BillOfMaterial.aspx?id=" + finishedProductId);
         }
-        else if (e.CommandName == "DeleteBOM")
-        {
-            DeleteBOMRecipe(finishedProductId);
-        }
     }
 
     private void ShowRecipeDetails(string finishedProductId)
@@ -222,23 +218,6 @@ public partial class ViewBillOfMaterial : System.Web.UI.Page
         catch (Exception ex)
         {
             lblMessage.Text = "Error loading recipe details: " + ex.Message;
-        }
-    }
-
-    private void DeleteBOMRecipe(string finishedProductId)
-    {
-        try
-        {
-            PR_BILL_OF_MATERIAL delFilter = new PR_BILL_OF_MATERIAL();
-            delFilter.FINISHED_PRODUCT_ID = finishedProductId;
-            bomService.Delete(delFilter);
-
-            lblMessage.Text = "BOM recipe deleted successfully.";
-            LoadMasterBOMGrid();
-        }
-        catch (Exception ex)
-        {
-            lblMessage.Text = "Error deleting BOM: " + ex.Message;
         }
     }
 
