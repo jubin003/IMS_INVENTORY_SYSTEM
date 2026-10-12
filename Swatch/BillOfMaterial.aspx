@@ -1,166 +1,165 @@
 ﻿<%@ Page Title="Manage Bill of Materials" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="BillOfMaterial.aspx.cs" Inherits="BillOfMaterial" %>
-
-<asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
-    
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+ <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
     <link href="css/ims-webform.css" rel="stylesheet" />
-    
-    <style>
-        .select2-container .select2-selection--single {
-            height: 34px; 
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            padding: 4px 12px;
-        }
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 32px;
-        }
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 24px;
-            color: #333;
-        }
-    </style>
-
+ 
     <asp:UpdatePanel ID="UpdatePanel1" runat="server">
         <ContentTemplate>
-            
-            <div class="container-fluid" style="margin-top: 15px;">
-                
-                <div class="row" style="margin-bottom: 20px;">
-                    <div class="col-md-6">
-                        <h2 style="margin: 0; color: #0f172a; font-weight: bold;">Manage Bill of Materials</h2>
+            <div class="imsv5-container">
+                <div class="imsv5-page-header">
+                    <div class="imsv5-title-block">
+                        <nav class="imsv5-breadcrumb" aria-label="Breadcrumb">
+                            <span>Production</span>
+                            <svg class="imsv5-icon-arrow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                            <span class="active">Bill of Materials</span>
+                        </nav>
+                        <h1 class="imsv5-page-title">Manage Bill of Materials</h1>
+                        <p class="imsv5-page-subtitle">Configure finished products and define raw material recipe ratios.</p>
                     </div>
-                    <div class="col-md-6 text-right">
-                        <a href="ViewBillOfMaterial.aspx" class="btn btn-default">
-                            <i class="fa fa-list"></i> View All BOMs
-                        </a>
+                    <div>
+                        <a href="ViewBillOfMaterial.aspx" class="btn-enterprise-outline">View All BOMs</a>
                     </div>
                 </div>
-
-                <div class="bs-card mb-4" style="margin-bottom: 20px;">
-                    <div class="card-toolbar" style="border-bottom: 1px solid #f1f5f9; padding: 15px;">
-                        <h4 style="margin: 0; font-size: 14px; font-weight: bold; color: #334155;">
-                            <span style="color: #0284c7;">●</span> 1. SELECT FINISHED PRODUCT
-                        </h4>
-                    </div>
-                    <div class="panel-body" style="padding: 20px;">
-                        <div class="row">
-                            <div class="col-md-6 form-group">
-                                <label style="font-weight: bold; color: #475569;">Finished Product <span class="text-danger">*</span></label>
-                                <asp:DropDownList ID="ddlFinishedProduct" runat="server" CssClass="form-control chosen-select" 
-                                    AutoPostBack="true" OnSelectedIndexChanged="ddlFinishedProduct_SelectedIndexChanged">
-                                </asp:DropDownList>
+ 
+                <%-- STEP 1: SELECT FINISHED PRODUCT --%>
+                <asp:Panel ID="pnlFinishedProduct" runat="server">
+                    <div class="bs-card">
+                        <div class="card-toolbar">
+                            <div class="toolbar-stats">
+                                <span class="badge-stat">Step 1: Select Finished Product</span>
+                            </div>
+                        </div>
+ 
+                        <div class="form-grid form-grid-3">
+                            <div class="form-group form-span-2">
+                                <label for="<%= ddlFinishedProduct.ClientID %>">Finished Product <span class="req">*</span></label>
+                                <asp:DropDownList ID="ddlFinishedProduct" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlFinishedProduct_SelectedIndexChanged"></asp:DropDownList>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="bs-card">
-                    <div class="card-toolbar" style="border-bottom: 1px solid #f1f5f9; padding: 15px;">
-                        <h4 style="margin: 0; font-size: 14px; font-weight: bold; color: #334155;">
-                            <span style="color: #0284c7;">●</span> 2. ADD RAW MATERIALS TO RECIPE
-                        </h4>
-                    </div>
-                    <div class="panel-body" style="padding: 20px;">
-                        
-                        <div class="row" style="margin-bottom: 20px; align-items: flex-end;">
-                            <div class="col-md-5 form-group mb-0">
-                                <label style="font-weight: bold; color: #475569;">Raw Material <span class="text-danger">*</span></label>
-                                <asp:DropDownList ID="ddlRawMaterial" runat="server" CssClass="form-control chosen-select"></asp:DropDownList>
-                            </div>
-                            <div class="col-md-4 form-group mb-0">
-                                <label style="font-weight: bold; color: #475569;">Required Quantity <span class="text-danger">*</span></label>
-                                <asp:TextBox ID="txtQty" runat="server" CssClass="form-control" placeholder="Enter qty"></asp:TextBox>
-                            </div>
-                            <div class="col-md-3 form-group mb-0" style="margin-top: 24px;">
-                                <asp:Button ID="btnAddMaterial" runat="server" Text="+ Add Material" CssClass="btn btn-primary btn-block" OnClick="btnAddMaterial_Click" />
+                </asp:Panel>
+ 
+                <%-- STEP 2: RAW MATERIAL RECIPE GRID WITH INLINE HEADER ADDITION --%>
+                <asp:Panel ID="pnlRawMaterials" runat="server" Visible="false">
+                    <div class="bs-card">
+                        <div class="card-toolbar">
+                            <div class="toolbar-stats">
+                                <span class="badge-stat">Step 2: Add Raw Materials to Recipe</span>
                             </div>
                         </div>
-
+ 
                         <div class="table-responsive">
-                            <asp:GridView ID="gvBOMDetails" runat="server" AutoGenerateColumns="false" GridLines="None" 
-                                CssClass="table table-bordered table-hover table-striped"
+                            <asp:GridView ID="gvBOMDetails" runat="server"
+                                Width="100%"
+                                AutoGenerateColumns="false"
+                                GridLines="None"
+                                CssClass="enterprise-grid"
                                 DataKeyNames="MATERIAL_ID"
+                                ShowHeaderWhenEmpty="true"
+                                OnRowDataBound="gvBOMDetails_RowDataBound"
                                 OnRowDeleting="gvBOMDetails_RowDeleting"
                                 OnRowEditing="gvBOMDetails_RowEditing"
                                 OnRowUpdating="gvBOMDetails_RowUpdating"
                                 OnRowCancelingEdit="gvBOMDetails_RowCancelingEdit">
-                                <HeaderStyle BackColor="#f8fafc" ForeColor="#475569" Font-Bold="true" />
                                 <Columns>
-                                    <asp:BoundField DataField="MATERIAL_ID" HeaderText="Material ID" Visible="false" ReadOnly="true" />
-                                    <asp:BoundField DataField="MATERIAL_NAME" HeaderText="Raw Material Name" ItemStyle-Font-Bold="true" ReadOnly="true" />
-                                    <asp:BoundField DataField="UNIT" HeaderText="Unit" ItemStyle-HorizontalAlign="Center" HeaderStyle-HorizontalAlign="Center" ReadOnly="true" />
-                                    
-                                    <asp:TemplateField HeaderText="Quantity" ItemStyle-HorizontalAlign="Right" HeaderStyle-HorizontalAlign="Right">
+                                    <%-- SN COLUMN --%>
+                                    <asp:TemplateField HeaderText="SN">
+                                        <HeaderStyle CssClass="col-sn" />
+                                        <ItemStyle CssClass="text-center col-sn" />
                                         <ItemTemplate>
-                                            <%# Eval("QTY") %>
+                                            <span class="row-sn-text"><%# Container.DataItemIndex + 1 %></span>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+ 
+                                    <%-- RAW MATERIAL COLUMN (HEADER SELECT) --%>
+                                    <asp:TemplateField HeaderText="Raw Material Name">
+                                        <HeaderStyle CssClass="col-name" />
+                                        <ItemStyle CssClass="col-name font-semibold" />
+                                        <HeaderTemplate>
+                                            <div class="header-field-group">
+                                                <span class="header-label">Raw Material Name</span>
+                                                <asp:DropDownList ID="ddlRawMaterialH" runat="server" 
+                                                    CssClass="form-control inline-select" 
+                                                    style="max-width: 100% !important; min-width: 260px !important;" 
+                                                    AutoPostBack="true" 
+                                                    OnSelectedIndexChanged="ddlRawMaterialH_SelectedIndexChanged">
+                                                </asp:DropDownList>
+                                            </div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <div class="cell-entity">
+                                                <span class="entity-bullet"></span>
+                                                <span><%# Eval("MATERIAL_NAME") %></span>
+                                            </div>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+ 
+                                    <%-- UNIT COLUMN (HEADER AUTO-FILLED) --%>
+                                    <asp:TemplateField HeaderText="Unit">
+                                        <HeaderStyle CssClass="col-status" />
+                                        <ItemStyle CssClass="col-status" />
+                                        <HeaderTemplate>
+                                            <div class="header-field-group">
+                                                <span class="header-label">Unit</span>
+                                                <asp:Label ID="lblUnitH" runat="server" CssClass="form-control form-readonly" Text="-"></asp:Label>
+                                            </div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <span><%# Eval("UNIT") %></span>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+ 
+                                    <%-- QUANTITY COLUMN (HEADER INPUT) --%>
+                                    <asp:TemplateField HeaderText="Quantity">
+                                        <HeaderStyle CssClass="col-rate" />
+                                        <ItemStyle CssClass="col-rate" />
+                                        <HeaderTemplate>
+                                            <div class="header-field-group">
+                                                <span class="header-label">Quantity</span>
+                                                <asp:TextBox ID="txtQtyH" runat="server" CssClass="form-control inline-input" placeholder="Enter qty..."></asp:TextBox>
+                                            </div>
+                                        </HeaderTemplate>
+                                        <ItemTemplate>
+                                            <span class="cell-rate"><%# Eval("QTY") %></span>
                                         </ItemTemplate>
                                         <EditItemTemplate>
-                                            <asp:TextBox ID="txtEditQty" runat="server" Text='<%# Bind("QTY") %>' CssClass="form-control input-sm text-right" style="max-width: 100px; display: inline-block;"></asp:TextBox>
+                                            <asp:TextBox ID="txtEditQty" runat="server" Text='<%# Bind("QTY") %>' CssClass="form-control rate-field"></asp:TextBox>
                                         </EditItemTemplate>
                                     </asp:TemplateField>
-                                    
-                                    <asp:TemplateField HeaderText="Actions" ItemStyle-HorizontalAlign="Center" HeaderStyle-Width="140px">
+ 
+                                    <%-- ACTIONS COLUMN (HEADER ADD BUTTON) --%>
+                                    <asp:TemplateField HeaderText="Actions">
+                                        <HeaderStyle CssClass="col-actions text-center" />
+                                        <ItemStyle CssClass="col-actions text-center" />
+                                        <HeaderTemplate>
+                                            <div class="header-action-group">
+                                                <asp:Button ID="btnAddMaterial" runat="server" Text="+ Add" CssClass="btn-add-primary" OnClick="btnAddMaterial_Click" CausesValidation="false" />
+                                            </div>
+                                        </HeaderTemplate>
                                         <ItemTemplate>
-                                            <asp:LinkButton ID="btnEditRow" runat="server" CommandName="Edit" CssClass="text-primary mr-2" style="text-decoration:none; font-weight:bold; margin-right: 8px;" CausesValidation="false">
-                                                <i class="fa fa-pencil"></i> 
-                                            </asp:LinkButton>
-                                            <asp:LinkButton ID="btnDeleteRow" runat="server" CommandName="Delete" CssClass="text-danger" style="text-decoration:none; font-weight:bold;" CausesValidation="false">
-                                                <i class="fa fa-trash"></i> 
-                                            </asp:LinkButton>
+                                            <div class="action-btn-group">
+                                                <asp:ImageButton ID="btnEditRow" runat="server" CommandName="Edit" ImageUrl="~/images/icons/edit.png" ToolTip="Edit Quantity" CssClass="btn-action-icon edit-icon" CausesValidation="false" />
+                                                <asp:ImageButton ID="btnDeleteRow" runat="server" CommandName="Delete" ImageUrl="~/images/icons/deletes.png" ToolTip="Remove Material" CssClass="btn-action-icon delete-icon" CausesValidation="false" OnClientClick="return confirm('Remove this raw material from recipe?');" />
+                                            </div>
                                         </ItemTemplate>
                                         <EditItemTemplate>
-                                            <asp:LinkButton ID="btnUpdateRow" runat="server" CommandName="Update" CssClass="text-success mr-2" style="text-decoration:none; font-weight:bold; margin-right: 8px;" CausesValidation="false">
-                                                <i class="fa fa-check"></i>
-                                            </asp:LinkButton>
-                                            <asp:LinkButton ID="btnCancelRow" runat="server" CommandName="Cancel" CssClass="text-muted" style="text-decoration:none; font-weight:bold;" CausesValidation="false">
-                                                <i class="fa fa-times"></i> 
-                                            </asp:LinkButton>
+                                            <div class="action-btn-group">
+                                                <asp:ImageButton ID="btnUpdateRow" runat="server" CommandName="Update" ImageUrl="~/images/icons/upload.png" ToolTip="Save Changes" CssClass="btn-action-icon update-icon" CausesValidation="false" />
+                                                <asp:ImageButton ID="btnCancelRow" runat="server" CommandName="Cancel" ImageUrl="~/images/icons/cancel.png" ToolTip="Cancel" CssClass="btn-action-icon cancel-icon" CausesValidation="false" />
+                                            </div>
                                         </EditItemTemplate>
                                     </asp:TemplateField>
                                 </Columns>
-                                <EmptyDataTemplate>
-                                    <div class="text-center text-muted" style="padding: 30px; background-color: #f9f9f9; border-radius: 4px;">
-                                        No raw materials added yet. Select a material and enter quantity above to build the recipe.
-                                    </div>
-                                </EmptyDataTemplate>
+                                <PagerStyle CssClass="gridview-pager" />
                             </asp:GridView>
                         </div>
+ 
+                        <div class="form-actions">
+                            <asp:Label ID="lblMessage" runat="server" CssClass="badge-stat"></asp:Label>
+                            <asp:Button ID="btnSaveBOM" runat="server" Text="Save Final BOM" CssClass="btn-add-primary" OnClick="btnSaveBOM_Click" CausesValidation="false" />
+                        </div>
                     </div>
-                </div>
-
-                <div class="row" style="margin-top: 20px; margin-bottom: 40px;">
-                    <div class="col-md-8 text-left">
-                        <asp:Label ID="lblMessage" runat="server" Font-Bold="true"></asp:Label>
-                    </div>
-                    <div class="col-md-4 text-right">
-                        <asp:Button ID="btnSaveBOM" runat="server" Text="Save Final BOM" CssClass="btn btn-success btn-lg" OnClick="btnSaveBOM_Click" />
-                    </div>
-                </div>
-
+                </asp:Panel>
             </div>
         </ContentTemplate>
     </asp:UpdatePanel>
-
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-    <script type="text/javascript">
-        
-        function initializeSelect2() {
-            $('.chosen-select').select2({
-                width: '100%',
-                placeholder: "-- Search and select --",
-                allowClear: true
-            });
-        }
-
-        $(document).ready(function () {
-            initializeSelect2();
-        });
-
-        var prm = Sys.WebForms.PageRequestManager.getInstance();
-        prm.add_endRequest(function () {
-            initializeSelect2();
-        });
-
-    </script>
-</asp:Content>
+</asp:Content>  
