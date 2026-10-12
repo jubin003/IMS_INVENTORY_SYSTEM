@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Data;
 using System.Web.UI;
 using System.Web.UI.WebControls;
@@ -17,6 +18,8 @@ public partial class Production_Create_Production : System.Web.UI.Page
             txtProductionDate.Text = GetTodayNepali();
             txtCompletionDate.Text = GetTodayNepali();
 
+            LoadCustomersDropdown();
+
             BindProductionDetails();
             BindProductionStages();
             BindProductionPipelineUnit();
@@ -26,7 +29,9 @@ public partial class Production_Create_Production : System.Web.UI.Page
         }
     }
 
-
+    // =====================================================
+    // DATE HELPERS
+    // =====================================================
 
     private string GetTodayNepali()
     {
@@ -58,6 +63,10 @@ public partial class Production_Create_Production : System.Web.UI.Page
         return new string[] { parts[0], parts[1], parts[2] };
     }
 
+    // =====================================================
+    // STEP NAVIGATION
+    // =====================================================
+
     private void ShowStep(int step)
     {
         pnlProductionMaster.Visible = step == 1;
@@ -76,7 +85,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
         }
     }
 
-    // Evaluates which pipeline cards to display based on step 3 choices
     private void ConfigureStep4Pipelines()
     {
         DataTable dtStages = ProductionStageTable;
@@ -153,10 +161,111 @@ public partial class Production_Create_Production : System.Web.UI.Page
         ShowStep(3);
     }
 
+    // =====================================================
+    // STEP 1: PRODUCTION MASTER & CUSTOMER SELECTION
+    // =====================================================
 
+    private void LoadCustomersDropdown()
+    {
+        try
+        {
+            CUSTOMERService custService = new CUSTOMERService();
+            CUSTOMER filter = new CUSTOMER();
+            EntityList custList = (EntityList)custService.GetAll(filter);
+
+            ddlCustomer.DataSource = custList;
+            ddlCustomer.DataTextField = "CUSTOMER_NAME";
+            ddlCustomer.DataValueField = "PK_ID";
+            ddlCustomer.DataBind();
+            ddlCustomer.Items.Insert(0, new ListItem("-- Select Customer --", ""));
+        }
+        catch (Exception ex)
+        {
+            HelperFunction.MsgBox(this, GetType(), "Error loading customers: " + ex.Message);
+        }
+    }
+
+    protected void ddlCustomer_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        string selectedCustomerId = ddlCustomer.SelectedValue;
+
+        txtCustomerPOId.Text = "";
+        ddlCustomerOrder.Items.Clear();
+
+        if (string.IsNullOrEmpty(selectedCustomerId))
+        {
+            ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer First --", ""));
+            return;
+        }
+
+        try
+        {
+            PR_PURCHASE_ORDERService poService = new PR_PURCHASE_ORDERService();
+            PR_PURCHASE_ORDER filter = new PR_PURCHASE_ORDER();
+            filter.CUSTOMER_ID = selectedCustomerId;
+
+            EntityList orderList = (EntityList)poService.GetAll(filter);
+
+            if (orderList != null && orderList.Count > 0)
+            {
+                ddlCustomerOrder.DataSource = orderList;
+                ddlCustomerOrder.DataTextField = "ORDER_NUMBER";
+                ddlCustomerOrder.DataValueField = "PK_ID";
+                ddlCustomerOrder.DataBind();
+                ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer Order --", ""));
+            }
+            else
+            {
+                ddlCustomerOrder.Items.Insert(0, new ListItem("No Orders Found", ""));
+            }
+        }
+        catch (Exception ex)
+        {
+            HelperFunction.MsgBox(this, GetType(), "Error loading customer orders: " + ex.Message);
+        }
+    }
+
+    protected void ddlCustomerOrder_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (!string.IsNullOrEmpty(ddlCustomerOrder.SelectedValue))
+        {
+            try
+            {
+                PR_PURCHASE_ORDERService poService = new PR_PURCHASE_ORDERService();
+                PR_PURCHASE_ORDER filter = new PR_PURCHASE_ORDER();
+                filter.PK_ID = ddlCustomerOrder.SelectedValue;
+
+                PR_PURCHASE_ORDER selectedOrder = (PR_PURCHASE_ORDER)poService.GetSingle(filter);
+                if (selectedOrder != null)
+                {
+                    txtCustomerPOId.Text = !string.IsNullOrEmpty(selectedOrder.CUSTOMER_ORDER_NUMBER)
+                        ? selectedOrder.CUSTOMER_ORDER_NUMBER
+                        : selectedOrder.ORDER_NUMBER;
+                }
+                else
+                {
+                    txtCustomerPOId.Text = ddlCustomerOrder.SelectedItem.Text;
+                }
+            }
+            catch
+            {
+                txtCustomerPOId.Text = ddlCustomerOrder.SelectedItem.Text;
+            }
+        }
+        else
+        {
+            txtCustomerPOId.Text = "";
+        }
+    }
 
     private bool ValidateMaster()
     {
+        if (string.IsNullOrWhiteSpace(ddlCustomer.SelectedValue))
+        {
+            HelperFunction.MsgBox(this, GetType(), "Please select a customer.");
+            return false;
+        }
+
         if (!IsValidDate(txtProductionDate.Text))
         {
             HelperFunction.MsgBox(this, GetType(), "Enter a valid production date in dd/mm/yyyy format.");
@@ -177,7 +286,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
         if (string.IsNullOrWhiteSpace(txtCustomerPOId.Text))
         {
-            HelperFunction.MsgBox(this, GetType(), "Customer PO ID cannot be empty.");
+            HelperFunction.MsgBox(this, GetType(), "Customer PO ID cannot be empty. Please select an order.");
             return false;
         }
 
@@ -191,6 +300,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
         txtProductionType.Text = "";
         txtCustomerPOId.Text = "";
         hfProductionId.Value = "";
+
+        if (ddlCustomer.Items.Count > 0)
+            ddlCustomer.SelectedIndex = 0;
+
+        ddlCustomerOrder.Items.Clear();
+        ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer First --", ""));
 
         ShowStep(1);
     }
@@ -727,6 +842,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
         txtCustomerPOId.Text = "";
         txtMultipleDeliveryId.Text = "";
         hfProductionId.Value = "";
+
+        if (ddlCustomer.Items.Count > 0)
+            ddlCustomer.SelectedIndex = 0;
+
+        ddlCustomerOrder.Items.Clear();
+        ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer First --", ""));
 
         ViewState.Remove("ProductionDetailTable");
         ViewState.Remove("ProductionStageTable");
