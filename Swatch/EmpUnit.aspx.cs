@@ -430,7 +430,11 @@ public partial class Swatch_EmpUnit : System.Web.UI.Page
                 LoadDivisionDropDown(ddlMapDivisionH);
 
             if (ddlMapEmployeeH != null)
-                LoadEmployeeDropDown(ddlMapEmployeeH);
+            {
+                ddlMapEmployeeH.Items.Clear();
+                ddlMapEmployeeH.Items.Add(new ListItem("-- Select Employee --", ""));
+                ddlMapEmployeeH.Enabled = false;
+            }
         }
 
         if (e.Row.RowType != DataControlRowType.DataRow)
@@ -538,16 +542,93 @@ public partial class Swatch_EmpUnit : System.Web.UI.Page
         ddl.DataBind();
         ddl.Items.Insert(0, new ListItem("-- Select Division --", ""));
     }
-
     private void LoadEmployeeDropDown(DropDownList ddl)
     {
         EmpEnt = new EMPLOYEES();
 
         ddl.DataSource = EmpSer.GetAll(EmpEnt);
-        ddl.DataTextField = "FIRSTNAME";
+        ddl.DataTextField = "FirstName";
         ddl.DataValueField = "EMPLOYEEID";
         ddl.DataBind();
         ddl.Items.Insert(0, new ListItem("-- Select Employee --", ""));
+    }
+
+    private void LoadEmployeeDropDown(DropDownList ddl, string divisionId)
+    {
+        EmpEnt = new EMPLOYEES();
+        EntityList empList = EmpSer.GetAll(EmpEnt);
+
+        ddl.Items.Clear();
+        ddl.Items.Insert(0, new ListItem("-- Select Employee --", ""));
+
+
+        //Loading the Division for employee filtering.
+        PR_DIVISION_EMPLOYEE divFilter = new PR_DIVISION_EMPLOYEE();
+        divFilter.DIVISION_ID = divisionId;
+        EntityList mappedList = MSer.GetAll(divFilter);
+
+        for (int i = 0; i < empList.Count; i++)
+        {
+            EMPLOYEES emp = (EMPLOYEES)empList[i];
+            bool isAlreadyMapped = false;
+
+            for (int j = 0; j < mappedList.Count; j++)
+            {
+                PR_DIVISION_EMPLOYEE mapping = (PR_DIVISION_EMPLOYEE)mappedList[j];
+                if (mapping.EMPLOYEE_ID == emp.EMPLOYEEID)
+                {
+                    isAlreadyMapped = true;
+                    break;
+                }
+            }
+
+            if (!isAlreadyMapped)
+            {
+                ddl.Items.Add(new ListItem(emp.FIRSTNAME, emp.EMPLOYEEID));
+            }
+        }
+
+        //if (string.IsNullOrEmpty(divisionId))
+        //{
+        //    for (int i = 0; i < allEmployees.Count; i++)
+        //    {
+        //        EMPLOYEES emp = (EMPLOYEES)allEmployees[i];
+        //        ddl.Items.Add(new ListItem(emp.FIRSTNAME, emp.EMPLOYEEID));
+        //    }
+        //    return;
+        //}
+
+        //ddl.DataSource = EmpSer.GetAll(EmpEnt);
+        //ddl.DataTextField = "FIRSTNAME";
+        //ddl.DataValueField = "EMPLOYEEID";
+        //ddl.DataBind();
+    }
+
+    protected void ddlMapDivisionH_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        DropDownList ddlDivision = (DropDownList)sender;
+        GridViewRow headerRow = gridMap.HeaderRow;
+
+        if (headerRow != null)
+        {
+            DropDownList ddlEmployee = (DropDownList)headerRow.FindControl("ddlMapEmployeeH");
+            if (ddlEmployee != null)
+            {
+                string divisionId = ddlDivision.SelectedValue;
+
+                if (string.IsNullOrEmpty(divisionId))
+                {
+                    ddlEmployee.Items.Clear();
+                    ddlEmployee.Items.Add(new ListItem("-- Select Employee --", ""));
+                    ddlEmployee.Enabled = false;
+                }
+                else
+                {
+                    ddlEmployee.Enabled = true;
+                    LoadEmployeeDropDown(ddlEmployee, divisionId);
+                }
+            }
+        }
     }
 
     private string GetUnitName(string unitId)

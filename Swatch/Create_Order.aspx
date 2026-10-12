@@ -218,7 +218,8 @@
 
                                     <asp:TemplateField HeaderText="Unit">
                                         <ItemTemplate>
-                                            <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" Text='<%# Eval("UNIT") %>' ReadOnly="true"></asp:TextBox>
+                                            <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" ReadOnly="true"></asp:TextBox>
+                                            <asp:HiddenField ID="hfUnitId" runat="server" Value='<%# Eval("UNIT") %>' />
                                         </ItemTemplate>
                                     </asp:TemplateField>
 
