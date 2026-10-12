@@ -26,9 +26,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         }
     }
 
-    // =====================================================
-    // DATE HELPERS
-    // =====================================================
+
 
     private string GetTodayNepali()
     {
@@ -59,10 +57,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
         string[] parts = value.Trim().Split('/');
         return new string[] { parts[0], parts[1], parts[2] };
     }
-
-    // =====================================================
-    // STEP NAVIGATION
-    // =====================================================
 
     private void ShowStep(int step)
     {
@@ -159,9 +153,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         ShowStep(3);
     }
 
-    // =====================================================
-    // STEP 1: PRODUCTION MASTER
-    // =====================================================
+
 
     private bool ValidateMaster()
     {

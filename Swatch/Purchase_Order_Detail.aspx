@@ -12,7 +12,7 @@
                     </svg>
                     <span class="active">Purchase Order Detail Configuration</span>
                 </nav>
-                <h1 class="imsv5-page-title">Purchase Order Detail Management</h1>
+                <h1 class="imsv5-page-title">Purchase Order Detail MWanagement</h1>
                 <p class="imsv5-page-subtitle">Configure purchase order products, sizes, swatches, quantities and units.</p>
             </div>
         </div>
