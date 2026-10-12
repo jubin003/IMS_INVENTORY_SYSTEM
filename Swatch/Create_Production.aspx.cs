@@ -10,6 +10,8 @@ using Entity.Framework;
 public partial class Production_Create_Production : System.Web.UI.Page
 {
     PhyeGanDate PGD = new PhyeGanDate();
+    PRODUCT_TYPE PTEnt = new PRODUCT_TYPE();
+    PRODUCT_TYPEService PTSer = new PRODUCT_TYPEService();
 
     protected void Page_Load(object sender, EventArgs e)
     {
@@ -18,6 +20,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
             txtProductionDate.Text = GetTodayNepali();
             txtCompletionDate.Text = GetTodayNepali();
 
+            LoadProductionType();
             LoadCustomersDropdown();
 
             BindProductionDetails();
@@ -27,6 +30,19 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
             ShowStep(1);
         }
+    }
+
+    protected void LoadProductionType()
+    {
+        PTEnt = new PRODUCT_TYPE();
+        PTEnt.STATUS = "1";
+
+        ddlProductionType.DataSource = PTSer.GetAll(PTEnt);
+        ddlProductionType.DataTextField = "PRODUCT_TYPE_NAME";
+        ddlProductionType.DataValueField = "PK_ID";
+        ddlProductionType.DataBind();
+
+        ddlProductionType.Items.Insert(0, new ListItem("-- Select Production Type --", "0"));
     }
 
     // =====================================================
@@ -112,9 +128,10 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
     protected void btnNextMaster_Click(object sender, EventArgs e)
     {
-        if (!ValidateMaster())
-            return;
+        //if (!ValidateMaster())
+        //    return;
 
+        LoadMultipleDeliveriesByPO(ddlCustomerOrder.SelectedValue);
         ShowStep(2);
     }
 
@@ -128,8 +145,8 @@ public partial class Production_Create_Production : System.Web.UI.Page
     {
         ReadProductionDetails();
 
-        if (!ValidateProductionDetails())
-            return;
+        //if (!ValidateProductionDetails())
+        //    return;
 
         ShowStep(3);
     }
@@ -144,8 +161,8 @@ public partial class Production_Create_Production : System.Web.UI.Page
     {
         ReadProductionStages();
 
-        if (!ValidateProductionStages())
-            return;
+        //if (!ValidateProductionStages())
+        //    return;
 
         ShowStep(4);
     }
@@ -189,7 +206,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
     {
         string selectedCustomerId = ddlCustomer.SelectedValue;
 
-        txtCustomerPOId.Text = "";
         ddlCustomerOrder.Items.Clear();
 
         if (string.IsNullOrEmpty(selectedCustomerId))
@@ -225,39 +241,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
         }
     }
 
-    protected void ddlCustomerOrder_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        if (!string.IsNullOrEmpty(ddlCustomerOrder.SelectedValue))
-        {
-            try
-            {
-                PR_PURCHASE_ORDERService poService = new PR_PURCHASE_ORDERService();
-                PR_PURCHASE_ORDER filter = new PR_PURCHASE_ORDER();
-                filter.PK_ID = ddlCustomerOrder.SelectedValue;
-
-                PR_PURCHASE_ORDER selectedOrder = (PR_PURCHASE_ORDER)poService.GetSingle(filter);
-                if (selectedOrder != null)
-                {
-                    txtCustomerPOId.Text = !string.IsNullOrEmpty(selectedOrder.CUSTOMER_ORDER_NUMBER)
-                        ? selectedOrder.CUSTOMER_ORDER_NUMBER
-                        : selectedOrder.ORDER_NUMBER;
-                }
-                else
-                {
-                    txtCustomerPOId.Text = ddlCustomerOrder.SelectedItem.Text;
-                }
-            }
-            catch
-            {
-                txtCustomerPOId.Text = ddlCustomerOrder.SelectedItem.Text;
-            }
-        }
-        else
-        {
-            txtCustomerPOId.Text = "";
-        }
-    }
-
     private bool ValidateMaster()
     {
         if (string.IsNullOrWhiteSpace(ddlCustomer.SelectedValue))
@@ -278,15 +261,9 @@ public partial class Production_Create_Production : System.Web.UI.Page
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(txtProductionType.Text))
+        if (string.IsNullOrWhiteSpace(ddlProductionType.SelectedValue) || ddlProductionType.SelectedValue == "0")
         {
-            HelperFunction.MsgBox(this, GetType(), "Production type cannot be empty.");
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(txtCustomerPOId.Text))
-        {
-            HelperFunction.MsgBox(this, GetType(), "Customer PO ID cannot be empty. Please select an order.");
+            HelperFunction.MsgBox(this, GetType(), "Please select a production type.");
             return false;
         }
 
@@ -297,8 +274,10 @@ public partial class Production_Create_Production : System.Web.UI.Page
     {
         txtProductionDate.Text = GetTodayNepali();
         txtCompletionDate.Text = GetTodayNepali();
-        txtProductionType.Text = "";
-        txtCustomerPOId.Text = "";
+
+        if (ddlProductionType.Items.Count > 0)
+            ddlProductionType.SelectedIndex = 0;
+
         hfProductionId.Value = "";
 
         if (ddlCustomer.Items.Count > 0)
@@ -311,8 +290,96 @@ public partial class Production_Create_Production : System.Web.UI.Page
     }
 
     // =====================================================
-    // STEP 2: PRODUCTION DETAILS
+    // STEP 2: PRODUCTION DETAILS & MULTIPLE DELIVERY
     // =====================================================
+
+    private void LoadMultipleDeliveriesByPO(string purchaseOrderId)
+    {
+        string previousSelection = ddlMultipleDelivery.SelectedValue;
+
+        ddlMultipleDelivery.Items.Clear();
+        pnlSelectedDeliveryInfo.Visible = false;
+
+        if (string.IsNullOrEmpty(purchaseOrderId))
+        {
+            ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select PO in Step 1 First --", ""));
+            return;
+        }
+
+        try
+        {
+            PR_MULTIPLE_DELIVERYService mdService = new PR_MULTIPLE_DELIVERYService();
+            PR_MULTIPLE_DELIVERY filter = new PR_MULTIPLE_DELIVERY();
+            filter.PURCHASE_ORDER_ID = purchaseOrderId;
+
+            EntityList deliveryList = (EntityList)mdService.GetAll(filter);
+
+            if (deliveryList != null && deliveryList.Count > 0)
+            {
+                for (int i = 0; i < deliveryList.Count; i++)
+                {
+                    PR_MULTIPLE_DELIVERY item = (PR_MULTIPLE_DELIVERY)deliveryList[i];
+                    string label = "Delivery #" + (i + 1) + " - " + item.DELIVERY_DATE + " (ID: " + item.PK_ID + ")";
+                    ddlMultipleDelivery.Items.Add(new ListItem(label, item.PK_ID));
+                }
+                ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select Delivery Date --", ""));
+
+                if (!string.IsNullOrEmpty(previousSelection) && ddlMultipleDelivery.Items.FindByValue(previousSelection) != null)
+                {
+                    ddlMultipleDelivery.SelectedValue = previousSelection;
+                    BindSelectedDeliveryDetails(previousSelection);
+                }
+            }
+            else
+            {
+                ddlMultipleDelivery.Items.Insert(0, new ListItem("No Delivery Dates Found", ""));
+            }
+        }
+        catch (Exception ex)
+        {
+            HelperFunction.MsgBox(this, GetType(), "Error loading delivery dates: " + ex.Message);
+        }
+    }
+
+    protected void ddlMultipleDelivery_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        ReadProductionDetails();
+        BindSelectedDeliveryDetails(ddlMultipleDelivery.SelectedValue);
+    }
+
+    private void BindSelectedDeliveryDetails(string selectedDeliveryId)
+    {
+        if (string.IsNullOrEmpty(selectedDeliveryId))
+        {
+            pnlSelectedDeliveryInfo.Visible = false;
+            grdSelectedDelivery.DataSource = null;
+            grdSelectedDelivery.DataBind();
+            return;
+        }
+
+        try
+        {
+            PR_MULTIPLE_DELIVERYService mdService = new PR_MULTIPLE_DELIVERYService();
+            PR_MULTIPLE_DELIVERY filter = new PR_MULTIPLE_DELIVERY();
+            filter.PK_ID = selectedDeliveryId;
+
+            EntityList list = (EntityList)mdService.GetAll(filter);
+            if (list != null && list.Count > 0)
+            {
+                grdSelectedDelivery.DataSource = list;
+                grdSelectedDelivery.DataBind();
+                pnlSelectedDeliveryInfo.Visible = true;
+            }
+            else
+            {
+                pnlSelectedDeliveryInfo.Visible = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            HelperFunction.MsgBox(this, GetType(), "Error loading delivery info: " + ex.Message);
+        }
+    }
 
     private DataTable ProductionDetailTable
     {
@@ -428,9 +495,9 @@ public partial class Production_Create_Production : System.Web.UI.Page
             return false;
         }
 
-        if (string.IsNullOrWhiteSpace(txtMultipleDeliveryId.Text))
+        if (string.IsNullOrWhiteSpace(ddlMultipleDelivery.SelectedValue))
         {
-            HelperFunction.MsgBox(this, GetType(), "Multiple Delivery ID cannot be empty.");
+            HelperFunction.MsgBox(this, GetType(), "Please select a Multiple Delivery Date.");
             return false;
         }
 
@@ -787,60 +854,23 @@ public partial class Production_Create_Production : System.Web.UI.Page
         if (pnlPipelineEmployee.Visible)
             ReadProductionPipelineEmployee();
 
-        if (!ValidateMaster() || !ValidateProductionDetails() || !ValidateProductionStages())
-            return;
-
-        // Validate Unit Pipeline if visible
-        if (pnlPipelineUnit.Visible)
-        {
-            foreach (DataRow row in ProductionPipelineUnitTable.Rows)
-            {
-                if (string.IsNullOrWhiteSpace(Convert.ToString(row["STAGE_ID"])))
-                    continue;
-
-                if (string.IsNullOrWhiteSpace(Convert.ToString(row["PRODUCTION_DETAIL_ID"]))
-                    || string.IsNullOrWhiteSpace(Convert.ToString(row["PRODUCTION_UNIT"]))
-                    || string.IsNullOrWhiteSpace(Convert.ToString(row["PRODUCTION_DIVISION"]))
-                    || string.IsNullOrWhiteSpace(Convert.ToString(row["ESTIMATED_DAY"]))
-                    || !IsValidDate(Convert.ToString(row["PRODUCTION_DATE"]))
-                    || !IsValidDate(Convert.ToString(row["COMPLETION_DATE"])))
-                {
-                    HelperFunction.MsgBox(this, GetType(), "Complete the Unit ID, Division ID, estimated days, and valid dates for every Unit pipeline row.");
-                    return;
-                }
-            }
-        }
-
-        // Validate Employee Pipeline if visible
-        if (pnlPipelineEmployee.Visible)
-        {
-            foreach (DataRow row in ProductionPipelineEmployeeTable.Rows)
-            {
-                if (string.IsNullOrWhiteSpace(Convert.ToString(row["STAGE_ID"])))
-                    continue;
-
-                if (string.IsNullOrWhiteSpace(Convert.ToString(row["PRODUCTION_DETAIL_ID"]))
-                    || string.IsNullOrWhiteSpace(Convert.ToString(row["EMPLOYEE_ID"]))
-                    || string.IsNullOrWhiteSpace(Convert.ToString(row["ESTIMATED_DAY"]))
-                    || !IsValidDate(Convert.ToString(row["PRODUCTION_DATE"]))
-                    || !IsValidDate(Convert.ToString(row["COMPLETION_DATE"])))
-                {
-                    HelperFunction.MsgBox(this, GetType(), "Complete the Employee ID, estimated days, and valid dates for every Employee pipeline row.");
-                    return;
-                }
-            }
-        }
-
-        HelperFunction.MsgBox(this, GetType(), "Validation passed. Ready to persist Production, Unit Pipeline, and Employee Pipeline!");
+        HelperFunction.MsgBox(this, GetType(), "Ready to persist Production, Unit Pipeline, and Employee Pipeline!");
     }
 
     protected void btnClearAll_Click(object sender, EventArgs e)
     {
         txtProductionDate.Text = GetTodayNepali();
         txtCompletionDate.Text = GetTodayNepali();
-        txtProductionType.Text = "";
-        txtCustomerPOId.Text = "";
-        txtMultipleDeliveryId.Text = "";
+
+        if (ddlProductionType.Items.Count > 0)
+            ddlProductionType.SelectedIndex = 0;
+
+        ddlMultipleDelivery.Items.Clear();
+        ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select Delivery Date --", ""));
+        pnlSelectedDeliveryInfo.Visible = false;
+        grdSelectedDelivery.DataSource = null;
+        grdSelectedDelivery.DataBind();
+
         hfProductionId.Value = "";
 
         if (ddlCustomer.Items.Count > 0)
