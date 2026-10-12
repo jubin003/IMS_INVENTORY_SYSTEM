@@ -12,8 +12,18 @@ public partial class ManageSwatches : System.Web.UI.Page
     PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
     PR_SWATCHService swatchService = new PR_SWATCHService();
 
+    // Same allowed image types as Table_Image
+    private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
+    private const string SwatchFolder = "~/images/swatches/";
+
     protected void Page_Load(object sender, EventArgs e)
     {
+        // File uploads need a multipart form
+        if (Page.Form != null)
+        {
+            Page.Form.Enctype = "multipart/form-data";
+        }
+
         if (!IsPostBack)
         {
             LoadFilterCategoryDropdown();
@@ -31,6 +41,10 @@ public partial class ManageSwatches : System.Web.UI.Page
         }
     }
 
+    // ---------------------------------------------------------------
+    // Loading
+    // ---------------------------------------------------------------
+
     private void LoadFilterCategoryDropdown()
     {
         try
@@ -44,7 +58,7 @@ public partial class ManageSwatches : System.Web.UI.Page
         }
         catch (Exception ex)
         {
-            HelperFunction.MsgBox(this, this.GetType(), "Error loading filters: " + ex.Message);
+            HelperFunction.MsgBox(this, this.GetType(), "Error loading filters: " + CleanMsg(ex.Message));
         }
     }
 
@@ -75,6 +89,7 @@ public partial class ManageSwatches : System.Web.UI.Page
 
             EntityList swatchList = (EntityList)swatchService.GetAll(searchEntity);
 
+            // Placeholder row so the header (with the add controls) still shows for an empty category
             if (swatchList == null || swatchList.Count == 0)
             {
                 swatchList = new EntityList();
@@ -91,39 +106,65 @@ public partial class ManageSwatches : System.Web.UI.Page
         }
         catch (Exception ex)
         {
-            HelperFunction.MsgBox(this, this.GetType(), "Error loading grid: " + ex.Message);
+            HelperFunction.MsgBox(this, this.GetType(), "Error loading grid: " + CleanMsg(ex.Message));
         }
     }
 
     protected void gvSwatches_RowDataBound(object sender, GridViewRowEventArgs e)
     {
-        // Register btnAdd as a full postback trigger for file upload
-        if (e.Row.RowType == DataControlRowType.Header)
+        // Hide the placeholder row used when a category has no swatches yet
+        if (e.Row.RowType == DataControlRowType.DataRow)
         {
-            Button btnAdd = e.Row.FindControl("btnAdd") as Button;
-            if (btnAdd != null)
-            {
-                ScriptManager.GetCurrent(this).RegisterPostBackControl(btnAdd);
-            }
-        }
-        else if (e.Row.RowType == DataControlRowType.DataRow)
-        {
-            string pkId = DataBinder.Eval(e.Row.DataItem, "PK_ID") != null
-                            ? DataBinder.Eval(e.Row.DataItem, "PK_ID").ToString()
-                            : "";
-
-            if (string.IsNullOrEmpty(pkId))
+            object pk = DataBinder.Eval(e.Row.DataItem, "PK_ID");
+            if (pk == null || string.IsNullOrEmpty(pk.ToString()))
             {
                 e.Row.Visible = false;
             }
+        }
+    }
 
-            // Register btnUpdate as full postback trigger when row is in edit mode
-            ImageButton btnUpdate = e.Row.FindControl("btnUpdate") as ImageButton;
-            if (btnUpdate != null)
+    // ---------------------------------------------------------------
+    // Image helpers (same rules as Table_Image: JPG / JPEG / PNG only)
+    // ---------------------------------------------------------------
+
+    /// <summary>Makes an exception message safe to pass to MsgBox (no quotes or backslashes).</summary>
+    private static string CleanMsg(string message)
+    {
+        if (message == null) return "";
+        return message.Replace("\\", "/").Replace("'", "").Replace("\r", " ").Replace("\n", " ");
+    }
+
+    /// <summary>Returns the lower-case extension if the upload is an allowed image type, otherwise null.</summary>
+    private string GetValidImageExtension(FileUpload fu)
+    {
+        string extension = Path.GetExtension(fu.FileName).ToLower();
+        foreach (string allowed in AllowedExtensions)
+        {
+            if (extension == allowed) return extension;
+        }
+        return null;
+    }
+
+    /// <summary>Saves the upload as {id}{ext} and removes any older image for the same swatch (e.g. an old .png when a .jpg is uploaded).</summary>
+    private void SaveSwatchImage(string id, FileUpload fu, string extension)
+    {
+        string folderPath = Server.MapPath(SwatchFolder);
+
+        if (!Directory.Exists(folderPath))
+        {
+            Directory.CreateDirectory(folderPath);
+        }
+
+        foreach (string ext in AllowedExtensions)
+        {
+            string oldFile = Path.Combine(folderPath, id + ext);
+            if (File.Exists(oldFile))
             {
-                ScriptManager.GetCurrent(this).RegisterPostBackControl(btnUpdate);
+                File.Delete(oldFile);
             }
         }
+
+        fu.SaveAs(Path.Combine(folderPath, id + extension));
     }
 
     protected string GetSwatchImageUrl(object pkId)
@@ -131,15 +172,23 @@ public partial class ManageSwatches : System.Web.UI.Page
         if (pkId == null || string.IsNullOrEmpty(pkId.ToString()))
             return ResolveUrl("~/images/profile.png");
 
-        string virtualPath = string.Format("~/images/swatches/{0}.jpg", pkId.ToString());
-        string physicalPath = Server.MapPath(virtualPath);
-
-        if (File.Exists(physicalPath))
+        foreach (string ext in AllowedExtensions)
         {
-            return ResolveUrl(virtualPath);
+            string virtualPath = SwatchFolder + pkId.ToString() + ext;
+            string physicalPath = Server.MapPath(virtualPath);
+
+            if (File.Exists(physicalPath))
+            {
+                // Version stamp so a replaced image is not served from the browser cache
+                return ResolveUrl(virtualPath) + "?v=" + File.GetLastWriteTime(physicalPath).Ticks;
+            }
         }
         return ResolveUrl("~/images/profile.png");
     }
+
+    // ---------------------------------------------------------------
+    // Add
+    // ---------------------------------------------------------------
 
     protected void btnAdd_Click(object sender, EventArgs e)
     {
@@ -148,10 +197,25 @@ public partial class ManageSwatches : System.Web.UI.Page
 
         TextBox txtSwatchName = headerRow.FindControl("txtSwatchName") as TextBox;
         DropDownList ddlHeaderStatus = headerRow.FindControl("ddlHeaderStatus") as DropDownList;
+        FileUpload fuAddImage = headerRow.FindControl("fuAddImage") as FileUpload;
 
         if (txtSwatchName == null || string.IsNullOrEmpty(txtSwatchName.Text.Trim()) || string.IsNullOrEmpty(ddlFilterCategory.SelectedValue))
         {
             HelperFunction.MsgBox(this, this.GetType(), "Please enter a swatch name.");
+            return;
+        }
+
+        // Validate the image BEFORE inserting, so a swatch is never created with a missing/invalid image
+        if (fuAddImage == null || !fuAddImage.HasFile)
+        {
+            HelperFunction.MsgBox(this, this.GetType(), "Please select an image.");
+            return;
+        }
+
+        string extension = GetValidImageExtension(fuAddImage);
+        if (extension == null)
+        {
+            HelperFunction.MsgBox(this, this.GetType(), "Only JPG, JPEG and PNG images are allowed.");
             return;
         }
 
@@ -167,28 +231,41 @@ public partial class ManageSwatches : System.Web.UI.Page
             string generatedId = newSwatch.PK_ID;
             if (string.IsNullOrEmpty(generatedId))
             {
-                EntityList allSwatches = (EntityList)swatchService.GetAll(new PR_SWATCH());
-                if (allSwatches != null && allSwatches.Count > 0)
+                // Find the row just inserted: same category + name, highest numeric PK_ID
+                PR_SWATCH lookup = new PR_SWATCH();
+                lookup.SWATCH_TYPE_ID = ddlFilterCategory.SelectedValue;
+                EntityList found = (EntityList)swatchService.GetAll(lookup);
+                long best = -1;
+                if (found != null)
                 {
-                    generatedId = ((PR_SWATCH)allSwatches[allSwatches.Count - 1]).PK_ID;
+                    foreach (PR_SWATCH s in found)
+                    {
+                        long n;
+                        if (s.SWATCH_NAME == newSwatch.SWATCH_NAME && long.TryParse(s.PK_ID, out n) && n > best)
+                        {
+                            best = n;
+                            generatedId = s.PK_ID;
+                        }
+                    }
                 }
             }
 
-            FileUpload fuAddImage = headerRow.FindControl("fuAddImage") as FileUpload;
-            if (fuAddImage != null && fuAddImage.HasFile && !string.IsNullOrEmpty(generatedId))
+            if (string.IsNullOrEmpty(generatedId))
             {
-                try
-                {
-                    string folderPath = Server.MapPath("~/images/swatches/");
-                    if (!Directory.Exists(folderPath))
-                    {
-                        Directory.CreateDirectory(folderPath);
-                    }
+                HelperFunction.MsgBox(this, this.GetType(), "Swatch saved, but its ID could not be determined, so the image was not uploaded. Please edit the swatch to upload the image.");
+                BindGrid();
+                return;
+            }
 
-                    string savePath = Path.Combine(folderPath, generatedId + ".jpg");
-                    fuAddImage.SaveAs(savePath);
-                }
-                catch { }
+            try
+            {
+                SaveSwatchImage(generatedId, fuAddImage, extension);
+            }
+            catch (Exception imgEx)
+            {
+                HelperFunction.MsgBox(this, this.GetType(), "Swatch saved, but the image could not be saved: " + CleanMsg(imgEx.Message) + " Use Edit on the swatch to upload the image again.");
+                BindGrid();
+                return;
             }
 
             HelperFunction.MsgBox(this, this.GetType(), "Swatch added successfully!");
@@ -196,9 +273,13 @@ public partial class ManageSwatches : System.Web.UI.Page
         }
         catch (Exception ex)
         {
-            HelperFunction.MsgBox(this, this.GetType(), "Error saving swatch: " + ex.Message);
+            HelperFunction.MsgBox(this, this.GetType(), "Error saving swatch: " + CleanMsg(ex.Message));
         }
     }
+
+    // ---------------------------------------------------------------
+    // Edit / Update
+    // ---------------------------------------------------------------
 
     protected void gvSwatches_RowEditing(object sender, GridViewEditEventArgs e)
     {
@@ -231,26 +312,46 @@ public partial class ManageSwatches : System.Web.UI.Page
             string id = gvSwatches.DataKeys[e.RowIndex].Value.ToString();
             GridViewRow row = gvSwatches.Rows[e.RowIndex];
 
-            // Maps to txtSwatchNameE from the EditItemTemplate in ManageSwatches.aspx
             TextBox txtName = row.FindControl("txtSwatchNameE") as TextBox;
             DropDownList ddlEditStatus = row.FindControl("ddlEditStatus") as DropDownList;
+            FileUpload fuEditImage = row.FindControl("fuEditImage") as FileUpload;
+
+            // Image is optional on edit, but if one is chosen it must be valid.
+            // Validate before touching the database.
+            string extension = null;
+            bool hasNewImage = fuEditImage != null && fuEditImage.HasFile;
+            if (hasNewImage)
+            {
+                extension = GetValidImageExtension(fuEditImage);
+                if (extension == null)
+                {
+                    HelperFunction.MsgBox(this, this.GetType(), "Only JPG, JPEG and PNG images are allowed.");
+                    return;
+                }
+            }
 
             PR_SWATCH updateEntity = new PR_SWATCH();
             updateEntity.PK_ID = id;
+            updateEntity = (PR_SWATCH)swatchService.GetSingle(updateEntity);
+
             if (txtName != null) updateEntity.SWATCH_NAME = txtName.Text.Trim();
             if (ddlEditStatus != null) updateEntity.STATUS = ddlEditStatus.SelectedValue;
 
             swatchService.Update(updateEntity);
 
-            FileUpload fuEditImage = row.FindControl("fuEditImage") as FileUpload;
-            if (fuEditImage != null && fuEditImage.HasFile)
+            if (hasNewImage)
             {
                 try
                 {
-                    string savePath = Server.MapPath("~/images/swatches/" + id + ".jpg");
-                    fuEditImage.SaveAs(savePath);
+                    SaveSwatchImage(id, fuEditImage, extension);
                 }
-                catch { }
+                catch (Exception imgEx)
+                {
+                    HelperFunction.MsgBox(this, this.GetType(), "Swatch updated, but the image could not be saved: " + CleanMsg(imgEx.Message));
+                    gvSwatches.EditIndex = -1;
+                    BindGrid();
+                    return;
+                }
             }
 
             HelperFunction.MsgBox(this, this.GetType(), "Swatch updated successfully!");
@@ -259,32 +360,7 @@ public partial class ManageSwatches : System.Web.UI.Page
         }
         catch (Exception ex)
         {
-            HelperFunction.MsgBox(this, this.GetType(), "Error updating swatch: " + ex.Message);
-        }
-    }
-
-    protected void gvSwatches_RowDeleting(object sender, GridViewDeleteEventArgs e)
-    {
-        try
-        {
-            string id = gvSwatches.DataKeys[e.RowIndex].Value.ToString();
-            PR_SWATCH deleteEntity = new PR_SWATCH();
-            deleteEntity.PK_ID = id;
-
-            swatchService.Delete(deleteEntity);
-
-            string physicalPath = Server.MapPath("~/images/swatches/" + id + ".jpg");
-            if (File.Exists(physicalPath))
-            {
-                try { File.Delete(physicalPath); } catch { }
-            }
-
-            HelperFunction.MsgBox(this, this.GetType(), "Swatch deleted successfully!");
-            BindGrid();
-        }
-        catch (Exception ex)
-        {
-            HelperFunction.MsgBox(this, this.GetType(), "Error deleting swatch: " + ex.Message);
+            HelperFunction.MsgBox(this, this.GetType(), "Error updating swatch: " + CleanMsg(ex.Message));
         }
     }
 }

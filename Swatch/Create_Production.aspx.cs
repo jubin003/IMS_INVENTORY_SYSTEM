@@ -23,7 +23,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
             LoadProductionType();
             LoadCustomersDropdown();
 
-            BindProductionDetails();
             BindProductionStages();
             BindProductionPipelineUnit();
             BindProductionPipelineEmployee();
@@ -77,6 +76,28 @@ public partial class Production_Create_Production : System.Web.UI.Page
     {
         string[] parts = value.Trim().Split('/');
         return new string[] { parts[0], parts[1], parts[2] };
+    }
+
+    private string FormatDeliveryDate(PR_MULTIPLE_DELIVERY item)
+    {
+        if (item == null) return "";
+
+        if (!string.IsNullOrWhiteSpace(item.DELIVERY_DAY) &&
+            !string.IsNullOrWhiteSpace(item.DELIVERY_MONTH) &&
+            !string.IsNullOrWhiteSpace(item.DELIVERY_YEAR))
+        {
+            string day = item.DELIVERY_DAY.Trim().PadLeft(2, '0');
+            string month = item.DELIVERY_MONTH.Trim().PadLeft(2, '0');
+            string year = item.DELIVERY_YEAR.Trim();
+            return string.Format("{0}/{1}/{2}", day, month, year);
+        }
+
+        if (!string.IsNullOrWhiteSpace(item.DELIVERY_DATE))
+        {
+            return item.DELIVERY_DATE.Trim().Split(' ')[0];
+        }
+
+        return "";
     }
 
     // =====================================================
@@ -137,13 +158,16 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
     protected void btnBackMaster_Click(object sender, EventArgs e)
     {
-        ReadProductionDetails();
+        if (pnlProductionProducts.Visible)
+            ReadProductionDetails();
+
         ShowStep(1);
     }
 
     protected void btnNextDetails_Click(object sender, EventArgs e)
     {
-        ReadProductionDetails();
+        if (pnlProductionProducts.Visible)
+            ReadProductionDetails();
 
         //if (!ValidateProductionDetails())
         //    return;
@@ -299,6 +323,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
         ddlMultipleDelivery.Items.Clear();
         pnlSelectedDeliveryInfo.Visible = false;
+        pnlProductionProducts.Visible = false;
 
         if (string.IsNullOrEmpty(purchaseOrderId))
         {
@@ -319,7 +344,10 @@ public partial class Production_Create_Production : System.Web.UI.Page
                 for (int i = 0; i < deliveryList.Count; i++)
                 {
                     PR_MULTIPLE_DELIVERY item = (PR_MULTIPLE_DELIVERY)deliveryList[i];
-                    string label = "Delivery #" + (i + 1) + " - " + item.DELIVERY_DATE + " (ID: " + item.PK_ID + ")";
+                    string formattedDate = FormatDeliveryDate(item);
+                    string remarks = string.IsNullOrWhiteSpace(item.REMARKS) ? "" : " (" + item.REMARKS.Trim() + ")";
+
+                    string label = "Delivery #" + (i + 1) + " - " + formattedDate + remarks;
                     ddlMultipleDelivery.Items.Add(new ListItem(label, item.PK_ID));
                 }
                 ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select Delivery Date --", ""));
@@ -328,6 +356,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
                 {
                     ddlMultipleDelivery.SelectedValue = previousSelection;
                     BindSelectedDeliveryDetails(previousSelection);
+                    LoadOrderDetailsByDelivery(previousSelection);
                 }
             }
             else
@@ -343,8 +372,10 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
     protected void ddlMultipleDelivery_SelectedIndexChanged(object sender, EventArgs e)
     {
-        ReadProductionDetails();
-        BindSelectedDeliveryDetails(ddlMultipleDelivery.SelectedValue);
+        string selectedDeliveryId = ddlMultipleDelivery.SelectedValue;
+
+        BindSelectedDeliveryDetails(selectedDeliveryId);
+        LoadOrderDetailsByDelivery(selectedDeliveryId);
     }
 
     private void BindSelectedDeliveryDetails(string selectedDeliveryId)
@@ -366,6 +397,50 @@ public partial class Production_Create_Production : System.Web.UI.Page
             EntityList list = (EntityList)mdService.GetAll(filter);
             if (list != null && list.Count > 0)
             {
+                PR_TRANSPORTATIONService transService = new PR_TRANSPORTATIONService();
+                PR_CUSTOMER_LOCATIONService locService = new PR_CUSTOMER_LOCATIONService();
+
+                foreach (PR_MULTIPLE_DELIVERY delivery in list)
+                {
+                    // 1. Format Delivery Date from DAY/MONTH/YEAR without 00:00:00
+                    delivery.DELIVERY_DATE = FormatDeliveryDate(delivery);
+
+                    // 2. Resolve Mode of Transportation Name
+                    if (!string.IsNullOrEmpty(delivery.MODE_OF_TRANSPORTATION_ID))
+                    {
+                        PR_TRANSPORTATION transFilter = new PR_TRANSPORTATION();
+                        transFilter.PK_ID = delivery.MODE_OF_TRANSPORTATION_ID;
+
+                        PR_TRANSPORTATION transObj = (PR_TRANSPORTATION)transService.GetSingle(transFilter);
+                        if (transObj != null && !string.IsNullOrEmpty(transObj.TRANSPORTATION_NAME))
+                        {
+                            delivery.MODE_OF_TRANSPORTATION_ID = transObj.TRANSPORTATION_NAME;
+                        }
+                    }
+
+                    // 3. Resolve Customer Location Address
+                    if (!string.IsNullOrEmpty(delivery.CUSOMTER_LOCATION_ID))
+                    {
+                        PR_CUSTOMER_LOCATION locFilter = new PR_CUSTOMER_LOCATION();
+                        locFilter.PK_ID = delivery.CUSOMTER_LOCATION_ID;
+
+                        PR_CUSTOMER_LOCATION locObj = (PR_CUSTOMER_LOCATION)locService.GetSingle(locFilter);
+                        if (locObj != null && !string.IsNullOrEmpty(locObj.ADDRESS))
+                        {
+                            delivery.CUSOMTER_LOCATION_ID = locObj.ADDRESS;
+                        }
+                    }
+                    else
+                    {
+                        delivery.CUSOMTER_LOCATION_ID = "-";
+                    }
+
+                    if (delivery.STATUS == "1")
+                        delivery.STATUS = "Active";
+                    else if (delivery.STATUS == "0")
+                        delivery.STATUS = "Inactive";
+                }
+
                 grdSelectedDelivery.DataSource = list;
                 grdSelectedDelivery.DataBind();
                 pnlSelectedDeliveryInfo.Visible = true;
@@ -381,19 +456,142 @@ public partial class Production_Create_Production : System.Web.UI.Page
         }
     }
 
+    // Lookup Helpers for Product, Size, and Swatch Names
+    private string GetProductNameById(string productId, PRODUCTService prodService)
+    {
+        if (string.IsNullOrWhiteSpace(productId))
+            return "";
+
+        PRODUCT filter = new PRODUCT();
+        filter.PK_ID = productId.Trim();
+
+        PRODUCT obj = (PRODUCT)prodService.GetSingle(filter);
+        if (obj != null && !string.IsNullOrEmpty(obj.PRODUCT_NAME))
+            return obj.PRODUCT_NAME;
+
+        return productId;
+    }
+
+    private string GetSizeNameById(string sizeId, PRODUCT_SIZEService sizeService)
+    {
+        if (string.IsNullOrWhiteSpace(sizeId))
+            return "";
+
+        PRODUCT_SIZE filter = new PRODUCT_SIZE();
+        filter.PK_ID = sizeId.Trim();
+
+        PRODUCT_SIZE obj = (PRODUCT_SIZE)sizeService.GetSingle(filter);
+        if (obj != null && !string.IsNullOrEmpty(obj.SIZE_NAME))
+            return obj.SIZE_NAME;
+
+        return sizeId;
+    }
+
+    private string GetSwatchNameById(string swatchId, PR_SWATCHService swatchService)
+    {
+        if (string.IsNullOrWhiteSpace(swatchId))
+            return "";
+
+        PR_SWATCH filter = new PR_SWATCH();
+        filter.PK_ID = swatchId.Trim();
+
+        PR_SWATCH obj = (PR_SWATCH)swatchService.GetSingle(filter);
+        if (obj != null && !string.IsNullOrEmpty(obj.SWATCH_NAME))
+            return obj.SWATCH_NAME;
+
+        return swatchId;
+    }
+
+    private void LoadOrderDetailsByDelivery(string selectedDeliveryId)
+    {
+        if (string.IsNullOrEmpty(selectedDeliveryId))
+        {
+            pnlProductionProducts.Visible = false;
+            ViewState.Remove("ProductionDetailTable");
+            grdProductionDetails.DataSource = null;
+            grdProductionDetails.DataBind();
+            return;
+        }
+
+        try
+        {
+            DataTable dt = CreateEmptyProductionDetailTable();
+
+            PR_ORDER_DETAILService orderDetailService = new PR_ORDER_DETAILService();
+            PR_ORDER_DETAIL filter = new PR_ORDER_DETAIL();
+            filter.MULTIPLE_DELVIERY_ID = selectedDeliveryId;
+
+            EntityList detailList = (EntityList)orderDetailService.GetAll(filter);
+
+            if (detailList != null && detailList.Count > 0)
+            {
+                PRODUCTService prodService = new PRODUCTService();
+                PRODUCT_SIZEService sizeService = new PRODUCT_SIZEService();
+                PR_SWATCHService swatchService = new PR_SWATCHService();
+
+                foreach (PR_ORDER_DETAIL item in detailList)
+                {
+                    string productName = GetProductNameById(item.PRODUCT_ID, prodService);
+                    string sizeName = GetSizeNameById(item.SIZE_ID, sizeService);
+                    string swatchName = GetSwatchNameById(item.SWATCH_ID, swatchService);
+
+                    dt.Rows.Add(
+                        item.PRODUCT_ID,
+                        productName,
+                        item.SIZE_ID,
+                        sizeName,
+                        item.SWATCH_ID,
+                        swatchName,
+                        item.QUANTITY,
+                        item.UNIT
+                    );
+                }
+            }
+            else
+            {
+                // Fallback to 1 blank row if no order details exist for this delivery
+                dt.Rows.Add("", "", "", "", "", "", "", "");
+            }
+
+            ProductionDetailTable = dt;
+            BindProductionDetails();
+            pnlProductionProducts.Visible = true;
+        }
+        catch (Exception ex)
+        {
+      
+            string safeMessage = ex.Message
+                .Replace("'", "")
+                .Replace("\"", "")
+                .Replace("\r", " ")
+                .Replace("\n", " ");
+            HelperFunction.MsgBox(this, GetType(), "Error loading production products: " + safeMessage);
+        
+    }
+    }
+
+    private DataTable CreateEmptyProductionDetailTable()
+    {
+        DataTable dt = new DataTable();
+        dt.Columns.Add("PRODUCT_ID");
+        dt.Columns.Add("PRODUCT_NAME");
+        dt.Columns.Add("SIZE_ID");
+        dt.Columns.Add("SIZE_NAME");
+        dt.Columns.Add("SWATCH_ID");
+        dt.Columns.Add("SWATCH_NAME");
+        dt.Columns.Add("QUANTITY");
+        dt.Columns.Add("UNIT");
+        return dt;
+    }
+
     private DataTable ProductionDetailTable
     {
         get
         {
             if (ViewState["ProductionDetailTable"] == null)
             {
-                DataTable dt = new DataTable();
-                dt.Columns.Add("PRODUCT_ID");
-                dt.Columns.Add("SIZE_ID");
-                dt.Columns.Add("SWATCH_ID");
-                dt.Columns.Add("QUANTITY");
-                dt.Columns.Add("UNIT");
-                dt.Rows.Add("", "", "", "", "");
+                DataTable dt = CreateEmptyProductionDetailTable();
+                dt.Rows.Add("", "", "", "", "", "", "", "");
                 ViewState["ProductionDetailTable"] = dt;
             }
 
@@ -420,11 +618,14 @@ public partial class Production_Create_Production : System.Web.UI.Page
             GridViewRow row = grdProductionDetails.Rows[i];
 
             if (i >= dt.Rows.Count)
-                dt.Rows.Add("", "", "", "", "");
+                dt.Rows.Add("", "", "", "", "", "", "", "");
 
-            dt.Rows[i]["PRODUCT_ID"] = GetText(row, "txtProductId");
-            dt.Rows[i]["SIZE_ID"] = GetText(row, "txtSizeId");
-            dt.Rows[i]["SWATCH_ID"] = GetText(row, "txtSwatchId");
+            dt.Rows[i]["PRODUCT_ID"] = GetHiddenValue(row, "hfProductId");
+            dt.Rows[i]["PRODUCT_NAME"] = GetText(row, "txtProductName");
+            dt.Rows[i]["SIZE_ID"] = GetHiddenValue(row, "hfSizeId");
+            dt.Rows[i]["SIZE_NAME"] = GetText(row, "txtSizeName");
+            dt.Rows[i]["SWATCH_ID"] = GetHiddenValue(row, "hfSwatchId");
+            dt.Rows[i]["SWATCH_NAME"] = GetText(row, "txtSwatchName");
             dt.Rows[i]["QUANTITY"] = GetText(row, "txtQuantity");
             dt.Rows[i]["UNIT"] = GetText(row, "txtUnit");
         }
@@ -440,7 +641,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         ReadProductionDetails();
 
         DataTable dt = ProductionDetailTable;
-        dt.Rows.Add("", "", "", "", "");
+        dt.Rows.Add("", "", "", "", "", "", "", "");
 
         ProductionDetailTable = dt;
         BindProductionDetails();
@@ -460,7 +661,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
             dt.Rows.RemoveAt(index);
 
         if (dt.Rows.Count == 0)
-            dt.Rows.Add("", "", "", "", "");
+            dt.Rows.Add("", "", "", "", "", "", "", "");
 
         ProductionDetailTable = dt;
         BindProductionDetails();
@@ -468,6 +669,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
     private bool ValidateProductionDetails()
     {
+        if (string.IsNullOrWhiteSpace(ddlMultipleDelivery.SelectedValue))
+        {
+            HelperFunction.MsgBox(this, GetType(), "Please select a Multiple Delivery Date.");
+            return false;
+        }
+
         DataTable dt = ProductionDetailTable;
         bool hasProduct = false;
 
@@ -492,12 +699,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
         if (!hasProduct)
         {
             HelperFunction.MsgBox(this, GetType(), "Add at least one production product.");
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(ddlMultipleDelivery.SelectedValue))
-        {
-            HelperFunction.MsgBox(this, GetType(), "Please select a Multiple Delivery Date.");
             return false;
         }
 
@@ -833,6 +1034,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
         return txt == null ? "" : txt.Text.Trim();
     }
 
+    private string GetHiddenValue(GridViewRow row, string controlId)
+    {
+        HiddenField hf = row.FindControl(controlId) as HiddenField;
+        return hf == null ? "" : hf.Value.Trim();
+    }
+
     private string GetSelectedValue(GridViewRow row, string controlId)
     {
         DropDownList ddl = row.FindControl(controlId) as DropDownList;
@@ -845,7 +1052,9 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
     protected void btnSaveProduction_Click(object sender, EventArgs e)
     {
-        ReadProductionDetails();
+        if (pnlProductionProducts.Visible)
+            ReadProductionDetails();
+
         ReadProductionStages();
 
         if (pnlPipelineUnit.Visible)
@@ -868,8 +1077,13 @@ public partial class Production_Create_Production : System.Web.UI.Page
         ddlMultipleDelivery.Items.Clear();
         ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select Delivery Date --", ""));
         pnlSelectedDeliveryInfo.Visible = false;
+        pnlProductionProducts.Visible = false;
+
         grdSelectedDelivery.DataSource = null;
         grdSelectedDelivery.DataBind();
+
+        grdProductionDetails.DataSource = null;
+        grdProductionDetails.DataBind();
 
         hfProductionId.Value = "";
 
@@ -884,7 +1098,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
         ViewState.Remove("ProductionPipelineUnitTable");
         ViewState.Remove("ProductionPipelineEmployeeTable");
 
-        BindProductionDetails();
         BindProductionStages();
         BindProductionPipelineUnit();
         BindProductionPipelineEmployee();
