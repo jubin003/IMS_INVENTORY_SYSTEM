@@ -36,10 +36,8 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             LoadPaymentTerm();
 
             string pkId = Request.QueryString["PK_ID"];
-            if (!string.IsNullOrEmpty(pkId))
-                LoadPurchaseOrder(pkId);
-            else
-                txtOrderDate.Text = PGD.GetTodayDate("dd/mm/yyyy");
+
+                txtOrderDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
 
             InitializeDeliveryTable();
             InitializeProductTable();
@@ -110,12 +108,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         CEnt.PK_ID = customerId;
         CEnt = (CUSTOMER)CSer.GetSingle(CEnt);
 
-        if (CEnt == null)
-        {
-            pnlCustomerDetails.Visible = false;
-            return;
-        }
-
         lblCustomerID.Text = CEnt.PK_ID;
         lblCustomerName.Text = CEnt.CUSTOMER_NAME;
         lblCustomerAddress.Text = CEnt.ADDRESS;
@@ -173,7 +165,15 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             PoEnt.ORDER_NUMBER = id.ToString();
 
             PoSer.Insert(PoEnt);
-            hfPK_ID.Value = PoEnt.PK_ID;
+
+
+            PR_PURCHASE_ORDER PooEnt = new PR_PURCHASE_ORDER();
+            EntityList tthlisst = PoSer.GetAll(PooEnt);
+            foreach (PR_PURCHASE_ORDER row in tthlisst)
+            {
+                pid = row.PK_ID;
+            }
+            hfPK_ID.Value = pid;
         }
 
         BindDeliveries();
@@ -214,7 +214,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     private void InitializeDeliveryTable()
     {
         DataTable dt = CreateDeliveryTable();
-        dt.Rows.Add(Guid.NewGuid().ToString("N"), PGD.GetTodayDate("dd/mm/yyyy"), "", "", "", "", "", "", "");
+        dt.Rows.Add(Guid.NewGuid().ToString("N"), PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy"), "", "", "", "", "", "", "");
         DeliveryTable = dt;
     }
 
@@ -310,12 +310,12 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             DataRow newRow = dt.NewRow();
             newRow.ItemArray = lastRow.ItemArray.Clone() as object[];
             newRow["DELIVERY_ROW_ID"] = Guid.NewGuid().ToString("N");
-            newRow["DELIVERY_DATE"] = PGD.GetTodayDate("dd/mm/yyyy");
+            newRow["DELIVERY_DATE"] = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
             dt.Rows.Add(newRow);
         }
         else
         {
-            dt.Rows.Add(Guid.NewGuid().ToString("N"), PGD.GetTodayDate("dd/mm/yyyy"), "", "", "", "", "", "", "");
+            dt.Rows.Add(Guid.NewGuid().ToString("N"), PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy"), "", "", "", "", "", "", "");
         }
 
         DeliveryTable = dt;
@@ -344,7 +344,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         }
 
         if (dt.Rows.Count == 0)
-            dt.Rows.Add(Guid.NewGuid().ToString("N"), PGD.GetTodayDate("dd/mm/yyyy"), "", "", "", "", "", "", "");
+            dt.Rows.Add(Guid.NewGuid().ToString("N"), PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy"), "", "", "", "", "", "", "");
 
         DeliveryTable = dt;
         BindDeliveries();
@@ -362,6 +362,16 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         EnsureProductRowsForDeliveries();
         BindDeliveryProducts();
         ShowStep(3);
+    }
+
+    private string GetUnitName(string unitId)
+    {
+
+        PRODUCT_UNIT ent = new PRODUCT_UNIT();
+        ent.PK_ID = unitId;
+        ent = (PRODUCT_UNIT)new PRODUCT_UNITService().GetSingle(ent);
+
+        return ent.UNIT_NAME;
     }
 
     // =====================================================
@@ -533,7 +543,8 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
                 pRow["SWATCH_TYPE_ID"] = GetSelectedValue(row, "ddlSwatchType");
                 pRow["SWATCH_ID"] = GetSelectedValue(row, "ddlSwatch");
                 pRow["QUANTITY"] = GetText(row, "txtQuantity");
-                pRow["UNIT"] = GetText(row, "txtUnit");
+                HiddenField hfUnitId = row.FindControl("hfUnitId") as HiddenField;
+                pRow["UNIT"] = hfUnitId != null ? hfUnitId.Value : "";
             }
         }
 
@@ -580,7 +591,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             TextBox txtQuantity = e.Row.FindControl("txtQuantity") as TextBox;
 
             if (txtUnit != null)
-                txtUnit.Text = Convert.ToString(rowView["UNIT"]);
+                txtUnit.Text = GetUnitName(Convert.ToString(rowView["UNIT"]));
             if (txtQuantity != null)
                 txtQuantity.Text = Convert.ToString(rowView["QUANTITY"]);
         }
@@ -643,19 +654,22 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         GridViewRow row = ddlProduct != null ? ddlProduct.NamingContainer as GridViewRow : null;
         if (row == null) return;
 
-        string productId = ddlProduct.SelectedValue;
         TextBox txtUnit = row.FindControl("txtUnit") as TextBox;
+        HiddenField hfUnitId = row.FindControl("hfUnitId") as HiddenField;
 
-        if (!string.IsNullOrEmpty(productId))
+        string unitId = "";
+
+        if (!string.IsNullOrEmpty(ddlProduct.SelectedValue))
         {
             PRODUCT ent = new PRODUCT();
-            ent.PK_ID = productId;
-            PRODUCTService ser = new PRODUCTService();
-            ent = (PRODUCT)ser.GetSingle(ent);
+            ent.PK_ID = ddlProduct.SelectedValue;
+            ent = (PRODUCT)new PRODUCTService().GetSingle(ent);
 
-            if (ent != null && txtUnit != null)
-                txtUnit.Text = ent.UNIT_ID;
+            unitId = ent.UNIT_ID;
         }
+
+        hfUnitId.Value = unitId;
+        txtUnit.Text = GetUnitName(unitId);
     }
 
     protected void ddlSwatchType_SelectedIndexChanged(object sender, EventArgs e)
@@ -721,6 +735,9 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         DataTable dTable = DeliveryTable;
         DataTable pTable = ProductTable;
 
+        // PK_ID of PR_PURCHASE_ORDER, saved in step 1
+        string purchaseOrderId = hfPK_ID.Value;
+
         foreach (DataRow dRow in dTable.Rows)
         {
             string deliveryRowId = Convert.ToString(dRow["DELIVERY_ROW_ID"]);
@@ -735,14 +752,17 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             ClEnt.EMAIL_ID = Convert.ToString(dRow["EMAIL_ID"]);
             ClSer.Insert(ClEnt);
 
-            // 2. Insert PR_MULTIPLE_DELIVERY
-            string[] delivDateParts = (Convert.ToString(dRow["DELIVERY_DATE"]) + "//").Split('/');
+            string locationId = ClEnt.PK_ID;
+
+            // 2. Insert PR_MULTIPLE_DELIVERY -> PURCHASE_ORDER_ID = PR_PURCHASE_ORDER.PK_ID
+            string nepDeliveryDate = Convert.ToString(dRow["DELIVERY_DATE"]);
+            string[] delivDateParts = (nepDeliveryDate + "//").Split('/');
 
             MdEnt = new PR_MULTIPLE_DELIVERY();
-            MdEnt.PURCHASE_ORDER_ID = hfPK_ID.Value;
-            MdEnt.CUSOMTER_LOCATION_ID = ClEnt.PK_ID;
+            MdEnt.PURCHASE_ORDER_ID = purchaseOrderId;
+            MdEnt.CUSOMTER_LOCATION_ID = locationId;
             MdEnt.MODE_OF_TRANSPORTATION_ID = Convert.ToString(dRow["MODE_OF_TRANSPORTATION_ID"]);
-            MdEnt.DELIVERY_DATE = Convert.ToString(dRow["DELIVERY_DATE"]);
+            MdEnt.DELIVERY_DATE = PGD.GetEnglishDateFromNepali(nepDeliveryDate, "dd/mm/yyyy");
             MdEnt.DELIVERY_DAY = delivDateParts[0];
             MdEnt.DELIVERY_MONTH = delivDateParts[1];
             MdEnt.DELIVERY_YEAR = delivDateParts[2];
@@ -750,13 +770,22 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             MdEnt.REMARKS = Convert.ToString(dRow["REMARKS"]);
             MdSer.Insert(MdEnt);
 
-            // 3. Insert PR_ORDER_DETAIL linked to this PR_MULTIPLE_DELIVERY PK_ID
+            EntityList tlst = new EntityList();
+            MdEnt = new PR_MULTIPLE_DELIVERY();
+            tlst = MdSer.GetAll(MdEnt);
+            string mdid = "";
+            foreach(PR_MULTIPLE_DELIVERY row in tlst)
+            {
+                mdid = row.PK_ID;
+            }
+
+
+            // 3. Insert PR_ORDER_DETAIL -> MULTIPLE_DELIVERY_ID = PR_MULTIPLE_DELIVERY.PK_ID
             DataRow[] linkedProducts = pTable.Select("DELIVERY_ROW_ID = '" + deliveryRowId.Replace("'", "''") + "'");
             foreach (DataRow pRow in linkedProducts)
             {
                 OdEnt = new PR_ORDER_DETAIL();
-                OdEnt.PK_ID = hfPK_ID.Value;
-                OdEnt.MULTIPLE_DELVIERY_ID = MdEnt.PK_ID;
+                OdEnt.MULTIPLE_DELVIERY_ID = mdid;
                 OdEnt.PRODUCT_ID = Convert.ToString(pRow["PRODUCT_ID"]);
                 OdEnt.SIZE_ID = Convert.ToString(pRow["SIZE_ID"]);
                 OdEnt.SWATCH_ID = Convert.ToString(pRow["SWATCH_ID"]);
@@ -770,34 +799,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         HelperFunction.MsgBox(this, this.GetType(), "Purchase Order saved successfully.");
     }
 
-    private void LoadPurchaseOrder(string pkId)
-    {
-        PoEnt = new PR_PURCHASE_ORDER();
-        PoEnt.PK_ID = pkId;
-        PoEnt = (PR_PURCHASE_ORDER)PoSer.GetSingle(PoEnt);
-
-        if (PoEnt == null)
-        {
-            HelperFunction.MsgBox(this, this.GetType(), "Purchase Order not found.");
-            return;
-        }
-
-        hfPK_ID.Value = pkId;
-
-        if (ddlCustomer.Items.FindByValue(PoEnt.CUSTOMER_ID) != null)
-        {
-            ddlCustomer.SelectedValue = PoEnt.CUSTOMER_ID;
-            LoadCustomerDetails(PoEnt.CUSTOMER_ID);
-        }
-
-        txtOrderDate.Text = NepDate(PoEnt.ORDER_DAY, PoEnt.ORDER_MONTH, PoEnt.ORDER_YEAR);
-
-        if (ddlPaymentTerm.Items.FindByValue(PoEnt.PAYMENT_TERM) != null)
-            ddlPaymentTerm.SelectedValue = PoEnt.PAYMENT_TERM;
-
-        lblFormTitle.Text = "Edit Purchase Order";
-    }
-
     protected void btnClear_Click(object sender, EventArgs e)
     {
         ClearForm();
@@ -809,7 +810,7 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         ViewState.Remove(DeliveryTableKey);
         ViewState.Remove(ProductTableKey);
 
-        txtOrderDate.Text = GetTodayNepali();
+        txtOrderDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
         ddlPaymentTerm.SelectedIndex = 0;
         ddlCustomer.SelectedIndex = 0;
 
@@ -820,19 +821,4 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         ShowStep(1);
     }
 
-    private string GetTodayNepali()
-    {
-        string engdate = PGD.GetTodayDate("dd/mm/yyyy");
-        return PGD.GetNepaliDateFromEnglish(engdate, "dd/mm/yyyy");
-    }
-
-    protected string NepDate(object day, object month, object year)
-    {
-        if (day == null || month == null || year == null) return "";
-        string d = day.ToString().Trim();
-        string m = month.ToString().Trim();
-        string y = year.ToString().Trim();
-        if (d == "" || m == "" || y == "") return "";
-        return d.PadLeft(2, '0') + "/" + m.PadLeft(2, '0') + "/" + y;
-    }
 }
