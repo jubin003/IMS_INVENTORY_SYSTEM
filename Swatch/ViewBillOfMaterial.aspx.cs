@@ -6,7 +6,7 @@ using System.Web.UI.WebControls;
 using Entity.Components;
 using Service.Components;
 using Entity.Framework;
-
+using Service.Framework;
 public partial class ViewBillOfMaterial : System.Web.UI.Page
 {
     PR_BILL_OF_MATERIALService bomService = new PR_BILL_OF_MATERIALService();
@@ -25,15 +25,15 @@ public partial class ViewBillOfMaterial : System.Web.UI.Page
         Dictionary<string, string> unitNames = new Dictionary<string, string>();
         try
         {
-            object unitService = new Service.Components.PRODUCT_UNITService();
-            Entity.Components.PRODUCT_UNIT puFilter = new Entity.Components.PRODUCT_UNIT();
-            EntityList allUnits = (EntityList)((Service.Framework.AbstractService)unitService).GetAll(puFilter);
+            object unitService = new PRODUCT_UNITService();
+            PRODUCT_UNIT puFilter = new PRODUCT_UNIT();
+            EntityList allUnits = (EntityList)((AbstractService)unitService).GetAll(puFilter);
 
             if (allUnits != null)
             {
                 for (int i = 0; i < allUnits.Count; i++)
                 {
-                    Entity.Components.PRODUCT_UNIT u = (Entity.Components.PRODUCT_UNIT)allUnits[i];
+                    PRODUCT_UNIT u = (PRODUCT_UNIT)allUnits[i];
                     if (u != null && !unitNames.ContainsKey(u.PK_ID))
                     {
                         unitNames.Add(u.PK_ID, u.UNIT_NAME);
