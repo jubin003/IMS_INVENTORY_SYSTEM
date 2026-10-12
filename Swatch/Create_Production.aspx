@@ -18,7 +18,6 @@
 
         <asp:HiddenField ID="hfProductionId" runat="server" />
 
-        <%-- ==================== STEP 1: PRODUCTION MASTER ==================== --%>
         <asp:Panel ID="pnlProductionMaster" runat="server">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -42,14 +41,12 @@
                         </asp:DropDownList>
                     </div>
 
-                    <!-- Customer Selection -->
                     <div class="form-group">
                         <label for="<%= ddlCustomer.ClientID %>">Customer *</label>
                         <asp:DropDownList ID="ddlCustomer" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomer_SelectedIndexChanged">
                         </asp:DropDownList>
                     </div>
 
-                    <!-- Customer Order Dropdown -->
                     <div class="form-group">
                         <label for="<%= ddlCustomerOrder.ClientID %>">Customer Order (PO) *</label>
                         <asp:DropDownList ID="ddlCustomerOrder" runat="server" CssClass="form-control">
@@ -65,7 +62,6 @@
             </div>
         </asp:Panel>
 
-        <%-- ==================== STEP 2: PRODUCTION DETAILS ==================== --%>
         <asp:Panel ID="pnlProductionDetails" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -91,7 +87,6 @@
                     </div>
                 </div>
 
-                <%-- Expandable Read-Only Table for Selected Delivery Details --%>
                 <asp:Panel ID="pnlSelectedDeliveryInfo" runat="server" Visible="false">
                     <div class="card-toolbar">
                         <div class="toolbar-stats">
@@ -114,7 +109,6 @@
                     </div>
                 </asp:Panel>
 
-                <%-- Production Products Panel (Hidden until a Delivery Date is selected) --%>
                 <asp:Panel ID="pnlProductionProducts" runat="server" Visible="false">
                     <div class="card-toolbar">
                         <div class="toolbar-stats">
@@ -175,7 +169,6 @@
             </div>
         </asp:Panel>
 
-        <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
         <asp:Panel ID="pnlProductionStages" runat="server" Visible="false">
             <div class="bs-card">
                 <div class="card-toolbar">
@@ -234,11 +227,7 @@
                 </div>
             </div>
         </asp:Panel>
-
-        <%-- ==================== STEP 4: PRODUCTION PIPELINE ==================== --%>
         <asp:Panel ID="pnlProductionPipeline" runat="server" Visible="false">
-            
-            <%-- Pipeline Table 1: Unit Pipeline --%>
             <asp:Panel ID="pnlPipelineUnit" runat="server" Visible="false">
                 <div class="bs-card">
                     <div class="card-toolbar">
@@ -324,7 +313,6 @@
                 </div>
             </asp:Panel>
 
-            <%-- Pipeline Table 2: Employee Pipeline --%>
             <asp:Panel ID="pnlPipelineEmployee" runat="server" Visible="false">
                 <div class="bs-card">
                     <div class="card-toolbar">

@@ -53,10 +53,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         pnlOrderDetails.Visible = (step == 3);
     }
 
-    // =====================================================
-    // STEP 1: MASTER DATA & CUSTOMER
-    // =====================================================
-
     private void LoadPaymentTerm()
     {
         PtEnt = new PAYMENT_TYPE();
@@ -179,10 +175,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         BindDeliveries();
         ShowStep(2);
     }
-
-    // =====================================================
-    // STEP 2: DELIVERY REPEATER
-    // =====================================================
 
     private DataTable CreateDeliveryTable()
     {
@@ -373,11 +365,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
         return ent.UNIT_NAME;
     }
-
-    // =====================================================
-    // STEP 3: PRODUCTS GROUPED PER DELIVERY
-    // =====================================================
-
     private DataTable CreateProductTable()
     {
         DataTable dt = new DataTable();
@@ -723,11 +710,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         BindDeliveries();
         ShowStep(2);
     }
-
-    // =====================================================
-    // FINAL SAVE: INSERT MULTIPLE DELIVERY PER DATE & LINK ORDER DETAILS
-    // =====================================================
-
     protected void btnFinalSave_Click(object sender, EventArgs e)
     {
         ReadStep3Products();
