@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Data;
 using System.IO;
+using System.Web.UI;
 using System.Web.UI.WebControls;
 using Entity.Components;
 using Service.Components;
@@ -44,7 +45,6 @@ public partial class CustomerMaster : System.Web.UI.Page
 
     static string path = "";
 
-    // Temporary memory for delivery locations during customer creation
     private DataTable TempLocations
     {
         get
@@ -83,8 +83,36 @@ public partial class CustomerMaster : System.Web.UI.Page
             LoadArea();
             LoadAgent();
             LoadCountry();
+            LoadCustomerDropdownForLocations();
         }
     }
+
+    #region Outer Tabs Switching
+
+    protected void btnOuterTabCustomers_Click(object sender, EventArgs e)
+    {
+        pnlCustomerSection.Visible = true;
+        pnlDeliverySection.Visible = false;
+        btnOuterTabCustomers.CssClass = "outer-nav-tab active";
+        btnOuterTabLocations.CssClass = "outer-nav-tab";
+
+        // Reset search filter and reload customer list
+        txtSearchCustomerCode.Text = "";
+        txtSearchCustomerName.Text = "";
+        LoadGrid(ddlBranchFilter.SelectedValue);
+    }
+
+    protected void btnOuterTabLocations_Click(object sender, EventArgs e)
+    {
+        pnlCustomerSection.Visible = false;
+        pnlDeliverySection.Visible = true;
+        btnOuterTabCustomers.CssClass = "outer-nav-tab";
+        btnOuterTabLocations.CssClass = "outer-nav-tab active";
+
+        LoadCustomerDropdownForLocations();
+    }
+
+    #endregion
 
     protected void LoadArea()
     {
@@ -102,19 +130,23 @@ public partial class CustomerMaster : System.Web.UI.Page
         CYEnt = new COUNTRY();
         var countries = CYSer.GetAll(CYEnt);
 
-        // Main customer country dropdown
         ddlCountry.DataSource = countries;
         ddlCountry.DataTextField = "COUNTRY_NAME";
         ddlCountry.DataValueField = "PK_ID";
         ddlCountry.DataBind();
         ddlCountry.Items.Insert(0, "");
 
-        // Delivery location country dropdown
         ddlDelCountry.DataSource = countries;
         ddlDelCountry.DataTextField = "COUNTRY_NAME";
         ddlDelCountry.DataValueField = "PK_ID";
         ddlDelCountry.DataBind();
         ddlDelCountry.Items.Insert(0, "");
+
+        ddlOuterDelCountry.DataSource = countries;
+        ddlOuterDelCountry.DataTextField = "COUNTRY_NAME";
+        ddlOuterDelCountry.DataValueField = "PK_ID";
+        ddlOuterDelCountry.DataBind();
+        ddlOuterDelCountry.Items.Insert(0, "");
     }
 
     protected void LoadAgent()
@@ -166,7 +198,6 @@ public partial class CustomerMaster : System.Web.UI.Page
         }
     }
 
-    // Resolves image for GridView: checks if images/Customer/{PK_ID}.jpg exists on the physical drive
     public string GetCustomerImageUrl(object pkId)
     {
         if (pkId != null && !string.IsNullOrEmpty(pkId.ToString()))
@@ -181,7 +212,6 @@ public partial class CustomerMaster : System.Web.UI.Page
         return "~/images/icons/user.png";
     }
 
-    // Strictly saves file as ~/images/Customer/{customerId}.jpg without any database fields
     private void UploadCustomerImageById(string customerId)
     {
         if (fuCustomerPhoto.HasFile)
@@ -233,10 +263,8 @@ public partial class CustomerMaster : System.Web.UI.Page
         if (ddlArea.Items.Count > 0) ddlArea.SelectedIndex = 0;
         if (ddlAgent.Items.Count > 0) ddlAgent.SelectedIndex = 0;
 
-        // Reset Profile Picture Preview
         imgCustomerPreview.ImageUrl = "~/images/icons/user.png";
 
-        // Reset delivery location fields
         txtDelAddress.Text = "";
         txtDelContactPerson.Text = "";
         txtDelContactNo.Text = "";
@@ -252,10 +280,7 @@ public partial class CustomerMaster : System.Web.UI.Page
         clearFields();
         ddlBranch.SelectedValue = ddlBranchFilter.SelectedValue;
 
-        // Default to first tab
         hdnActiveTab.Value = "general";
-
-        // Display delivery location form with a blank in-memory table
         secDeliveryLocations.Visible = true;
         TempLocations = null;
         gridCustomerLocations.DataSource = TempLocations;
@@ -269,6 +294,11 @@ public partial class CustomerMaster : System.Web.UI.Page
         divGrid.Visible = true;
         divAdd.Visible = false;
         secDeliveryLocations.Visible = false;
+
+        // Reset search filter and reload customer list
+        txtSearchCustomerCode.Text = "";
+        txtSearchCustomerName.Text = "";
+        LoadGrid(ddlBranchFilter.SelectedValue);
     }
 
     protected void btnSave_Click(object sender, EventArgs e)
@@ -277,7 +307,6 @@ public partial class CustomerMaster : System.Web.UI.Page
         {
             if (lblPKIDU.Text == "")
             {
-                // ==================== ADD CUSTOMER ====================
                 if (txtCustomerName.Text != "")
                 {
                     DistributedTransaction DT = new DistributedTransaction();
@@ -302,16 +331,13 @@ public partial class CustomerMaster : System.Web.UI.Page
                     CEnt.AGENT_ID = ddlAgent.SelectedValue;
                     CEnt.OFFICE_CODE = ddlBranch.SelectedValue;
 
-                    // 1. Insert customer to get generated PK_ID (e.g. 1)
                     string pk_id = CSer.Insert(CEnt, DT).ToString();
 
-                    // 2. Upload file strictly to disk as {pk_id}.jpg
                     if (fuCustomerPhoto.HasFile)
                     {
                         UploadCustomerImageById(pk_id);
                     }
 
-                    // 3. Insert GL Sub-Account
                     SLAEnt = new GL_SUB_ACCOUNT();
                     SLAEnt.SUB_GL_CODE = txtCustomerCode.Text.ToUpper();
                     SLAEnt.GL_CODE = "010301";
@@ -320,7 +346,6 @@ public partial class CustomerMaster : System.Web.UI.Page
                     SLAEnt.OFFICE_CODE = ddlBranch.SelectedValue;
                     SLASer.Insert(SLAEnt, DT);
 
-                    // 4. Insert in-memory delivery locations created during Add
                     if (TempLocations != null && TempLocations.Rows.Count > 0)
                     {
                         foreach (DataRow row in TempLocations.Rows)
@@ -343,6 +368,7 @@ public partial class CustomerMaster : System.Web.UI.Page
                         divAdd.Visible = false;
                         secDeliveryLocations.Visible = false;
                         DT.Commit();
+                        LoadCustomerDropdownForLocations();
                     }
                     else
                     {
@@ -360,7 +386,6 @@ public partial class CustomerMaster : System.Web.UI.Page
             }
             else
             {
-                // ==================== EDIT CUSTOMER ====================
                 if (txtCustomerName.Text != "")
                 {
                     DistributedTransaction DT = new DistributedTransaction();
@@ -391,13 +416,11 @@ public partial class CustomerMaster : System.Web.UI.Page
 
                         CSer.Update(CEnt, DT);
 
-                        // Save or overwrite {lblPKIDU.Text}.jpg on disk if a new photo is uploaded
                         if (fuCustomerPhoto.HasFile)
                         {
                             UploadCustomerImageById(lblPKIDU.Text);
                         }
 
-                        // Update GL Sub-Account
                         SLAEnt = new GL_SUB_ACCOUNT();
                         SLAEnt.SUB_GL_CODE = txtCustomerCode.Text.ToUpper();
                         SLAEnt = (GL_SUB_ACCOUNT)SLASer.GetSingle(SLAEnt);
@@ -427,6 +450,7 @@ public partial class CustomerMaster : System.Web.UI.Page
                             divAdd.Visible = false;
                             secDeliveryLocations.Visible = false;
                             DT.Commit();
+                            LoadCustomerDropdownForLocations();
                         }
                         else
                         {
@@ -462,7 +486,6 @@ public partial class CustomerMaster : System.Web.UI.Page
             Label lblShowBranch = e.Row.FindControl("lblShowBranch") as Label;
             Label lblBranch = e.Row.FindControl("lblBranch") as Label;
 
-            // Status Badge Formatting
             if (lblStatus != null && !string.IsNullOrEmpty(lblStatus.Text) && lblStatus.Text != "Select")
             {
                 if (lblStatus.Text == "1")
@@ -477,7 +500,6 @@ public partial class CustomerMaster : System.Web.UI.Page
                 }
             }
 
-            // Decrypt Office Name
             if (lblBranch != null && !string.IsNullOrEmpty(lblBranch.Text))
             {
                 OEnt = new OFFICE();
@@ -488,37 +510,6 @@ public partial class CustomerMaster : System.Web.UI.Page
                     lblShowBranch.Text = ED.Decrypt(OEnt.OFFICENAME) + " - " + OEnt.STREET;
                 }
             }
-
-            // Bind Delivery Locations & Count Badge
-            HiddenField hdnCustId = e.Row.FindControl("hdnCustId") as HiddenField;
-            Repeater rptDeliveryLocations = e.Row.FindControl("rptDeliveryLocations") as Repeater;
-            Label lblLocCount = e.Row.FindControl("lblLocCount") as Label;
-            Label lblNoLoc = e.Row.FindControl("lblNoLoc") as Label;
-
-            if (hdnCustId != null && !string.IsNullOrEmpty(hdnCustId.Value))
-            {
-                PR_CUSTOMER_LOCATION locQuery = new PR_CUSTOMER_LOCATION();
-                locQuery.CUSTOMER_ID = hdnCustId.Value;
-                var locList = CLocSer.GetAll(locQuery);
-
-                if (locList != null && locList.Count > 0)
-                {
-                    rptDeliveryLocations.DataSource = locList;
-                    rptDeliveryLocations.DataBind();
-
-                    if (lblLocCount != null)
-                    {
-                        lblLocCount.Text = locList.Count + (locList.Count == 1 ? " Location" : " Locations");
-                        lblLocCount.Visible = true;
-                    }
-                    if (lblNoLoc != null) lblNoLoc.Visible = false;
-                }
-                else
-                {
-                    if (lblLocCount != null) lblLocCount.Visible = false;
-                    if (lblNoLoc != null) lblNoLoc.Visible = true;
-                }
-            }
         }
     }
 
@@ -526,7 +517,7 @@ public partial class CustomerMaster : System.Web.UI.Page
     {
         if (e.CommandName.Equals("Change"))
         {
-            GridViewRow gr = ((ImageButton)e.CommandSource).Parent.Parent as GridViewRow;
+            GridViewRow gr = ((Control)e.CommandSource).NamingContainer as GridViewRow;
             Label lblCustomerID = gr.FindControl("lblCustomerID") as Label;
 
             CEnt = new CUSTOMER();
@@ -548,7 +539,6 @@ public partial class CustomerMaster : System.Web.UI.Page
                 txtRemarks.Text = CEnt.REMARKS;
                 ddlStatus.SelectedValue = CEnt.STATUS;
 
-                // Safe PAN/VAT selection
                 if (!string.IsNullOrEmpty(CEnt.PAN_VAT))
                 {
                     string panVatValue = CEnt.PAN_VAT.Trim().ToUpper();
@@ -576,7 +566,6 @@ public partial class CustomerMaster : System.Web.UI.Page
                 }
                 ddlBranch.SelectedValue = CEnt.OFFICE_CODE;
 
-                // Load existing customer image preview directly from disk
                 string imageFile = CEnt.PK_ID.Trim() + ".jpg";
                 string physicalPath = Server.MapPath("~/images/Customer/" + imageFile);
                 if (File.Exists(physicalPath))
@@ -588,10 +577,7 @@ public partial class CustomerMaster : System.Web.UI.Page
                     imgCustomerPreview.ImageUrl = "~/images/icons/user.png";
                 }
 
-                // Load existing delivery locations
                 LoadCustomerLocations(CEnt.PK_ID);
-
-                // Set initial tab to General Info
                 hdnActiveTab.Value = "general";
             }
 
@@ -657,9 +643,17 @@ public partial class CustomerMaster : System.Web.UI.Page
         gridCustomer.DataBind();
     }
 
+    protected void btnSearchClear_Click(object sender, EventArgs e)
+    {
+        txtSearchCustomerCode.Text = "";
+        txtSearchCustomerName.Text = "";
+        LoadGrid(ddlBranchFilter.SelectedValue);
+    }
+
     protected void ddlBranchFilter_SelectedIndexChanged(object sender, EventArgs e)
     {
         btnSearch_Click(sender, e);
+        LoadCustomerDropdownForLocations();
     }
 
     protected void ddlBranch_SelectedIndexChanged(object sender, EventArgs e)
@@ -668,7 +662,7 @@ public partial class CustomerMaster : System.Web.UI.Page
         LoadArea();
     }
 
-    #region Delivery Locations Handling
+    #region Inner Delivery Locations (Customer Add/Edit Wizard)
 
     protected void LoadCustomerLocations(string customerId)
     {
@@ -690,7 +684,6 @@ public partial class CustomerMaster : System.Web.UI.Page
 
     protected void btnAddLocation_Click(object sender, EventArgs e)
     {
-        // Keep active tab on Delivery Addresses
         hdnActiveTab.Value = "delivery";
 
         if (string.IsNullOrEmpty(txtDelAddress.Text.Trim()))
@@ -702,7 +695,6 @@ public partial class CustomerMaster : System.Web.UI.Page
 
         if (string.IsNullOrEmpty(lblPKIDU.Text))
         {
-            // ADD MODE: Keep in temporary in-memory DataTable
             DataTable dt = TempLocations;
             DataRow row = dt.NewRow();
             row["PK_ID"] = Guid.NewGuid().ToString();
@@ -719,7 +711,6 @@ public partial class CustomerMaster : System.Web.UI.Page
         }
         else
         {
-            // EDIT MODE: Insert directly to Database
             CLocEnt = new PR_CUSTOMER_LOCATION();
             CLocEnt.CUSTOMER_ID = lblPKIDU.Text;
             CLocEnt.ADDRESS = txtDelAddress.Text.Trim();
@@ -743,14 +734,11 @@ public partial class CustomerMaster : System.Web.UI.Page
     {
         if (e.CommandName.Equals("RemoveLoc"))
         {
-            // Keep active tab on Delivery Addresses
             hdnActiveTab.Value = "delivery";
-
             string locId = e.CommandArgument.ToString();
 
             if (string.IsNullOrEmpty(lblPKIDU.Text))
             {
-                // ADD MODE: Remove from in-memory DataTable
                 DataTable dt = TempLocations;
                 for (int i = dt.Rows.Count - 1; i >= 0; i--)
                 {
@@ -766,7 +754,6 @@ public partial class CustomerMaster : System.Web.UI.Page
             }
             else
             {
-                // EDIT MODE: Delete from Database
                 CLocEnt = new PR_CUSTOMER_LOCATION();
                 CLocEnt.PK_ID = locId;
                 CLocSer.Delete(CLocEnt);
@@ -788,6 +775,180 @@ public partial class CustomerMaster : System.Web.UI.Page
                 if (CYEnt != null)
                 {
                     lblCountryName.Text = CYEnt.COUNTRY_NAME;
+                }
+            }
+        }
+    }
+
+    #endregion
+
+    #region Dedicated Outer Delivery Locations Tab Handling
+
+    protected void LoadCustomerDropdownForLocations()
+    {
+        CEnt = new CUSTOMER();
+        CEnt.OFFICE_CODE = ddlBranchFilter.SelectedValue;
+        var custList = CSer.GetAll(CEnt);
+
+        ddlSelectCustomerForLoc.DataSource = custList;
+        ddlSelectCustomerForLoc.DataTextField = "CUSTOMER_NAME";
+        ddlSelectCustomerForLoc.DataValueField = "PK_ID";
+        ddlSelectCustomerForLoc.DataBind();
+        ddlSelectCustomerForLoc.Items.Insert(0, new ListItem("-- Select Customer --", ""));
+    }
+
+    protected void ddlSelectCustomerForLoc_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        if (!string.IsNullOrEmpty(ddlSelectCustomerForLoc.SelectedValue))
+        {
+            CEnt = new CUSTOMER();
+            CEnt.PK_ID = ddlSelectCustomerForLoc.SelectedValue;
+            CEnt = (CUSTOMER)CSer.GetSingle(CEnt);
+            if (CEnt != null)
+            {
+                lblOuterCustName.Text = CEnt.CUSTOMER_NAME;
+                lblOuterCustCode.Text = CEnt.CUSTOMER_CODE;
+                lblOuterCustAddress.Text = string.IsNullOrEmpty(CEnt.ADDRESS) ? "No address specified" : CEnt.ADDRESS;
+                lblOuterCustPhone.Text = string.IsNullOrEmpty(CEnt.MOBILE) ? CEnt.PHONE : CEnt.MOBILE;
+
+                pnlOuterCustomerInfo.Visible = true;
+                ClearOuterDeliveryLocationForm();
+                LoadOuterCustomerLocations(CEnt.PK_ID);
+            }
+        }
+        else
+        {
+            pnlOuterCustomerInfo.Visible = false;
+        }
+    }
+
+    protected void LoadOuterCustomerLocations(string customerId)
+    {
+        if (!string.IsNullOrEmpty(customerId))
+        {
+            CLocEnt = new PR_CUSTOMER_LOCATION();
+            CLocEnt.CUSTOMER_ID = customerId;
+            gridOuterCustomerLocations.DataSource = CLocSer.GetAll(CLocEnt);
+            gridOuterCustomerLocations.DataBind();
+        }
+    }
+
+    protected void btnSaveOuterDelLoc_Click(object sender, EventArgs e)
+    {
+        if (string.IsNullOrEmpty(ddlSelectCustomerForLoc.SelectedValue))
+        {
+            HelperFunction.MsgBox(this, this.GetType(), "Please select a customer first.");
+            return;
+        }
+
+        if (string.IsNullOrEmpty(txtOuterDelAddress.Text.Trim()))
+        {
+            HelperFunction.MsgBox(this, this.GetType(), "Please enter the delivery address.");
+            txtOuterDelAddress.Focus();
+            return;
+        }
+
+        if (string.IsNullOrEmpty(hdnOuterLocPKID.Value))
+        {
+            CLocEnt = new PR_CUSTOMER_LOCATION();
+            CLocEnt.CUSTOMER_ID = ddlSelectCustomerForLoc.SelectedValue;
+            CLocEnt.ADDRESS = txtOuterDelAddress.Text.Trim();
+            CLocEnt.CONTACT_PERSON = txtOuterDelContactPerson.Text.Trim();
+            CLocEnt.CONTACT_NUMBER = txtOuterDelContactNo.Text.Trim();
+            CLocEnt.EMAIL_ID = txtOuterDelEmail.Text.Trim();
+            CLocEnt.COUNTRY_ID = ddlOuterDelCountry.SelectedValue;
+            CLocSer.Insert(CLocEnt);
+            HelperFunction.MsgBox(this, this.GetType(), "Delivery location added successfully.");
+        }
+        else
+        {
+            CLocEnt = new PR_CUSTOMER_LOCATION();
+            CLocEnt.PK_ID = hdnOuterLocPKID.Value;
+            CLocEnt = (PR_CUSTOMER_LOCATION)CLocSer.GetSingle(CLocEnt);
+            if (CLocEnt != null)
+            {
+                CLocEnt.ADDRESS = txtOuterDelAddress.Text.Trim();
+                CLocEnt.CONTACT_PERSON = txtOuterDelContactPerson.Text.Trim();
+                CLocEnt.CONTACT_NUMBER = txtOuterDelContactNo.Text.Trim();
+                CLocEnt.EMAIL_ID = txtOuterDelEmail.Text.Trim();
+                CLocEnt.COUNTRY_ID = ddlOuterDelCountry.SelectedValue;
+                CLocSer.Update(CLocEnt);
+                HelperFunction.MsgBox(this, this.GetType(), "Delivery location updated successfully.");
+            }
+        }
+
+        LoadOuterCustomerLocations(ddlSelectCustomerForLoc.SelectedValue);
+        ClearOuterDeliveryLocationForm();
+    }
+
+    protected void btnCancelOuterLocEdit_Click(object sender, EventArgs e)
+    {
+        ClearOuterDeliveryLocationForm();
+    }
+
+    private void ClearOuterDeliveryLocationForm()
+    {
+        hdnOuterLocPKID.Value = "";
+        txtOuterDelAddress.Text = "";
+        txtOuterDelContactPerson.Text = "";
+        txtOuterDelContactNo.Text = "";
+        txtOuterDelEmail.Text = "";
+        if (ddlOuterDelCountry.Items.Count > 0) ddlOuterDelCountry.SelectedIndex = 0;
+        btnSaveOuterDelLoc.Text = "+ Add Location";
+        lblOuterLocFormTitle.Text = "Add New Delivery Location";
+        btnCancelOuterLocEdit.Visible = false;
+    }
+
+    protected void gridOuterCustomerLocations_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName.Equals("EditOuterLoc"))
+        {
+            string locId = e.CommandArgument.ToString();
+            CLocEnt = new PR_CUSTOMER_LOCATION();
+            CLocEnt.PK_ID = locId;
+            CLocEnt = (PR_CUSTOMER_LOCATION)CLocSer.GetSingle(CLocEnt);
+            if (CLocEnt != null)
+            {
+                hdnOuterLocPKID.Value = CLocEnt.PK_ID;
+                txtOuterDelAddress.Text = CLocEnt.ADDRESS;
+                txtOuterDelContactPerson.Text = CLocEnt.CONTACT_PERSON;
+                txtOuterDelContactNo.Text = CLocEnt.CONTACT_NUMBER;
+                txtOuterDelEmail.Text = CLocEnt.EMAIL_ID;
+                if (ddlOuterDelCountry.Items.FindByValue(CLocEnt.COUNTRY_ID) != null)
+                {
+                    ddlOuterDelCountry.SelectedValue = CLocEnt.COUNTRY_ID;
+                }
+
+                btnSaveOuterDelLoc.Text = "Update Location";
+                lblOuterLocFormTitle.Text = "Edit Delivery Location";
+                btnCancelOuterLocEdit.Visible = true;
+            }
+        }
+        else if (e.CommandName.Equals("DeleteOuterLoc"))
+        {
+            string locId = e.CommandArgument.ToString();
+            CLocEnt = new PR_CUSTOMER_LOCATION();
+            CLocEnt.PK_ID = locId;
+            CLocSer.Delete(CLocEnt);
+            HelperFunction.MsgBox(this, this.GetType(), "Delivery location deleted successfully.");
+            LoadOuterCustomerLocations(ddlSelectCustomerForLoc.SelectedValue);
+            ClearOuterDeliveryLocationForm();
+        }
+    }
+
+    protected void gridOuterCustomerLocations_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblCountry = e.Row.FindControl("lblOuterGridCountryName") as Label;
+            if (lblCountry != null && !string.IsNullOrEmpty(lblCountry.Text))
+            {
+                CYEnt = new COUNTRY();
+                CYEnt.PK_ID = lblCountry.Text;
+                CYEnt = (COUNTRY)CYSer.GetSingle(CYEnt);
+                if (CYEnt != null)
+                {
+                    lblCountry.Text = CYEnt.COUNTRY_NAME;
                 }
             }
         }
