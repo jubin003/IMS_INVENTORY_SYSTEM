@@ -12,7 +12,6 @@ public partial class Production_Create_Production : System.Web.UI.Page
     PhyeGanDate PGD = new PhyeGanDate();
     PRODUCT_TYPE PTEnt = new PRODUCT_TYPE();
     PRODUCT_TYPEService PTSer = new PRODUCT_TYPEService();
-    
 
     protected void Page_Load(object sender, EventArgs e)
     {
