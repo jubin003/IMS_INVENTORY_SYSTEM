@@ -1,1343 +1,1129 @@
 ﻿using System;
-using System.Collections;
 using System.Data;
+using System.Globalization;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Entity.Components;
 using Service.Components;
 using Entity.Framework;
+using DataHelper.Framework;
 
 public partial class Production_Create_Production : System.Web.UI.Page
 {
+    PR_PRODUCTION_MASTER ProdMasterEnt = new PR_PRODUCTION_MASTER();
+    PR_PRODUCTION_MASTERService ProdMasterSer = new PR_PRODUCTION_MASTERService();
+
+    PR_PRODCUTION_DETAIL ProdDetEnt = new PR_PRODCUTION_DETAIL();
+    PR_PRODCUTION_DETAILService ProdDetSer = new PR_PRODCUTION_DETAILService();
+
+    PR_PRODUCTION_STAGE ProdStageEnt = new PR_PRODUCTION_STAGE();
+    PR_PRODUCTION_STAGEService ProdStageSer = new PR_PRODUCTION_STAGEService();
+
+    PR_PRODUCITON_PIPELINE ProdPipeEnt = new PR_PRODUCITON_PIPELINE();
+    PR_PRODUCITON_PIPELINEService ProdPipeSer = new PR_PRODUCITON_PIPELINEService();
+
+    PR_PURCHASE_ORDER PoEnt = new PR_PURCHASE_ORDER();
+    PR_PURCHASE_ORDERService PoSer = new PR_PURCHASE_ORDERService();
+
+    PR_MULTIPLE_DELIVERY MdEnt = new PR_MULTIPLE_DELIVERY();
+    PR_MULTIPLE_DELIVERYService MdSer = new PR_MULTIPLE_DELIVERYService();
+
+    PR_ORDER_DETAIL OdEnt = new PR_ORDER_DETAIL();
+    PR_ORDER_DETAILService OdSer = new PR_ORDER_DETAILService();
+
+    CUSTOMER CustEnt = new CUSTOMER();
+    CUSTOMERService CustSer = new CUSTOMERService();
+
+    PR_CUSTOMER_LOCATION LocEnt = new PR_CUSTOMER_LOCATION();
+    PR_CUSTOMER_LOCATIONService LocSer = new PR_CUSTOMER_LOCATIONService();
+
     PhyeGanDate PGD = new PhyeGanDate();
-    PRODUCT_TYPE PTEnt = new PRODUCT_TYPE();
-    PRODUCT_TYPEService PTSer = new PRODUCT_TYPEService();
+
+    private const string ProdDetailsKey = "ProdDetailsTable";
+    private const string ProdStagesKey = "ProdStagesTable";
+    private const string PipeUnitKey = "PipeUnitTable";
+    private const string PipeEmpKey = "PipeEmpTable";
 
     protected void Page_Load(object sender, EventArgs e)
     {
         if (!IsPostBack)
         {
-            txtProductionDate.Text = GetTodayNepali();
-            txtCompletionDate.Text = GetTodayNepali();
+            txtProductionDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
 
-            LoadProductionType();
-            LoadCustomersDropdown();
-
-            BindProductionStages();
-            BindProductionPipelineUnit();
-            BindProductionPipelineEmployee();
-
+            InitializeTables();
             ShowStep(1);
         }
     }
 
-    protected void LoadProductionType()
-    {
-        PTEnt = new PRODUCT_TYPE();
-        PTEnt.STATUS = "1";
-
-        ddlProductionType.DataSource = PTSer.GetAll(PTEnt);
-        ddlProductionType.DataTextField = "PRODUCT_TYPE_NAME";
-        ddlProductionType.DataValueField = "PK_ID";
-        ddlProductionType.DataBind();
-
-        ddlProductionType.Items.Insert(0, new ListItem("-- Select Production Type --", "0"));
-    }
-
-    // =====================================================
-    // DATE HELPERS
-    // =====================================================
-
-    private string GetTodayNepali()
-    {
-        string engDate = PGD.GetTodayDate("dd/mm/yyyy");
-        return PGD.GetNepaliDateFromEnglish(engDate, "dd/mm/yyyy");
-    }
-
-    private bool IsValidDate(string value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return false;
-
-        string[] parts = value.Trim().Split('/');
-
-        int day, month, year;
-
-        return parts.Length == 3
-            && int.TryParse(parts[0], out day)
-            && int.TryParse(parts[1], out month)
-            && int.TryParse(parts[2], out year)
-            && day > 0 && day <= 32
-            && month > 0 && month <= 12
-            && year > 0;
-    }
-
-    private string[] GetDateParts(string value)
-    {
-        string[] parts = value.Trim().Split('/');
-        return new string[] { parts[0], parts[1], parts[2] };
-    }
-
-    private string FormatDeliveryDate(PR_MULTIPLE_DELIVERY item)
-    {
-        if (item == null) return "";
-
-        if (!string.IsNullOrWhiteSpace(item.DELIVERY_DAY) &&
-            !string.IsNullOrWhiteSpace(item.DELIVERY_MONTH) &&
-            !string.IsNullOrWhiteSpace(item.DELIVERY_YEAR))
-        {
-            string day = item.DELIVERY_DAY.Trim().PadLeft(2, '0');
-            string month = item.DELIVERY_MONTH.Trim().PadLeft(2, '0');
-            string year = item.DELIVERY_YEAR.Trim();
-            return string.Format("{0}/{1}/{2}", day, month, year);
-        }
-
-        if (!string.IsNullOrWhiteSpace(item.DELIVERY_DATE))
-        {
-            return item.DELIVERY_DATE.Trim().Split(' ')[0];
-        }
-
-        return "";
-    }
-
-    // =====================================================
-    // STEP NAVIGATION
-    // =====================================================
-
     private void ShowStep(int step)
     {
-        pnlProductionMaster.Visible = step == 1;
-        pnlProductionDetails.Visible = step == 2;
-        pnlProductionStages.Visible = step == 3;
-        pnlProductionPipeline.Visible = step == 4;
+        pnlProductionMaster.Visible = (step == 1);
+        pnlProductionDetails.Visible = (step == 2);
+        pnlProductionStages.Visible = (step == 3);
+        pnlProductionPipeline.Visible = (step == 4);
+    }
 
-        if (step == 2)
+    private void InitializeTables()
+    {
+        DataTable dtDetails = new DataTable();
+        dtDetails.Columns.Add("ROW_ID", typeof(string));
+        dtDetails.Columns.Add("PRODUCT_ID", typeof(string));
+        dtDetails.Columns.Add("PRODUCT_NAME", typeof(string));
+        dtDetails.Columns.Add("SIZE_ID", typeof(string));
+        dtDetails.Columns.Add("SIZE_NAME", typeof(string));
+        dtDetails.Columns.Add("SWATCH_ID", typeof(string));
+        dtDetails.Columns.Add("SWATCH_NAME", typeof(string));
+        dtDetails.Columns.Add("QUANTITY", typeof(string));
+        dtDetails.Columns.Add("UNIT", typeof(string));
+        dtDetails.Columns.Add("MULTIPLE_DELVIERY_ID", typeof(string));
+        ViewState[ProdDetailsKey] = dtDetails;
+
+        DataTable dtStages = new DataTable();
+        dtStages.Columns.Add("ROW_ID", typeof(string));
+        dtStages.Columns.Add("PRODUCTION_DETAIL_ROW_ID", typeof(string));
+        dtStages.Columns.Add("STAGE_MASTER_ID", typeof(string));
+        dtStages.Columns.Add("UNIT_OR_EMPLOYEE", typeof(string));
+        dtStages.Columns.Add("STATUS", typeof(string));
+        ViewState[ProdStagesKey] = dtStages;
+
+        DataTable dtPipeUnit = new DataTable();
+        dtPipeUnit.Columns.Add("ROW_ID", typeof(string));
+        dtPipeUnit.Columns.Add("PRODUCTION_DETAIL_ROW_ID", typeof(string));
+        dtPipeUnit.Columns.Add("STAGE_ROW_ID", typeof(string));
+        dtPipeUnit.Columns.Add("PRODUCTION_UNIT", typeof(string));
+        dtPipeUnit.Columns.Add("PRODUCTION_DIVISION", typeof(string));
+        dtPipeUnit.Columns.Add("ESTIMATED_DAY", typeof(string));
+        dtPipeUnit.Columns.Add("ESTIMATED_TIME", typeof(string));
+        ViewState[PipeUnitKey] = dtPipeUnit;
+
+        DataTable dtPipeEmp = new DataTable();
+        dtPipeEmp.Columns.Add("ROW_ID", typeof(string));
+        dtPipeEmp.Columns.Add("PRODUCTION_DETAIL_ROW_ID", typeof(string));
+        dtPipeEmp.Columns.Add("STAGE_ROW_ID", typeof(string));
+        dtPipeEmp.Columns.Add("EMPLOYEE_ID", typeof(string));
+        dtPipeEmp.Columns.Add("ESTIMATED_DAY", typeof(string));
+        dtPipeEmp.Columns.Add("ESTIMATED_TIME", typeof(string));
+        ViewState[PipeEmpKey] = dtPipeEmp;
+    }
+
+    #region STEP 1: PRODUCTION MASTER & SCHEDULED DELIVERIES
+
+    private DataTable ScheduledDeliveriesTable
+    {
+        get { return ViewState["ScheduledDeliveriesTable"] as DataTable; }
+        set { ViewState["ScheduledDeliveriesTable"] = value; }
+    }
+
+    private string GridSortExpression
+    {
+        get { return ViewState["GridSortExpression"] as string ?? "PARSED_DATE"; }
+        set { ViewState["GridSortExpression"] = value; }
+    }
+
+    private string GridSortDirection
+    {
+        get { return ViewState["GridSortDirection"] as string ?? "ASC"; }
+        set { ViewState["GridSortDirection"] = value; }
+    }
+
+    protected void ddlProductionType_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        string selectedType = ddlProductionType.SelectedValue;
+
+        if (selectedType == "PO")
         {
+            btnNextMaster.Visible = false;
+            pnlPOGrid.Visible = true;
+            LoadScheduledDeliveriesGrid();
+        }
+        else
+        {
+            btnNextMaster.Visible = true;
+            pnlPOGrid.Visible = false;
+            hfCustomerPoId.Value = "";
+            hfMultipleDeliveryId.Value = "";
+            hfAutomatedCompletionDate.Value = "";
+        }
+    }
+
+    private DateTime ParseDateToDateTime(string dateStr)
+    {
+        if (string.IsNullOrWhiteSpace(dateStr))
+            return DateTime.MaxValue;
+
+        string trimmed = dateStr.Trim();
+        DateTime parsedDate;
+        string[] formats = { "dd/MM/yyyy", "d/M/yyyy", "yyyy/MM/dd", "yyyy-MM-dd" };
+
+        if (DateTime.TryParseExact(trimmed, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate))
+            return parsedDate;
+
+        if (DateTime.TryParse(trimmed, out parsedDate))
+            return parsedDate;
+
+        try
+        {
+            string engDate = PGD.GetEnglishDateFromNepali(trimmed, "dd/mm/yyyy");
+            if (DateTime.TryParse(engDate, out parsedDate))
+                return parsedDate;
+        }
+        catch { }
+
+        return DateTime.MaxValue;
+    }
+
+    private void LoadScheduledDeliveriesGrid()
+    {
+        DataTable dtDeliveries = new DataTable();
+        dtDeliveries.Columns.Add("MULTIPLE_DELIVERY_ID", typeof(string));
+        dtDeliveries.Columns.Add("ORDER_NUMBER", typeof(string));
+        dtDeliveries.Columns.Add("CUSTOMER_NAME", typeof(string));
+        dtDeliveries.Columns.Add("DELIVERY_DATE", typeof(string));
+        dtDeliveries.Columns.Add("PARSED_DATE", typeof(DateTime));
+        dtDeliveries.Columns.Add("CUSTOMER_LOCATION", typeof(string));
+
+        MdEnt = new PR_MULTIPLE_DELIVERY();
+        MdEnt.STATUS = "1";
+        EntityList mdList = MdSer.GetAll(MdEnt);
+
+        if (mdList != null)
+        {
+            foreach (PR_MULTIPLE_DELIVERY md in mdList)
+            {
+                string orderNumber = "";
+                string customerName = "";
+
+                if (!string.IsNullOrEmpty(md.PURCHASE_ORDER_ID))
+                {
+                    PoEnt = new PR_PURCHASE_ORDER();
+                    PoEnt.PK_ID = md.PURCHASE_ORDER_ID;
+                    PoEnt = (PR_PURCHASE_ORDER)PoSer.GetSingle(PoEnt);
+
+                    if (PoEnt != null)
+                    {
+                        orderNumber = PoEnt.ORDER_NUMBER;
+                        if (!string.IsNullOrEmpty(PoEnt.CUSTOMER_ID))
+                        {
+                            CustEnt = new CUSTOMER();
+                            CustEnt.PK_ID = PoEnt.CUSTOMER_ID;
+                            CustEnt = (CUSTOMER)CustSer.GetSingle(CustEnt);
+                            customerName = CustEnt != null ? CustEnt.CUSTOMER_NAME : "";
+                        }
+                    }
+                }
+
+                string locAddress = "";
+                if (!string.IsNullOrEmpty(md.CUSOMTER_LOCATION_ID))
+                {
+                    LocEnt = new PR_CUSTOMER_LOCATION();
+                    LocEnt.PK_ID = md.CUSOMTER_LOCATION_ID;
+                    LocEnt = (PR_CUSTOMER_LOCATION)LocSer.GetSingle(LocEnt);
+                    locAddress = LocEnt != null ? LocEnt.ADDRESS : "";
+                }
+
+                DataRow dr = dtDeliveries.NewRow();
+                dr["MULTIPLE_DELIVERY_ID"] = md.PK_ID;
+                dr["ORDER_NUMBER"] = orderNumber;
+                dr["CUSTOMER_NAME"] = customerName;
+                dr["DELIVERY_DATE"] = md.DELIVERY_DATE;
+                dr["PARSED_DATE"] = ParseDateToDateTime(md.DELIVERY_DATE);
+                dr["CUSTOMER_LOCATION"] = locAddress;
+                dtDeliveries.Rows.Add(dr);
+            }
+        }
+
+        GridSortExpression = "PARSED_DATE";
+        GridSortDirection = "ASC";
+        ScheduledDeliveriesTable = dtDeliveries;
+
+        BindSortedDeliveries();
+    }
+
+    private void BindSortedDeliveries()
+    {
+        DataTable dt = ScheduledDeliveriesTable;
+        if (dt != null)
+        {
+            DataView dv = dt.DefaultView;
+            dv.Sort = GridSortExpression + " " + GridSortDirection;
+            grdPurchaseOrders.DataSource = dv;
+            grdPurchaseOrders.DataBind();
+        }
+    }
+
+    protected void grdPurchaseOrders_PageIndexChanging(object sender, GridViewPageEventArgs e)
+    {
+        grdPurchaseOrders.PageIndex = e.NewPageIndex;
+        BindSortedDeliveries();
+    }
+
+    protected void grdPurchaseOrders_Sorting(object sender, GridViewSortEventArgs e)
+    {
+        if (GridSortExpression == e.SortExpression)
+        {
+            GridSortDirection = GridSortDirection == "ASC" ? "DESC" : "ASC";
+        }
+        else
+        {
+            GridSortExpression = e.SortExpression;
+            GridSortDirection = "ASC";
+        }
+
+        grdPurchaseOrders.PageIndex = 0;
+        BindSortedDeliveries();
+    }
+
+    public string GetUrgencyBadge(object deliveryDateObj)
+    {
+        if (deliveryDateObj == null || string.IsNullOrEmpty(deliveryDateObj.ToString()))
+            return "<span class=\"badge-stat\">N/A</span>";
+
+        DateTime deliveryDate = ParseDateToDateTime(deliveryDateObj.ToString());
+        if (deliveryDate == DateTime.MaxValue)
+            return "<span class=\"badge-stat\">" + deliveryDateObj.ToString() + "</span>";
+
+        int remainingDays = (int)(deliveryDate.Date - DateTime.Now.Date).TotalDays;
+
+        if (remainingDays < 0)
+        {
+            return "<span style=\"color:#e53e3e; font-weight:600; padding:3px 8px; background:#fff5f5; border:1px solid #feb2b2; border-radius:4px;\">Overdue (" + Math.Abs(remainingDays) + "d)</span>";
+        }
+        else if (remainingDays <= 5)
+        {
+            return "<span style=\"color:#dd6b20; font-weight:600; padding:3px 8px; background:#fffaf0; border:1px solid #fbd38d; border-radius:4px;\">Urgent (" + remainingDays + "d)</span>";
+        }
+        else if (remainingDays <= 15)
+        {
+            return "<span style=\"color:#3182ce; font-weight:600; padding:3px 8px; background:#ebf8ff; border:1px solid #bee3f8; border-radius:4px;\">Moderate (" + remainingDays + "d)</span>";
+        }
+        else
+        {
+            return "<span style=\"color:#38a169; font-weight:600; padding:3px 8px; background:#f0fff4; border:1px solid #c6f6d5; border-radius:4px;\">Normal (" + remainingDays + "d)</span>";
+        }
+    }
+
+    protected void grdPurchaseOrders_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName == "CreateFromDelivery")
+        {
+            string mdId = Convert.ToString(e.CommandArgument);
+            hfMultipleDeliveryId.Value = mdId;
+
+            MdEnt = new PR_MULTIPLE_DELIVERY();
+            MdEnt.PK_ID = mdId;
+            MdEnt = (PR_MULTIPLE_DELIVERY)MdSer.GetSingle(MdEnt);
+
+            if (MdEnt != null)
+            {
+                hfCustomerPoId.Value = MdEnt.PURCHASE_ORDER_ID;
+                hfAutomatedCompletionDate.Value = MdEnt.DELIVERY_DATE;
+
+                lblDetailsDeliveryTarget.Text = MdEnt.DELIVERY_DATE;
+
+                PoEnt = new PR_PURCHASE_ORDER();
+                PoEnt.PK_ID = MdEnt.PURCHASE_ORDER_ID;
+                PoEnt = (PR_PURCHASE_ORDER)PoSer.GetSingle(PoEnt);
+                lblStageOrderNumber.Text = PoEnt != null ? PoEnt.ORDER_NUMBER : "";
+            }
+
             lblDetailsProductionDate.Text = txtProductionDate.Text;
-            lblDetailsCompletionDate.Text = txtCompletionDate.Text;
-        }
-        else if (step == 3)
-        {
-            lblStageOrderNumber.Text = ddlCustomerOrder.SelectedIndex > 0 ? ddlCustomerOrder.SelectedItem.Text : "-";
             lblStageProductionDate.Text = txtProductionDate.Text;
-            lblStageCompletionDate.Text = txtCompletionDate.Text;
-            BindProductionStages();
+
+            LoadProductsFromDelivery(mdId);
+            ShowStep(2);
         }
-        else if (step == 4)
+        else if (e.CommandName == "ViewDeliveryDetails")
         {
-            ConfigureStep4Pipelines();
+            string mdId = Convert.ToString(e.CommandArgument);
+            Response.Redirect("View_Delivery_Details.aspx?DeliveryId=" + Server.UrlEncode(mdId));
         }
-    }
-
-    private void ConfigureStep4Pipelines()
-    {
-        DataTable dtStages = ProductionStageTable;
-        bool hasUnit = false;
-        bool hasEmployee = false;
-
-        DataTable dtUnit = CreateEmptyPipelineUnitTable();
-        DataTable dtEmp = CreateEmptyPipelineEmployeeTable();
-
-        foreach (DataRow row in dtStages.Rows)
-        {
-            string assignment = Convert.ToString(row["UNIT_OR_EMPLOYEE"]);
-            string detailId = Convert.ToString(row["PRODUCTION_DETAIL_ID"]);
-            string stageId = Convert.ToString(row["STAGE_MASTER_ID"]);
-
-            if (string.Equals(assignment, "Unit", StringComparison.OrdinalIgnoreCase))
-            {
-                hasUnit = true;
-                dtUnit.Rows.Add(detailId, stageId, "", "", "", "");
-            }
-            else if (string.Equals(assignment, "Employee", StringComparison.OrdinalIgnoreCase))
-            {
-                hasEmployee = true;
-                dtEmp.Rows.Add(detailId, stageId, "", "", "");
-            }
-        }
-
-        pnlPipelineUnit.Visible = hasUnit;
-        pnlPipelineEmployee.Visible = hasEmployee;
-
-        if (hasUnit)
-        {
-            // Seed from Step 3 if Unit table is still blank
-            if (ViewState["ProductionPipelineUnitTable"] == null || IsPipelineTableBlank(ProductionPipelineUnitTable))
-                ProductionPipelineUnitTable = dtUnit;
-
-            BindProductionPipelineUnit();
-        }
-
-        if (hasEmployee)
-        {
-            // Seed from Step 3 if Employee table is still blank
-            if (ViewState["ProductionPipelineEmployeeTable"] == null || IsPipelineTableBlank(ProductionPipelineEmployeeTable))
-                ProductionPipelineEmployeeTable = dtEmp;
-
-            BindProductionPipelineEmployee();
-        }
-    }
-
-    private bool IsPipelineTableBlank(DataTable dt)
-    {
-        if (dt == null || dt.Rows.Count == 0) return true;
-        if (dt.Rows.Count == 1 &&
-            string.IsNullOrWhiteSpace(Convert.ToString(dt.Rows[0]["PRODUCTION_DETAIL_ID"])) &&
-            string.IsNullOrWhiteSpace(Convert.ToString(dt.Rows[0]["STAGE_ID"])))
-        {
-            return true;
-        }
-        return false;
     }
 
     protected void btnNextMaster_Click(object sender, EventArgs e)
     {
-        //if (!ValidateMaster())
-        //    return;
+        hfCustomerPoId.Value = "";
+        hfMultipleDeliveryId.Value = "";
+        hfAutomatedCompletionDate.Value = "";
 
-        LoadMultipleDeliveriesByPO(ddlCustomerOrder.SelectedValue);
+        lblDetailsProductionDate.Text = txtProductionDate.Text;
+        lblDetailsDeliveryTarget.Text = "IN-HOUSE (Automated)";
+        lblStageProductionDate.Text = txtProductionDate.Text;
+        lblStageOrderNumber.Text = "IN-HOUSE";
+
         ShowStep(2);
-    }
-
-    protected void btnBackMaster_Click(object sender, EventArgs e)
-    {
-        if (pnlProductionProducts.Visible)
-            ReadProductionDetails();
-
-        ShowStep(1);
-    }
-
-    protected void btnNextDetails_Click(object sender, EventArgs e)
-    {
-        if (pnlProductionProducts.Visible)
-            ReadProductionDetails();
-
-        //if (!ValidateProductionDetails())
-        //    return;
-
-        ShowStep(3);
-    }
-
-    protected void btnBackDetails_Click(object sender, EventArgs e)
-    {
-        ReadProductionStages();
-        ShowStep(2);
-    }
-
-    protected void btnNextStages_Click(object sender, EventArgs e)
-    {
-        ReadProductionStages();
-
-        //if (!ValidateProductionStages())
-        //    return;
-
-        ShowStep(4);
-    }
-
-    protected void btnBackStages_Click(object sender, EventArgs e)
-    {
-        if (pnlPipelineUnit.Visible)
-            ReadProductionPipelineUnit();
-
-        if (pnlPipelineEmployee.Visible)
-            ReadProductionPipelineEmployee();
-
-        ShowStep(3);
-    }
-
-    // =====================================================
-    // STEP 1: PRODUCTION MASTER & CUSTOMER SELECTION
-    // =====================================================
-
-    private void LoadCustomersDropdown()
-    {
-        try
-        {
-            CUSTOMERService custService = new CUSTOMERService();
-            CUSTOMER filter = new CUSTOMER();
-            EntityList custList = (EntityList)custService.GetAll(filter);
-
-            ddlCustomer.DataSource = custList;
-            ddlCustomer.DataTextField = "CUSTOMER_NAME";
-            ddlCustomer.DataValueField = "PK_ID";
-            ddlCustomer.DataBind();
-            ddlCustomer.Items.Insert(0, new ListItem("-- Select Customer --", ""));
-        }
-        catch (Exception ex)
-        {
-            HelperFunction.MsgBox(this, GetType(), "Error loading customers: " + ex.Message);
-        }
-    }
-
-    protected void ddlCustomer_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        string selectedCustomerId = ddlCustomer.SelectedValue;
-
-        ddlCustomerOrder.Items.Clear();
-
-        if (string.IsNullOrEmpty(selectedCustomerId))
-        {
-            ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer First --", ""));
-            return;
-        }
-
-        try
-        {
-            PR_PURCHASE_ORDERService poService = new PR_PURCHASE_ORDERService();
-            PR_PURCHASE_ORDER filter = new PR_PURCHASE_ORDER();
-            filter.CUSTOMER_ID = selectedCustomerId;
-
-            EntityList orderList = (EntityList)poService.GetAll(filter);
-
-            if (orderList != null && orderList.Count > 0)
-            {
-                ddlCustomerOrder.DataSource = orderList;
-                ddlCustomerOrder.DataTextField = "ORDER_NUMBER";
-                ddlCustomerOrder.DataValueField = "PK_ID";
-                ddlCustomerOrder.DataBind();
-                ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer Order --", ""));
-            }
-            else
-            {
-                ddlCustomerOrder.Items.Insert(0, new ListItem("No Orders Found", ""));
-            }
-        }
-        catch (Exception ex)
-        {
-            HelperFunction.MsgBox(this, GetType(), "Error loading customer orders: " + ex.Message);
-        }
-    }
-
-    private bool ValidateMaster()
-    {
-        if (string.IsNullOrWhiteSpace(ddlCustomer.SelectedValue))
-        {
-            HelperFunction.MsgBox(this, GetType(), "Please select a customer.");
-            return false;
-        }
-
-        if (!IsValidDate(txtProductionDate.Text))
-        {
-            HelperFunction.MsgBox(this, GetType(), "Enter a valid production date in dd/mm/yyyy format.");
-            return false;
-        }
-
-        if (!IsValidDate(txtCompletionDate.Text))
-        {
-            HelperFunction.MsgBox(this, GetType(), "Enter a valid completion date in dd/mm/yyyy format.");
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(ddlProductionType.SelectedValue) || ddlProductionType.SelectedValue == "0")
-        {
-            HelperFunction.MsgBox(this, GetType(), "Please select a production type.");
-            return false;
-        }
-
-        return true;
     }
 
     protected void btnClearMaster_Click(object sender, EventArgs e)
     {
-        txtProductionDate.Text = GetTodayNepali();
-        txtCompletionDate.Text = GetTodayNepali();
-
-        if (ddlProductionType.Items.Count > 0)
-            ddlProductionType.SelectedIndex = 0;
-
-        hfProductionId.Value = "";
-
-        if (ddlCustomer.Items.Count > 0)
-            ddlCustomer.SelectedIndex = 0;
-
-        ddlCustomerOrder.Items.Clear();
-        ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer First --", ""));
-
-        ShowStep(1);
+        ClearAll();
     }
 
-    // =====================================================
-    // STEP 2: PRODUCTION DETAILS & MULTIPLE DELIVERY
-    // =====================================================
+    #endregion
 
-    private void LoadMultipleDeliveriesByPO(string purchaseOrderId)
+    #region STEP 2: PRODUCTION DETAILS
+
+    private void LoadProductsFromDelivery(string mdId)
     {
-        string previousSelection = ddlMultipleDelivery.SelectedValue;
+        OdEnt = new PR_ORDER_DETAIL();
+        OdEnt.MULTIPLE_DELVIERY_ID = mdId;
+        EntityList odList = OdSer.GetAll(OdEnt);
 
-        ddlMultipleDelivery.Items.Clear();
-        pnlSelectedDeliveryInfo.Visible = false;
-        pnlProductionProducts.Visible = false;
+        DataTable dtProd = (DataTable)ViewState[ProdDetailsKey];
+        dtProd.Rows.Clear();
 
-        if (string.IsNullOrEmpty(purchaseOrderId))
+        if (odList != null)
         {
-            ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select PO in Step 1 First --", ""));
-            return;
-        }
-
-        try
-        {
-            PR_MULTIPLE_DELIVERYService mdService = new PR_MULTIPLE_DELIVERYService();
-            PR_MULTIPLE_DELIVERY filter = new PR_MULTIPLE_DELIVERY();
-            filter.PURCHASE_ORDER_ID = purchaseOrderId;
-
-            EntityList deliveryList = (EntityList)mdService.GetAll(filter);
-
-            if (deliveryList != null && deliveryList.Count > 0)
+            foreach (PR_ORDER_DETAIL od in odList)
             {
-                for (int i = 0; i < deliveryList.Count; i++)
-                {
-                    PR_MULTIPLE_DELIVERY item = (PR_MULTIPLE_DELIVERY)deliveryList[i];
-                    string formattedDate = FormatDeliveryDate(item);
-                    string remarks = string.IsNullOrWhiteSpace(item.REMARKS) ? "" : " (" + item.REMARKS.Trim() + ")";
-
-                    string label = "Delivery #" + (i + 1) + " - " + formattedDate + remarks;
-                    ddlMultipleDelivery.Items.Add(new ListItem(label, item.PK_ID));
-                }
-                ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select Delivery Date --", ""));
-
-                if (!string.IsNullOrEmpty(previousSelection) && ddlMultipleDelivery.Items.FindByValue(previousSelection) != null)
-                {
-                    ddlMultipleDelivery.SelectedValue = previousSelection;
-                    BindSelectedDeliveryDetails(previousSelection);
-                    LoadOrderDetailsByDelivery(previousSelection);
-                }
-            }
-            else
-            {
-                ddlMultipleDelivery.Items.Insert(0, new ListItem("No Delivery Dates Found", ""));
+                DataRow nr = dtProd.NewRow();
+                nr["ROW_ID"] = Guid.NewGuid().ToString("N");
+                nr["PRODUCT_ID"] = od.PRODUCT_ID;
+                nr["PRODUCT_NAME"] = GetProductName(od.PRODUCT_ID);
+                nr["SIZE_ID"] = od.SIZE_ID;
+                nr["SIZE_NAME"] = GetSizeName(od.SIZE_ID);
+                nr["SWATCH_ID"] = od.SWATCH_ID;
+                nr["SWATCH_NAME"] = GetSwatchName(od.SWATCH_ID);
+                nr["QUANTITY"] = od.QUANTITY;
+                nr["UNIT"] = od.UNIT;
+                nr["MULTIPLE_DELVIERY_ID"] = mdId;
+                dtProd.Rows.Add(nr);
             }
         }
-        catch (Exception ex)
-        {
-            HelperFunction.MsgBox(this, GetType(), "Error loading delivery dates: " + ex.Message);
-        }
-    }
 
-    protected void ddlMultipleDelivery_SelectedIndexChanged(object sender, EventArgs e)
-    {
-        string selectedDeliveryId = ddlMultipleDelivery.SelectedValue;
-
-        BindSelectedDeliveryDetails(selectedDeliveryId);
-        LoadOrderDetailsByDelivery(selectedDeliveryId);
-    }
-
-    private void BindSelectedDeliveryDetails(string selectedDeliveryId)
-    {
-        if (string.IsNullOrEmpty(selectedDeliveryId))
-        {
-            pnlSelectedDeliveryInfo.Visible = false;
-            grdSelectedDelivery.DataSource = null;
-            grdSelectedDelivery.DataBind();
-            return;
-        }
-
-        try
-        {
-            PR_MULTIPLE_DELIVERYService mdService = new PR_MULTIPLE_DELIVERYService();
-            PR_MULTIPLE_DELIVERY filter = new PR_MULTIPLE_DELIVERY();
-            filter.PK_ID = selectedDeliveryId;
-
-            EntityList list = (EntityList)mdService.GetAll(filter);
-            if (list != null && list.Count > 0)
-            {
-                PR_TRANSPORTATIONService transService = new PR_TRANSPORTATIONService();
-                PR_CUSTOMER_LOCATIONService locService = new PR_CUSTOMER_LOCATIONService();
-
-                foreach (PR_MULTIPLE_DELIVERY delivery in list)
-                {
-                    delivery.DELIVERY_DATE = FormatDeliveryDate(delivery);
-
-                    if (!string.IsNullOrEmpty(delivery.MODE_OF_TRANSPORTATION_ID))
-                    {
-                        PR_TRANSPORTATION transFilter = new PR_TRANSPORTATION();
-                        transFilter.PK_ID = delivery.MODE_OF_TRANSPORTATION_ID;
-
-                        PR_TRANSPORTATION transObj = (PR_TRANSPORTATION)transService.GetSingle(transFilter);
-                        if (transObj != null && !string.IsNullOrEmpty(transObj.TRANSPORTATION_NAME))
-                        {
-                            delivery.MODE_OF_TRANSPORTATION_ID = transObj.TRANSPORTATION_NAME;
-                        }
-                    }
-
-                    if (!string.IsNullOrEmpty(delivery.CUSOMTER_LOCATION_ID))
-                    {
-                        PR_CUSTOMER_LOCATION locFilter = new PR_CUSTOMER_LOCATION();
-                        locFilter.PK_ID = delivery.CUSOMTER_LOCATION_ID;
-
-                        PR_CUSTOMER_LOCATION locObj = (PR_CUSTOMER_LOCATION)locService.GetSingle(locFilter);
-                        if (locObj != null && !string.IsNullOrEmpty(locObj.ADDRESS))
-                        {
-                            delivery.CUSOMTER_LOCATION_ID = locObj.ADDRESS;
-                        }
-                    }
-                    else
-                    {
-                        delivery.CUSOMTER_LOCATION_ID = "-";
-                    }
-
-                    if (delivery.STATUS == "1")
-                        delivery.STATUS = "Active";
-                    else if (delivery.STATUS == "0")
-                        delivery.STATUS = "Inactive";
-                }
-
-                grdSelectedDelivery.DataSource = list;
-                grdSelectedDelivery.DataBind();
-                pnlSelectedDeliveryInfo.Visible = true;
-            }
-            else
-            {
-                pnlSelectedDeliveryInfo.Visible = false;
-            }
-        }
-        catch (Exception ex)
-        {
-            HelperFunction.MsgBox(this, GetType(), "Error loading delivery info: " + ex.Message);
-        }
-    }
-
-    private string GetProductNameById(string productId, PRODUCTService prodService)
-    {
-        if (string.IsNullOrWhiteSpace(productId))
-            return "";
-
-        PRODUCT filter = new PRODUCT();
-        filter.PK_ID = productId.Trim();
-
-        PRODUCT obj = (PRODUCT)prodService.GetSingle(filter);
-        if (obj != null && !string.IsNullOrEmpty(obj.PRODUCT_NAME))
-            return obj.PRODUCT_NAME;
-
-        return productId;
-    }
-
-    private string GetSizeNameById(string sizeId, PRODUCT_SIZEService sizeService)
-    {
-        if (string.IsNullOrWhiteSpace(sizeId))
-            return "";
-
-        PRODUCT_SIZE filter = new PRODUCT_SIZE();
-        filter.PK_ID = sizeId.Trim();
-
-        PRODUCT_SIZE obj = (PRODUCT_SIZE)sizeService.GetSingle(filter);
-        if (obj != null && !string.IsNullOrEmpty(obj.SIZE_NAME))
-            return obj.SIZE_NAME;
-
-        return sizeId;
-    }
-
-    private string GetSwatchNameById(string swatchId, PR_SWATCHService swatchService)
-    {
-        if (string.IsNullOrWhiteSpace(swatchId))
-            return "";
-
-        PR_SWATCH filter = new PR_SWATCH();
-        filter.PK_ID = swatchId.Trim();
-
-        PR_SWATCH obj = (PR_SWATCH)swatchService.GetSingle(filter);
-        if (obj != null && !string.IsNullOrEmpty(obj.SWATCH_NAME))
-            return obj.SWATCH_NAME;
-
-        return swatchId;
-    }
-
-    private void LoadOrderDetailsByDelivery(string selectedDeliveryId)
-    {
-        if (string.IsNullOrEmpty(selectedDeliveryId))
-        {
-            pnlProductionProducts.Visible = false;
-            ViewState.Remove("ProductionDetailTable");
-            grdProductionDetails.DataSource = null;
-            grdProductionDetails.DataBind();
-            return;
-        }
-
-        try
-        {
-            DataTable dt = CreateEmptyProductionDetailTable();
-
-            PR_ORDER_DETAILService orderDetailService = new PR_ORDER_DETAILService();
-            PR_ORDER_DETAIL filter = new PR_ORDER_DETAIL();
-            filter.MULTIPLE_DELVIERY_ID = selectedDeliveryId;
-
-            EntityList detailList = (EntityList)orderDetailService.GetAll(filter);
-
-            if (detailList != null && detailList.Count > 0)
-            {
-                PRODUCTService prodService = new PRODUCTService();
-                PRODUCT_SIZEService sizeService = new PRODUCT_SIZEService();
-                PR_SWATCHService swatchService = new PR_SWATCHService();
-
-                foreach (PR_ORDER_DETAIL item in detailList)
-                {
-                    string productName = GetProductNameById(item.PRODUCT_ID, prodService);
-                    string sizeName = GetSizeNameById(item.SIZE_ID, sizeService);
-                    string swatchName = GetSwatchNameById(item.SWATCH_ID, swatchService);
-
-                    dt.Rows.Add(
-                        item.PRODUCT_ID,
-                        productName,
-                        item.SIZE_ID,
-                        sizeName,
-                        item.SWATCH_ID,
-                        swatchName,
-                        item.QUANTITY,
-                        item.UNIT
-                    );
-                }
-            }
-            else
-            {
-                dt.Rows.Add("", "", "", "", "", "", "", "");
-            }
-
-            ProductionDetailTable = dt;
-            BindProductionDetails();
-            pnlProductionProducts.Visible = true;
-        }
-        catch (Exception ex)
-        {
-            string safeMessage = ex.Message
-                .Replace("'", "")
-                .Replace("\"", "")
-                .Replace("\r", " ")
-                .Replace("\n", " ");
-            HelperFunction.MsgBox(this, GetType(), "Error loading production products: " + safeMessage);
-        }
-    }
-
-    private DataTable CreateEmptyProductionDetailTable()
-    {
-        DataTable dt = new DataTable();
-        dt.Columns.Add("PRODUCT_ID");
-        dt.Columns.Add("PRODUCT_NAME");
-        dt.Columns.Add("SIZE_ID");
-        dt.Columns.Add("SIZE_NAME");
-        dt.Columns.Add("SWATCH_ID");
-        dt.Columns.Add("SWATCH_NAME");
-        dt.Columns.Add("QUANTITY");
-        dt.Columns.Add("UNIT");
-        return dt;
-    }
-
-    private DataTable ProductionDetailTable
-    {
-        get
-        {
-            if (ViewState["ProductionDetailTable"] == null)
-            {
-                DataTable dt = CreateEmptyProductionDetailTable();
-                dt.Rows.Add("", "", "", "", "", "", "", "");
-                ViewState["ProductionDetailTable"] = dt;
-            }
-
-            return (DataTable)ViewState["ProductionDetailTable"];
-        }
-        set
-        {
-            ViewState["ProductionDetailTable"] = value;
-        }
-    }
-
-    private void BindProductionDetails()
-    {
-        grdProductionDetails.DataSource = ProductionDetailTable;
+        ViewState[ProdDetailsKey] = dtProd;
+        grdProductionDetails.DataSource = dtProd;
         grdProductionDetails.DataBind();
     }
 
     private void ReadProductionDetails()
     {
-        DataTable dt = ProductionDetailTable;
+        DataTable dtProd = (DataTable)ViewState[ProdDetailsKey];
 
-        for (int i = 0; i < grdProductionDetails.Rows.Count; i++)
+        foreach (GridViewRow row in grdProductionDetails.Rows)
         {
-            GridViewRow row = grdProductionDetails.Rows[i];
+            LinkButton btnRemove = row.FindControl("btnRemoveProduct") as LinkButton;
+            if (btnRemove == null) continue;
 
-            if (i >= dt.Rows.Count)
-                dt.Rows.Add("", "", "", "", "", "", "", "");
+            string rowId = btnRemove.CommandArgument;
+            DataRow[] matches = dtProd.Select("ROW_ID = '" + rowId.Replace("'", "''") + "'");
+            if (matches.Length == 0) continue;
 
-            dt.Rows[i]["PRODUCT_ID"] = GetHiddenValue(row, "hfProductId");
-            dt.Rows[i]["PRODUCT_NAME"] = GetText(row, "txtProductName");
-            dt.Rows[i]["SIZE_ID"] = GetHiddenValue(row, "hfSizeId");
-            dt.Rows[i]["SIZE_NAME"] = GetText(row, "txtSizeName");
-            dt.Rows[i]["SWATCH_ID"] = GetHiddenValue(row, "hfSwatchId");
-            dt.Rows[i]["SWATCH_NAME"] = GetText(row, "txtSwatchName");
-            dt.Rows[i]["QUANTITY"] = GetText(row, "txtQuantity");
-            dt.Rows[i]["UNIT"] = GetText(row, "txtUnit");
+            TextBox txtQty = row.FindControl("txtQuantity") as TextBox;
+            TextBox txtU = row.FindControl("txtUnit") as TextBox;
+
+            matches[0]["QUANTITY"] = txtQty != null ? txtQty.Text.Trim() : "";
+            matches[0]["UNIT"] = txtU != null ? txtU.Text.Trim() : "";
         }
 
-        while (dt.Rows.Count > grdProductionDetails.Rows.Count)
-            dt.Rows.RemoveAt(dt.Rows.Count - 1);
-
-        ProductionDetailTable = dt;
+        ViewState[ProdDetailsKey] = dtProd;
     }
-
-    //protected void btnAddProduct_Click(object sender, EventArgs e)
-    //{
-    //    ReadProductionDetails();
-
-    //    DataTable dt = ProductionDetailTable;
-    //    dt.Rows.Add("", "", "", "", "", "", "", "");
-
-    //    ProductionDetailTable = dt;
-    //    BindProductionDetails();
-    //}
 
     protected void grdProductionDetails_RowCommand(object sender, GridViewCommandEventArgs e)
     {
-        if (e.CommandName != "RemoveProduct")
-            return;
+        if (e.CommandName == "RemoveProduct")
+        {
+            ReadProductionDetails();
+            string rowId = Convert.ToString(e.CommandArgument);
+            DataTable dtProd = (DataTable)ViewState[ProdDetailsKey];
 
+            DataRow[] matches = dtProd.Select("ROW_ID = '" + rowId.Replace("'", "''") + "'");
+            if (matches.Length > 0)
+                dtProd.Rows.Remove(matches[0]);
+
+            ViewState[ProdDetailsKey] = dtProd;
+            grdProductionDetails.DataSource = dtProd;
+            grdProductionDetails.DataBind();
+        }
+    }
+
+    protected void btnBackMaster_Click(object sender, EventArgs e)
+    {
         ReadProductionDetails();
-
-        int index = Convert.ToInt32(e.CommandArgument);
-        DataTable dt = ProductionDetailTable;
-
-        if (index >= 0 && index < dt.Rows.Count)
-            dt.Rows.RemoveAt(index);
-
-        if (dt.Rows.Count == 0)
-            dt.Rows.Add("", "", "", "", "", "", "", "");
-
-        ProductionDetailTable = dt;
-        BindProductionDetails();
+        ShowStep(1);
     }
 
-    private bool ValidateProductionDetails()
+    protected void btnNextDetails_Click(object sender, EventArgs e)
     {
-        if (string.IsNullOrWhiteSpace(ddlMultipleDelivery.SelectedValue))
-        {
-            HelperFunction.MsgBox(this, GetType(), "Please select a Multiple Delivery Date.");
-            return false;
-        }
-
-        DataTable dt = ProductionDetailTable;
-        bool hasProduct = false;
-
-        foreach (DataRow row in dt.Rows)
-        {
-            string productId = Convert.ToString(row["PRODUCT_ID"]);
-            string quantity = Convert.ToString(row["QUANTITY"]);
-
-            if (string.IsNullOrWhiteSpace(productId))
-                continue;
-
-            hasProduct = true;
-
-            decimal qty;
-            if (!decimal.TryParse(quantity, out qty) || qty <= 0)
-            {
-                HelperFunction.MsgBox(this, GetType(), "Enter a valid positive quantity for every product.");
-                return false;
-            }
-        }
-
-        if (!hasProduct)
-        {
-            HelperFunction.MsgBox(this, GetType(), "Add at least one production product.");
-            return false;
-        }
-
-        return true;
+        ReadProductionDetails();
+        BindStagesGrid();
+        ShowStep(3);
     }
 
-    // =====================================================
-    // SHARED DROPDOWN BINDERS (STEP 3 & STEP 4)
-    // =====================================================
+    #endregion
 
-    private void PopulateProductDetailDropdown(DropDownList ddl, string selectedValue)
+    #region STEP 3: PRODUCTION STAGE
+
+    private void BindStagesGrid()
     {
-        if (ddl == null) return;
-
-        ddl.Items.Clear();
-        ddl.Items.Add(new ListItem("-- Select Product --", ""));
-
-        DataTable dtDetails = ProductionDetailTable;
-        for (int i = 0; i < dtDetails.Rows.Count; i++)
-        {
-            string prodId = Convert.ToString(dtDetails.Rows[i]["PRODUCT_ID"]);
-            string prodName = Convert.ToString(dtDetails.Rows[i]["PRODUCT_NAME"]);
-            string sizeName = Convert.ToString(dtDetails.Rows[i]["SIZE_NAME"]);
-            string qty = Convert.ToString(dtDetails.Rows[i]["QUANTITY"]);
-
-            if (!string.IsNullOrWhiteSpace(prodId))
-            {
-                string displayText = string.Format("{0} (Size: {1}, Qty: {2})", prodName, sizeName, qty);
-                if (ddl.Items.FindByValue(prodId) == null)
-                    ddl.Items.Add(new ListItem(displayText, prodId));
-            }
-        }
-
-        if (!string.IsNullOrEmpty(selectedValue) && ddl.Items.FindByValue(selectedValue) != null)
-        {
-            ddl.SelectedValue = selectedValue;
-        }
-    }
-
-    private void PopulateStageMasterDropdown(DropDownList ddl, string selectedValue)
-    {
-        if (ddl == null) return;
-
-        PR_STAGE_MASTERService stageService = new PR_STAGE_MASTERService();
-        PR_STAGE_MASTER filter = new PR_STAGE_MASTER();
-        filter.STATUS = "1";
-
-        ddl.DataSource = stageService.GetAll(filter);
-        ddl.DataTextField = "NAME";
-        ddl.DataValueField = "PK_ID";
-        ddl.DataBind();
-        ddl.Items.Insert(0, new ListItem("-- Select Stage --", ""));
-
-        if (!string.IsNullOrEmpty(selectedValue) && ddl.Items.FindByValue(selectedValue) != null)
-        {
-            ddl.SelectedValue = selectedValue;
-        }
-    }
-
-    private void PopulateUnitDropdown(DropDownList ddl, string selectedValue)
-    {
-        if (ddl == null) return;
-
-        PR_UNITService unitService = new PR_UNITService();
-        PR_UNIT filter = new PR_UNIT();
-        filter.STATUS = "1";
-
-        ddl.DataSource = unitService.GetAll(filter);
-        ddl.DataTextField = "UNIT_NAME";
-        ddl.DataValueField = "PK_ID";
-        ddl.DataBind();
-        ddl.Items.Insert(0, new ListItem("-- Select Unit --", ""));
-
-        if (!string.IsNullOrEmpty(selectedValue) && ddl.Items.FindByValue(selectedValue) != null)
-        {
-            ddl.SelectedValue = selectedValue;
-        }
-    }
-
-    private void PopulateDivisionDropdown(DropDownList ddl, string unitId, string selectedValue)
-    {
-        if (ddl == null) return;
-
-        ddl.Items.Clear();
-
-        if (string.IsNullOrWhiteSpace(unitId))
-        {
-            ddl.Items.Insert(0, new ListItem("-- Select Unit First --", ""));
-            return;
-        }
-
-        PR_DIVISIONService divService = new PR_DIVISIONService();
-        PR_DIVISION filter = new PR_DIVISION();
-        filter.UNIT_ID = unitId;
-        filter.STATUS = "1";
-
-        EntityList divList = (EntityList)divService.GetAll(filter);
-        if (divList != null && divList.Count > 0)
-        {
-            ddl.DataSource = divList;
-            ddl.DataTextField = "DIVISION_NAME";
-            ddl.DataValueField = "PK_ID";
-            ddl.DataBind();
-            ddl.Items.Insert(0, new ListItem("-- Select Division --", ""));
-        }
-        else
-        {
-            ddl.Items.Insert(0, new ListItem("No Divisions Found", ""));
-        }
-
-        if (!string.IsNullOrEmpty(selectedValue) && ddl.Items.FindByValue(selectedValue) != null)
-        {
-            ddl.SelectedValue = selectedValue;
-        }
-    }
-
-    private void PopulateEmployeeDropdown(DropDownList ddl, string selectedValue)
-    {
-        if (ddl == null) return;
-
-        PR_DIVISION_EMPLOYEEService empService = new PR_DIVISION_EMPLOYEEService();
-        PR_DIVISION_EMPLOYEE filter = new PR_DIVISION_EMPLOYEE();
-        filter.STATUS = "1";
-
-        EntityList empList = (EntityList)empService.GetAll(filter);
-
-        ddl.Items.Clear();
-        ddl.Items.Add(new ListItem("-- Select Employee --", ""));
-
-        if (empList != null)
-        {
-            foreach (PR_DIVISION_EMPLOYEE item in empList)
-            {
-                if (!string.IsNullOrWhiteSpace(item.EMPLOYEE_ID) && ddl.Items.FindByValue(item.EMPLOYEE_ID) == null)
-                {
-                    ddl.Items.Add(new ListItem("Employee #" + item.EMPLOYEE_ID, item.EMPLOYEE_ID));
-                }
-            }
-        }
-
-        if (!string.IsNullOrEmpty(selectedValue) && ddl.Items.FindByValue(selectedValue) != null)
-        {
-            ddl.SelectedValue = selectedValue;
-        }
-    }
-
-    // =====================================================
-    // STEP 3: PRODUCTION STAGES
-    // =====================================================
-
-    private DataTable ProductionStageTable
-    {
-        get
-        {
-            if (ViewState["ProductionStageTable"] == null)
-            {
-                DataTable dt = new DataTable();
-                dt.Columns.Add("PRODUCTION_DETAIL_ID");
-                dt.Columns.Add("PRODUCT_ID");
-                dt.Columns.Add("STAGE_MASTER_ID");
-                dt.Columns.Add("UNIT_OR_EMPLOYEE");
-                dt.Columns.Add("STATUS");
-                dt.Rows.Add("", "", "", "", "Pending");
-                ViewState["ProductionStageTable"] = dt;
-            }
-
-            return (DataTable)ViewState["ProductionStageTable"];
-        }
-        set
-        {
-            ViewState["ProductionStageTable"] = value;
-        }
-    }
-
-    private void BindProductionStages()
-    {
-        grdProductionStages.DataSource = ProductionStageTable;
+        DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
+        grdProductionStages.DataSource = dtStages;
         grdProductionStages.DataBind();
     }
 
-    protected void grdProductionStages_RowDataBound(object sender, GridViewRowEventArgs e)
+    private void ReadStages()
     {
-        if (e.Row.RowType != DataControlRowType.DataRow)
-            return;
+        DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
 
-        DropDownList ddlStageProduct = (DropDownList)e.Row.FindControl("ddlStageProduct");
-        HiddenField hfStageProductId = (HiddenField)e.Row.FindControl("hfStageProductId");
-        PopulateProductDetailDropdown(ddlStageProduct, hfStageProductId != null ? hfStageProductId.Value : "");
-
-        DropDownList ddlStageMaster = (DropDownList)e.Row.FindControl("ddlStageMaster");
-        HiddenField hfStageMasterId = (HiddenField)e.Row.FindControl("hfStageMasterId");
-        PopulateStageMasterDropdown(ddlStageMaster, hfStageMasterId != null ? hfStageMasterId.Value : "");
-    }
-
-    private void ReadProductionStages()
-    {
-        DataTable dt = ProductionStageTable;
-
-        for (int i = 0; i < grdProductionStages.Rows.Count; i++)
+        foreach (GridViewRow row in grdProductionStages.Rows)
         {
-            GridViewRow row = grdProductionStages.Rows[i];
+            HiddenField hfRowId = row.FindControl("hfStageRowId") as HiddenField;
+            if (hfRowId == null) continue;
 
-            if (i >= dt.Rows.Count)
-                dt.Rows.Add("", "", "", "", "Pending");
+            DataRow[] matches = dtStages.Select("ROW_ID = '" + hfRowId.Value.Replace("'", "''") + "'");
+            if (matches.Length == 0) continue;
 
-            string selectedProductId = GetSelectedValue(row, "ddlStageProduct");
+            DropDownList ddlProd = row.FindControl("ddlStageProduct") as DropDownList;
+            DropDownList ddlStg = row.FindControl("ddlStageMaster") as DropDownList;
+            DropDownList ddlAssign = row.FindControl("ddlStageAssignmentType") as DropDownList;
+            DropDownList ddlStat = row.FindControl("ddlStageStatus") as DropDownList;
 
-            dt.Rows[i]["PRODUCT_ID"] = selectedProductId;
-            dt.Rows[i]["PRODUCTION_DETAIL_ID"] = selectedProductId;
-            dt.Rows[i]["STAGE_MASTER_ID"] = GetSelectedValue(row, "ddlStageMaster");
-            dt.Rows[i]["UNIT_OR_EMPLOYEE"] = GetSelectedValue(row, "ddlStageAssignmentType");
-            dt.Rows[i]["STATUS"] = GetSelectedValue(row, "ddlStageStatus");
+            matches[0]["PRODUCTION_DETAIL_ROW_ID"] = ddlProd != null ? ddlProd.SelectedValue : "";
+            matches[0]["STAGE_MASTER_ID"] = ddlStg != null ? ddlStg.SelectedValue : "";
+            matches[0]["UNIT_OR_EMPLOYEE"] = ddlAssign != null ? ddlAssign.SelectedValue : "";
+            matches[0]["STATUS"] = ddlStat != null ? ddlStat.SelectedValue : "";
         }
 
-        while (dt.Rows.Count > grdProductionStages.Rows.Count)
-            dt.Rows.RemoveAt(dt.Rows.Count - 1);
-
-        ProductionStageTable = dt;
-    }
-
-    private bool ValidateProductionStages()
-    {
-        DataTable stageTable = ProductionStageTable;
-        bool hasStage = false;
-
-        foreach (DataRow row in stageTable.Rows)
-        {
-            string stageMasterId = Convert.ToString(row["STAGE_MASTER_ID"]);
-            if (string.IsNullOrWhiteSpace(stageMasterId))
-                continue;
-
-            hasStage = true;
-
-            if (string.IsNullOrWhiteSpace(Convert.ToString(row["PRODUCTION_DETAIL_ID"]))
-                || string.IsNullOrWhiteSpace(Convert.ToString(row["UNIT_OR_EMPLOYEE"])))
-            {
-                HelperFunction.MsgBox(this, GetType(), "Every configured stage requires a product and an assignment type (Unit or Employee).");
-                return false;
-            }
-        }
-
-        if (!hasStage)
-        {
-            HelperFunction.MsgBox(this, GetType(), "Configure at least one production stage.");
-            return false;
-        }
-
-        return true;
+        ViewState[ProdStagesKey] = dtStages;
     }
 
     protected void btnAddStage_Click(object sender, EventArgs e)
     {
-        ReadProductionStages();
+        ReadStages();
 
-        DataTable dt = ProductionStageTable;
-        dt.Rows.Add("", "", "", "", "Pending");
+        DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
+        DataRow nr = dtStages.NewRow();
+        nr["ROW_ID"] = Guid.NewGuid().ToString("N");
+        nr["PRODUCTION_DETAIL_ROW_ID"] = "";
+        nr["STAGE_MASTER_ID"] = "";
+        nr["UNIT_OR_EMPLOYEE"] = "";
+        nr["STATUS"] = "Pending";
+        dtStages.Rows.Add(nr);
 
-        ProductionStageTable = dt;
-        BindProductionStages();
+        ViewState[ProdStagesKey] = dtStages;
+        BindStagesGrid();
     }
 
     protected void grdProductionStages_RowCommand(object sender, GridViewCommandEventArgs e)
     {
-        if (e.CommandName != "RemoveStage")
-            return;
-
-        ReadProductionStages();
-
-        int index = Convert.ToInt32(e.CommandArgument);
-        DataTable dt = ProductionStageTable;
-
-        if (index >= 0 && index < dt.Rows.Count)
-            dt.Rows.RemoveAt(index);
-
-        if (dt.Rows.Count == 0)
-            dt.Rows.Add("", "", "", "", "Pending");
-
-        ProductionStageTable = dt;
-        BindProductionStages();
-    }
-
-    // =====================================================
-    // STEP 4A: PRODUCTION PIPELINE (UNIT)
-    // =====================================================
-
-    private DataTable CreateEmptyPipelineUnitTable()
-    {
-        DataTable dt = new DataTable();
-        dt.Columns.Add("PRODUCTION_DETAIL_ID");
-        dt.Columns.Add("STAGE_ID");
-        dt.Columns.Add("PRODUCTION_UNIT");
-        dt.Columns.Add("PRODUCTION_DIVISION");
-        dt.Columns.Add("ESTIMATED_DAY");
-        dt.Columns.Add("ESTIMATED_TIME");
-        return dt;
-    }
-
-    private DataTable ProductionPipelineUnitTable
-    {
-        get
+        if (e.CommandName == "RemoveStage")
         {
-            if (ViewState["ProductionPipelineUnitTable"] == null)
+            ReadStages();
+            string rowId = Convert.ToString(e.CommandArgument);
+            DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
+
+            DataRow[] matches = dtStages.Select("ROW_ID = '" + rowId.Replace("'", "''") + "'");
+            if (matches.Length > 0)
+                dtStages.Rows.Remove(matches[0]);
+
+            ViewState[ProdStagesKey] = dtStages;
+            BindStagesGrid();
+        }
+    }
+
+    protected void grdProductionStages_RowDataBound(object sender, GridViewRowEventArgs e)
+    {
+        if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+        DropDownList ddlProd = e.Row.FindControl("ddlStageProduct") as DropDownList;
+        DropDownList ddlStg = e.Row.FindControl("ddlStageMaster") as DropDownList;
+        DropDownList ddlAssign = e.Row.FindControl("ddlStageAssignmentType") as DropDownList;
+        DropDownList ddlStat = e.Row.FindControl("ddlStageStatus") as DropDownList;
+
+        DataTable dtProd = (DataTable)ViewState[ProdDetailsKey];
+        if (ddlProd != null && dtProd != null)
+        {
+            ddlProd.DataSource = dtProd;
+            ddlProd.DataTextField = "PRODUCT_NAME";
+            ddlProd.DataValueField = "ROW_ID";
+            ddlProd.DataBind();
+            ddlProd.Items.Insert(0, new ListItem("-- Select Product --", ""));
+        }
+
+        if (ddlStg != null)
+        {
+            ddlStg.Items.Clear();
+            ddlStg.Items.Insert(0, new ListItem("-- Select Stage --", ""));
+            try
             {
-                DataTable dt = CreateEmptyPipelineUnitTable();
-                dt.Rows.Add("", "", "", "", "", "");
-                ViewState["ProductionPipelineUnitTable"] = dt;
+                PR_STAGE_MASTER smEnt = new PR_STAGE_MASTER();
+                PR_STAGE_MASTERService smSer = new PR_STAGE_MASTERService();
+                ddlStg.DataSource = smSer.GetAll(smEnt);
+                ddlStg.DataTextField = "STAGE_NAME";
+                ddlStg.DataValueField = "PK_ID";
+                ddlStg.DataBind();
+                ddlStg.Items.Insert(0, new ListItem("-- Select Stage --", ""));
             }
-
-            return (DataTable)ViewState["ProductionPipelineUnitTable"];
+            catch { }
         }
-        set
+
+        DataRowView rv = e.Row.DataItem as DataRowView;
+        if (rv != null)
         {
-            ViewState["ProductionPipelineUnitTable"] = value;
+            SetSelectedValue(ddlProd, rv["PRODUCTION_DETAIL_ROW_ID"]);
+            SetSelectedValue(ddlStg, rv["STAGE_MASTER_ID"]);
+            SetSelectedValue(ddlAssign, rv["UNIT_OR_EMPLOYEE"]);
+            SetSelectedValue(ddlStat, rv["STATUS"]);
         }
     }
 
-    private void BindProductionPipelineUnit()
+    protected void btnBackDetails_Click(object sender, EventArgs e)
     {
-        grdProductionPipelineUnit.DataSource = ProductionPipelineUnitTable;
+        ReadStages();
+        ShowStep(2);
+    }
+
+    protected void btnNextStages_Click(object sender, EventArgs e)
+    {
+        ReadStages();
+
+        DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
+        bool hasUnit = false;
+        bool hasEmployee = false;
+
+        foreach (DataRow r in dtStages.Rows)
+        {
+            string assignType = Convert.ToString(r["UNIT_OR_EMPLOYEE"]);
+            if (assignType == "Unit") hasUnit = true;
+            if (assignType == "Employee") hasEmployee = true;
+        }
+
+        pnlPipelineUnit.Visible = hasUnit;
+        pnlPipelineEmployee.Visible = hasEmployee;
+
+        BindPipelineUnitGrid();
+        BindPipelineEmployeeGrid();
+
+        ShowStep(4);
+    }
+
+    #endregion
+
+    #region STEP 4: PRODUCTION PIPELINE & AUTOMATED COMPLETION DATE
+
+    private void BindPipelineUnitGrid()
+    {
+        DataTable dt = (DataTable)ViewState[PipeUnitKey];
+        grdProductionPipelineUnit.DataSource = dt;
         grdProductionPipelineUnit.DataBind();
     }
 
-    protected void grdProductionPipelineUnit_RowDataBound(object sender, GridViewRowEventArgs e)
+    private void BindPipelineEmployeeGrid()
     {
-        if (e.Row.RowType != DataControlRowType.DataRow)
-            return;
-
-        DropDownList ddlPipelineDetail = (DropDownList)e.Row.FindControl("ddlPipelineDetail");
-        HiddenField hfPipelineDetailId = (HiddenField)e.Row.FindControl("hfPipelineDetailId");
-        PopulateProductDetailDropdown(ddlPipelineDetail, hfPipelineDetailId != null ? hfPipelineDetailId.Value : "");
-
-        DropDownList ddlPipelineStage = (DropDownList)e.Row.FindControl("ddlPipelineStage");
-        HiddenField hfPipelineStageId = (HiddenField)e.Row.FindControl("hfPipelineStageId");
-        PopulateStageMasterDropdown(ddlPipelineStage, hfPipelineStageId != null ? hfPipelineStageId.Value : "");
-
-        DropDownList ddlPipelineUnit = (DropDownList)e.Row.FindControl("ddlPipelineUnit");
-        HiddenField hfPipelineUnitId = (HiddenField)e.Row.FindControl("hfPipelineUnitId");
-        string selectedUnitId = hfPipelineUnitId != null ? hfPipelineUnitId.Value : "";
-        PopulateUnitDropdown(ddlPipelineUnit, selectedUnitId);
-
-        DropDownList ddlPipelineDivision = (DropDownList)e.Row.FindControl("ddlPipelineDivision");
-        HiddenField hfPipelineDivisionId = (HiddenField)e.Row.FindControl("hfPipelineDivisionId");
-        string selectedDivisionId = hfPipelineDivisionId != null ? hfPipelineDivisionId.Value : "";
-        PopulateDivisionDropdown(ddlPipelineDivision, selectedUnitId, selectedDivisionId);
+        DataTable dt = (DataTable)ViewState[PipeEmpKey];
+        grdProductionPipelineEmployee.DataSource = dt;
+        grdProductionPipelineEmployee.DataBind();
     }
 
-    protected void ddlPipelineUnit_SelectedIndexChanged(object sender, EventArgs e)
+    private void ReadPipelineUnit()
     {
-        DropDownList ddlUnit = (DropDownList)sender;
-        GridViewRow row = (GridViewRow)ddlUnit.NamingContainer;
-        DropDownList ddlDivision = (DropDownList)row.FindControl("ddlPipelineDivision");
+        DataTable dt = (DataTable)ViewState[PipeUnitKey];
 
-        PopulateDivisionDropdown(ddlDivision, ddlUnit.SelectedValue, "");
-        ReadProductionPipelineUnit();
-    }
-
-    private void ReadProductionPipelineUnit()
-    {
-        DataTable dt = ProductionPipelineUnitTable;
-
-        for (int i = 0; i < grdProductionPipelineUnit.Rows.Count; i++)
+        foreach (GridViewRow row in grdProductionPipelineUnit.Rows)
         {
-            GridViewRow row = grdProductionPipelineUnit.Rows[i];
+            HiddenField hfRowId = row.FindControl("hfPipelineUnitRowId") as HiddenField;
+            if (hfRowId == null) continue;
 
-            if (i >= dt.Rows.Count)
-                dt.Rows.Add("", "", "", "", "", "");
+            DataRow[] matches = dt.Select("ROW_ID = '" + hfRowId.Value.Replace("'", "''") + "'");
+            if (matches.Length == 0) continue;
 
-            dt.Rows[i]["PRODUCTION_DETAIL_ID"] = GetSelectedValue(row, "ddlPipelineDetail");
-            dt.Rows[i]["STAGE_ID"] = GetSelectedValue(row, "ddlPipelineStage");
-            dt.Rows[i]["PRODUCTION_UNIT"] = GetSelectedValue(row, "ddlPipelineUnit");
-            dt.Rows[i]["PRODUCTION_DIVISION"] = GetSelectedValue(row, "ddlPipelineDivision");
-            dt.Rows[i]["ESTIMATED_DAY"] = GetText(row, "txtEstimatedDay");
-            dt.Rows[i]["ESTIMATED_TIME"] = GetText(row, "txtEstimatedTime");
+            DropDownList ddlProd = row.FindControl("ddlPipelineDetail") as DropDownList;
+            DropDownList ddlStg = row.FindControl("ddlPipelineStage") as DropDownList;
+            DropDownList ddlU = row.FindControl("ddlPipelineUnit") as DropDownList;
+            DropDownList ddlDiv = row.FindControl("ddlPipelineDivision") as DropDownList;
+            TextBox txtD = row.FindControl("txtEstimatedDay") as TextBox;
+            TextBox txtT = row.FindControl("txtEstimatedTime") as TextBox;
+
+            matches[0]["PRODUCTION_DETAIL_ROW_ID"] = ddlProd != null ? ddlProd.SelectedValue : "";
+            matches[0]["STAGE_ROW_ID"] = ddlStg != null ? ddlStg.SelectedValue : "";
+            matches[0]["PRODUCTION_UNIT"] = ddlU != null ? ddlU.SelectedValue : "";
+            matches[0]["PRODUCTION_DIVISION"] = ddlDiv != null ? ddlDiv.SelectedValue : "";
+            matches[0]["ESTIMATED_DAY"] = txtD != null ? txtD.Text.Trim() : "";
+            matches[0]["ESTIMATED_TIME"] = txtT != null ? txtT.Text.Trim() : "";
         }
 
-        while (dt.Rows.Count > grdProductionPipelineUnit.Rows.Count)
-            dt.Rows.RemoveAt(dt.Rows.Count - 1);
+        ViewState[PipeUnitKey] = dt;
+    }
 
-        ProductionPipelineUnitTable = dt;
+    private void ReadPipelineEmployee()
+    {
+        DataTable dt = (DataTable)ViewState[PipeEmpKey];
+
+        foreach (GridViewRow row in grdProductionPipelineEmployee.Rows)
+        {
+            HiddenField hfRowId = row.FindControl("hfPipelineEmpRowId") as HiddenField;
+            if (hfRowId == null) continue;
+
+            DataRow[] matches = dt.Select("ROW_ID = '" + hfRowId.Value.Replace("'", "''") + "'");
+            if (matches.Length == 0) continue;
+
+            DropDownList ddlProd = row.FindControl("ddlPipelineDetail") as DropDownList;
+            DropDownList ddlStg = row.FindControl("ddlPipelineStage") as DropDownList;
+            DropDownList ddlEmp = row.FindControl("ddlPipelineEmployee") as DropDownList;
+            TextBox txtD = row.FindControl("txtEstimatedDay") as TextBox;
+            TextBox txtT = row.FindControl("txtEstimatedTime") as TextBox;
+
+            matches[0]["PRODUCTION_DETAIL_ROW_ID"] = ddlProd != null ? ddlProd.SelectedValue : "";
+            matches[0]["STAGE_ROW_ID"] = ddlStg != null ? ddlStg.SelectedValue : "";
+            matches[0]["EMPLOYEE_ID"] = ddlEmp != null ? ddlEmp.SelectedValue : "";
+            matches[0]["ESTIMATED_DAY"] = txtD != null ? txtD.Text.Trim() : "";
+            matches[0]["ESTIMATED_TIME"] = txtT != null ? txtT.Text.Trim() : "";
+        }
+
+        ViewState[PipeEmpKey] = dt;
     }
 
     protected void btnAddPipelineUnit_Click(object sender, EventArgs e)
     {
-        ReadProductionPipelineUnit();
+        ReadPipelineUnit();
 
-        DataTable dt = ProductionPipelineUnitTable;
-        dt.Rows.Add("", "", "", "", "", "");
+        DataTable dt = (DataTable)ViewState[PipeUnitKey];
+        DataRow nr = dt.NewRow();
+        nr["ROW_ID"] = Guid.NewGuid().ToString("N");
+        nr["PRODUCTION_DETAIL_ROW_ID"] = "";
+        nr["STAGE_ROW_ID"] = "";
+        nr["PRODUCTION_UNIT"] = "";
+        nr["PRODUCTION_DIVISION"] = "";
+        nr["ESTIMATED_DAY"] = "";
+        nr["ESTIMATED_TIME"] = "";
+        dt.Rows.Add(nr);
 
-        ProductionPipelineUnitTable = dt;
-        BindProductionPipelineUnit();
-    }
-
-    protected void grdProductionPipelineUnit_RowCommand(object sender, GridViewCommandEventArgs e)
-    {
-        if (e.CommandName != "RemovePipelineUnit")
-            return;
-
-        ReadProductionPipelineUnit();
-
-        int index = Convert.ToInt32(e.CommandArgument);
-        DataTable dt = ProductionPipelineUnitTable;
-
-        if (index >= 0 && index < dt.Rows.Count)
-            dt.Rows.RemoveAt(index);
-
-        if (dt.Rows.Count == 0)
-            dt.Rows.Add("", "", "", "", "", "");
-
-        ProductionPipelineUnitTable = dt;
-        BindProductionPipelineUnit();
-    }
-
-    // =====================================================
-    // STEP 4B: PRODUCTION PIPELINE (EMPLOYEE)
-    // =====================================================
-
-    private DataTable CreateEmptyPipelineEmployeeTable()
-    {
-        DataTable dt = new DataTable();
-        dt.Columns.Add("PRODUCTION_DETAIL_ID");
-        dt.Columns.Add("STAGE_ID");
-        dt.Columns.Add("EMPLOYEE_ID");
-        dt.Columns.Add("ESTIMATED_DAY");
-        dt.Columns.Add("ESTIMATED_TIME");
-        return dt;
-    }
-
-    private DataTable ProductionPipelineEmployeeTable
-    {
-        get
-        {
-            if (ViewState["ProductionPipelineEmployeeTable"] == null)
-            {
-                DataTable dt = CreateEmptyPipelineEmployeeTable();
-                dt.Rows.Add("", "", "", "", "");
-                ViewState["ProductionPipelineEmployeeTable"] = dt;
-            }
-
-            return (DataTable)ViewState["ProductionPipelineEmployeeTable"];
-        }
-        set
-        {
-            ViewState["ProductionPipelineEmployeeTable"] = value;
-        }
-    }
-
-    private void BindProductionPipelineEmployee()
-    {
-        grdProductionPipelineEmployee.DataSource = ProductionPipelineEmployeeTable;
-        grdProductionPipelineEmployee.DataBind();
-    }
-
-    protected void grdProductionPipelineEmployee_RowDataBound(object sender, GridViewRowEventArgs e)
-    {
-        if (e.Row.RowType != DataControlRowType.DataRow)
-            return;
-
-        DropDownList ddlPipelineDetail = (DropDownList)e.Row.FindControl("ddlPipelineDetail");
-        HiddenField hfPipelineDetailId = (HiddenField)e.Row.FindControl("hfPipelineDetailId");
-        PopulateProductDetailDropdown(ddlPipelineDetail, hfPipelineDetailId != null ? hfPipelineDetailId.Value : "");
-
-        DropDownList ddlPipelineStage = (DropDownList)e.Row.FindControl("ddlPipelineStage");
-        HiddenField hfPipelineStageId = (HiddenField)e.Row.FindControl("hfPipelineStageId");
-        PopulateStageMasterDropdown(ddlPipelineStage, hfPipelineStageId != null ? hfPipelineStageId.Value : "");
-
-        DropDownList ddlPipelineEmployee = (DropDownList)e.Row.FindControl("ddlPipelineEmployee");
-        HiddenField hfPipelineEmployeeId = (HiddenField)e.Row.FindControl("hfPipelineEmployeeId");
-        PopulateEmployeeDropdown(ddlPipelineEmployee, hfPipelineEmployeeId != null ? hfPipelineEmployeeId.Value : "");
-    }
-
-    private void ReadProductionPipelineEmployee()
-    {
-        DataTable dt = ProductionPipelineEmployeeTable;
-
-        for (int i = 0; i < grdProductionPipelineEmployee.Rows.Count; i++)
-        {
-            GridViewRow row = grdProductionPipelineEmployee.Rows[i];
-
-            if (i >= dt.Rows.Count)
-                dt.Rows.Add("", "", "", "", "");
-
-            dt.Rows[i]["PRODUCTION_DETAIL_ID"] = GetSelectedValue(row, "ddlPipelineDetail");
-            dt.Rows[i]["STAGE_ID"] = GetSelectedValue(row, "ddlPipelineStage");
-            dt.Rows[i]["EMPLOYEE_ID"] = GetSelectedValue(row, "ddlPipelineEmployee");
-            dt.Rows[i]["ESTIMATED_DAY"] = GetText(row, "txtEstimatedDay");
-            dt.Rows[i]["ESTIMATED_TIME"] = GetText(row, "txtEstimatedTime");
-        }
-
-        while (dt.Rows.Count > grdProductionPipelineEmployee.Rows.Count)
-            dt.Rows.RemoveAt(dt.Rows.Count - 1);
-
-        ProductionPipelineEmployeeTable = dt;
+        ViewState[PipeUnitKey] = dt;
+        BindPipelineUnitGrid();
     }
 
     protected void btnAddPipelineEmployee_Click(object sender, EventArgs e)
     {
-        ReadProductionPipelineEmployee();
+        ReadPipelineEmployee();
 
-        DataTable dt = ProductionPipelineEmployeeTable;
-        dt.Rows.Add("", "", "", "", "");
+        DataTable dt = (DataTable)ViewState[PipeEmpKey];
+        DataRow nr = dt.NewRow();
+        nr["ROW_ID"] = Guid.NewGuid().ToString("N");
+        nr["PRODUCTION_DETAIL_ROW_ID"] = "";
+        nr["STAGE_ROW_ID"] = "";
+        nr["EMPLOYEE_ID"] = "";
+        nr["ESTIMATED_DAY"] = "";
+        nr["ESTIMATED_TIME"] = "";
+        dt.Rows.Add(nr);
 
-        ProductionPipelineEmployeeTable = dt;
-        BindProductionPipelineEmployee();
+        ViewState[PipeEmpKey] = dt;
+        BindPipelineEmployeeGrid();
+    }
+
+    protected void grdProductionPipelineUnit_RowCommand(object sender, GridViewCommandEventArgs e)
+    {
+        if (e.CommandName == "RemovePipelineUnit")
+        {
+            ReadPipelineUnit();
+            string rowId = Convert.ToString(e.CommandArgument);
+            DataTable dt = (DataTable)ViewState[PipeUnitKey];
+
+            DataRow[] matches = dt.Select("ROW_ID = '" + rowId.Replace("'", "''") + "'");
+            if (matches.Length > 0)
+                dt.Rows.Remove(matches[0]);
+
+            ViewState[PipeUnitKey] = dt;
+            BindPipelineUnitGrid();
+        }
     }
 
     protected void grdProductionPipelineEmployee_RowCommand(object sender, GridViewCommandEventArgs e)
     {
-        if (e.CommandName != "RemovePipelineEmployee")
-            return;
+        if (e.CommandName == "RemovePipelineEmployee")
+        {
+            ReadPipelineEmployee();
+            string rowId = Convert.ToString(e.CommandArgument);
+            DataTable dt = (DataTable)ViewState[PipeEmpKey];
 
-        ReadProductionPipelineEmployee();
+            DataRow[] matches = dt.Select("ROW_ID = '" + rowId.Replace("'", "''") + "'");
+            if (matches.Length > 0)
+                dt.Rows.Remove(matches[0]);
 
-        int index = Convert.ToInt32(e.CommandArgument);
-        DataTable dt = ProductionPipelineEmployeeTable;
-
-        if (index >= 0 && index < dt.Rows.Count)
-            dt.Rows.RemoveAt(index);
-
-        if (dt.Rows.Count == 0)
-            dt.Rows.Add("", "", "", "", "");
-
-        ProductionPipelineEmployeeTable = dt;
-        BindProductionPipelineEmployee();
+            ViewState[PipeEmpKey] = dt;
+            BindPipelineEmployeeGrid();
+        }
     }
 
-    // =====================================================
-    // GRID HELPERS
-    // =====================================================
-
-    private string GetText(GridViewRow row, string controlId)
+    protected void grdProductionPipelineUnit_RowDataBound(object sender, GridViewRowEventArgs e)
     {
-        TextBox txt = row.FindControl(controlId) as TextBox;
-        return txt == null ? "" : txt.Text.Trim();
+        if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+        DropDownList ddlProd = e.Row.FindControl("ddlPipelineDetail") as DropDownList;
+        DropDownList ddlStg = e.Row.FindControl("ddlPipelineStage") as DropDownList;
+        DropDownList ddlU = e.Row.FindControl("ddlPipelineUnit") as DropDownList;
+        DropDownList ddlDiv = e.Row.FindControl("ddlPipelineDivision") as DropDownList;
+
+        PopulatePipelineDropdowns(ddlProd, ddlStg);
+
+        if (ddlU != null)
+        {
+            ddlU.Items.Clear();
+            ddlU.Items.Insert(0, new ListItem("-- Select Unit --", ""));
+        }
+
+        DataRowView rv = e.Row.DataItem as DataRowView;
+        if (rv != null)
+        {
+            SetSelectedValue(ddlProd, rv["PRODUCTION_DETAIL_ROW_ID"]);
+            SetSelectedValue(ddlStg, rv["STAGE_ROW_ID"]);
+            SetSelectedValue(ddlU, rv["PRODUCTION_UNIT"]);
+            SetSelectedValue(ddlDiv, rv["PRODUCTION_DIVISION"]);
+        }
     }
 
-    private string GetHiddenValue(GridViewRow row, string controlId)
+    protected void grdProductionPipelineEmployee_RowDataBound(object sender, GridViewRowEventArgs e)
     {
-        HiddenField hf = row.FindControl(controlId) as HiddenField;
-        return hf == null ? "" : hf.Value.Trim();
+        if (e.Row.RowType != DataControlRowType.DataRow) return;
+
+        DropDownList ddlProd = e.Row.FindControl("ddlPipelineDetail") as DropDownList;
+        DropDownList ddlStg = e.Row.FindControl("ddlPipelineStage") as DropDownList;
+        DropDownList ddlEmp = e.Row.FindControl("ddlPipelineEmployee") as DropDownList;
+
+        PopulatePipelineDropdowns(ddlProd, ddlStg);
+
+        if (ddlEmp != null)
+        {
+            ddlEmp.Items.Clear();
+            ddlEmp.Items.Insert(0, new ListItem("-- Select Employee --", ""));
+        }
+
+        DataRowView rv = e.Row.DataItem as DataRowView;
+        if (rv != null)
+        {
+            SetSelectedValue(ddlProd, rv["PRODUCTION_DETAIL_ROW_ID"]);
+            SetSelectedValue(ddlStg, rv["STAGE_ROW_ID"]);
+            SetSelectedValue(ddlEmp, rv["EMPLOYEE_ID"]);
+        }
     }
 
-    private string GetSelectedValue(GridViewRow row, string controlId)
+    private void PopulatePipelineDropdowns(DropDownList ddlProd, DropDownList ddlStg)
     {
-        DropDownList ddl = row.FindControl(controlId) as DropDownList;
-        return ddl == null ? "" : ddl.SelectedValue;
+        DataTable dtProd = (DataTable)ViewState[ProdDetailsKey];
+        if (ddlProd != null && dtProd != null)
+        {
+            ddlProd.DataSource = dtProd;
+            ddlProd.DataTextField = "PRODUCT_NAME";
+            ddlProd.DataValueField = "ROW_ID";
+            ddlProd.DataBind();
+            ddlProd.Items.Insert(0, new ListItem("-- Select Product --", ""));
+        }
+
+        DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
+        if (ddlStg != null && dtStages != null)
+        {
+            ddlStg.DataSource = dtStages;
+            ddlStg.DataTextField = "STAGE_MASTER_ID";
+            ddlStg.DataValueField = "ROW_ID";
+            ddlStg.DataBind();
+            ddlStg.Items.Insert(0, new ListItem("-- Select Stage --", ""));
+        }
     }
 
-    // =====================================================
-    // FINAL VALIDATION & SAVE
-    // =====================================================
+    protected void ddlPipelineUnit_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        DropDownList ddlU = sender as DropDownList;
+        GridViewRow row = ddlU != null ? ddlU.NamingContainer as GridViewRow : null;
+        if (row == null) return;
+
+        DropDownList ddlDiv = row.FindControl("ddlPipelineDivision") as DropDownList;
+        if (ddlDiv == null) return;
+
+        ddlDiv.Items.Clear();
+        ddlDiv.Items.Insert(0, new ListItem("-- Select Division --", ""));
+    }
+
+    protected void btnBackStages_Click(object sender, EventArgs e)
+    {
+        ReadPipelineUnit();
+        ReadPipelineEmployee();
+        ShowStep(3);
+    }
+
+    #endregion
+
+    #region SAVE PRODUCTION WITH DISTRIBUTED TRANSACTION
+
+    private string CalculateAutomatedCompletionDate(string productionDateNep)
+    {
+        if (!string.IsNullOrEmpty(hfAutomatedCompletionDate.Value))
+        {
+            return hfAutomatedCompletionDate.Value;
+        }
+
+        int maxDays = 0;
+        DataTable dtUnitPipe = (DataTable)ViewState[PipeUnitKey];
+        if (dtUnitPipe != null)
+        {
+            foreach (DataRow r in dtUnitPipe.Rows)
+            {
+                int d = 0;
+                int.TryParse(Convert.ToString(r["ESTIMATED_DAY"]), out d);
+                if (d > maxDays) maxDays = d;
+            }
+        }
+
+        DataTable dtEmpPipe = (DataTable)ViewState[PipeEmpKey];
+        if (dtEmpPipe != null)
+        {
+            foreach (DataRow r in dtEmpPipe.Rows)
+            {
+                int d = 0;
+                int.TryParse(Convert.ToString(r["ESTIMATED_DAY"]), out d);
+                if (d > maxDays) maxDays = d;
+            }
+        }
+
+        try
+        {
+            string engProdDate = PGD.GetEnglishDateFromNepali(productionDateNep, "dd/mm/yyyy");
+            DateTime dt = DateTime.Parse(engProdDate);
+            DateTime compDt = dt.AddDays(maxDays);
+            return PGD.GetNepaliDateFromEnglish(compDt.ToString("dd/MM/yyyy"), "dd/mm/yyyy");
+        }
+        catch
+        {
+            return productionDateNep;
+        }
+    }
 
     protected void btnSaveProduction_Click(object sender, EventArgs e)
     {
-        if (pnlProductionProducts.Visible)
-            ReadProductionDetails();
+        ReadPipelineUnit();
+        ReadPipelineEmployee();
 
-        ReadProductionStages();
+        DistributedTransaction DT = new DistributedTransaction();
 
-        if (pnlPipelineUnit.Visible)
-            ReadProductionPipelineUnit();
+        try
+        {
+            string nepProdDate = txtProductionDate.Text.Trim();
+            string[] nepProdParts = (nepProdDate + "//").Split('/');
 
-        if (pnlPipelineEmployee.Visible)
-            ReadProductionPipelineEmployee();
+            string autoCompDate = CalculateAutomatedCompletionDate(nepProdDate);
+            string[] autoCompParts = (autoCompDate + "//").Split('/');
 
-        HelperFunction.MsgBox(this, GetType(), "Ready to persist Production, Unit Pipeline, and Employee Pipeline!");
+            // 1. INSERT PR_PRODUCTION_MASTER
+            ProdMasterEnt = new PR_PRODUCTION_MASTER();
+
+            EntityList pmList = ProdMasterSer.GetAll(new PR_PRODUCTION_MASTER());
+            string lastPid = "";
+            int pidNum = 0;
+            if (pmList != null)
+            {
+                foreach (PR_PRODUCTION_MASTER row in pmList) { lastPid = row.PK_ID; }
+            }
+            int.TryParse(lastPid, out pidNum);
+            pidNum = pidNum + 1;
+
+            ProdMasterEnt.PRODUCTION_NUMBER = pidNum.ToString();
+            ProdMasterEnt.PRODUCTION_DATE = PGD.GetEnglishDateFromNepali(nepProdDate, "dd/mm/yyyy");
+            ProdMasterEnt.PRODUCTION_DAY = nepProdParts[0];
+            ProdMasterEnt.PRODUCTION_MONTH = nepProdParts[1];
+            ProdMasterEnt.PRODUCTION_YEAR = nepProdParts[2];
+            ProdMasterEnt.COMPLITION_DATE = PGD.GetEnglishDateFromNepali(autoCompDate, "dd/mm/yyyy");
+            ProdMasterEnt.COMPLITION_DAY = autoCompParts[0];
+            ProdMasterEnt.COMPLITION_MONTH = autoCompParts[1];
+            ProdMasterEnt.COMPLITION_YEAR = autoCompParts[2];
+            ProdMasterEnt.PRODUCTION_TYPE = ddlProductionType.SelectedValue;
+            ProdMasterEnt.CUSTOMER_PO_ID = hfCustomerPoId.Value;
+            ProdMasterEnt.STATUS = "1";
+
+            string prodMasterId = ProdMasterSer.Insert(ProdMasterEnt, DT).ToString();
+
+            // 2. INSERT PR_PRODCUTION_DETAIL
+            DataTable dtProd = (DataTable)ViewState[ProdDetailsKey];
+            System.Collections.Generic.Dictionary<string, string> detailRowIdToPkMap = new System.Collections.Generic.Dictionary<string, string>();
+
+            foreach (DataRow r in dtProd.Rows)
+            {
+                ProdDetEnt = new PR_PRODCUTION_DETAIL();
+                ProdDetEnt.PRODUCTION_ID = prodMasterId;
+                ProdDetEnt.MULTIPLE_DELVIERY_ID = Convert.ToString(r["MULTIPLE_DELVIERY_ID"]);
+                ProdDetEnt.PRODUCT_ID = Convert.ToString(r["PRODUCT_ID"]);
+                ProdDetEnt.SIZE_ID = Convert.ToString(r["SIZE_ID"]);
+                ProdDetEnt.SWATCH_ID = Convert.ToString(r["SWATCH_ID"]);
+                ProdDetEnt.QUANTITY = Convert.ToString(r["QUANTITY"]);
+                ProdDetEnt.UNIT = Convert.ToString(r["UNIT"]);
+                ProdDetEnt.STATUS = "1";
+                ProdDetEnt.PRODUCTION_DATE = PGD.GetEnglishDateFromNepali(nepProdDate, "dd/mm/yyyy");
+                ProdDetEnt.PRODUCTION_DAY = nepProdParts[0];
+                ProdDetEnt.PRODUCTION_MONTH = nepProdParts[1];
+                ProdDetEnt.PRODUCTION_YEAR = nepProdParts[2];
+                ProdDetEnt.COMPLITION_DATE = PGD.GetEnglishDateFromNepali(autoCompDate, "dd/mm/yyyy");
+                ProdDetEnt.COMPLITION_DAY = autoCompParts[0];
+                ProdDetEnt.COMPLITION_MONTH = autoCompParts[1];
+                ProdDetEnt.COMPLITION_YEAR = autoCompParts[2];
+
+                string detailPkId = ProdDetSer.Insert(ProdDetEnt, DT).ToString();
+                detailRowIdToPkMap[Convert.ToString(r["ROW_ID"])] = detailPkId;
+            }
+
+            // 3. INSERT PR_PRODUCTION_STAGE
+            DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
+            System.Collections.Generic.Dictionary<string, string> stageRowIdToPkMap = new System.Collections.Generic.Dictionary<string, string>();
+
+            foreach (DataRow r in dtStages.Rows)
+            {
+                string pRowId = Convert.ToString(r["PRODUCTION_DETAIL_ROW_ID"]);
+                string mappedDetailId = detailRowIdToPkMap.ContainsKey(pRowId) ? detailRowIdToPkMap[pRowId] : "";
+
+                ProdStageEnt = new PR_PRODUCTION_STAGE();
+                ProdStageEnt.PRODCTION_MASTER_ID = prodMasterId;
+                ProdStageEnt.PRODUCTION_DETAIL_ID = mappedDetailId;
+                ProdStageEnt.STAGE_MASTER_ID = Convert.ToString(r["STAGE_MASTER_ID"]);
+                ProdStageEnt.UNIT_OR_EMPOYEE = Convert.ToString(r["UNIT_OR_EMPLOYEE"]);
+                ProdStageEnt.STATUS = Convert.ToString(r["STATUS"]);
+
+                DataRow[] prMatch = dtProd.Select("ROW_ID = '" + pRowId.Replace("'", "''") + "'");
+                ProdStageEnt.PRODUCT_ID = prMatch.Length > 0 ? Convert.ToString(prMatch[0]["PRODUCT_ID"]) : "";
+
+                string stagePkId = ProdStageSer.Insert(ProdStageEnt, DT).ToString();
+                stageRowIdToPkMap[Convert.ToString(r["ROW_ID"])] = stagePkId;
+            }
+
+            // 4. INSERT PR_PRODUCITON_PIPELINE
+            // A. Unit Pipeline
+            DataTable dtUnitPipe = (DataTable)ViewState[PipeUnitKey];
+            foreach (DataRow r in dtUnitPipe.Rows)
+            {
+                string pRowId = Convert.ToString(r["PRODUCTION_DETAIL_ROW_ID"]);
+                string sRowId = Convert.ToString(r["STAGE_ROW_ID"]);
+
+                ProdPipeEnt = new PR_PRODUCITON_PIPELINE();
+                ProdPipeEnt.PRODUCTION_DETAIL_ID = detailRowIdToPkMap.ContainsKey(pRowId) ? detailRowIdToPkMap[pRowId] : "";
+                ProdPipeEnt.STAGE_ID = stageRowIdToPkMap.ContainsKey(sRowId) ? stageRowIdToPkMap[sRowId] : "";
+                ProdPipeEnt.PRODUCITON_UNIT = Convert.ToString(r["PRODUCTION_UNIT"]);
+                ProdPipeEnt.PRODUCTION_DIVISION = Convert.ToString(r["PRODUCTION_DIVISION"]);
+                ProdPipeEnt.EMPLOYEE_ID = "";
+                ProdPipeEnt.ESTIMATED_DAY = Convert.ToString(r["ESTIMATED_DAY"]);
+                ProdPipeEnt.ESTIMATED_TIME = Convert.ToString(r["ESTIMATED_TIME"]);
+                ProdPipeEnt.PRODUCTION_DATE = PGD.GetEnglishDateFromNepali(nepProdDate, "dd/mm/yyyy");
+                ProdPipeEnt.PRODUCTION_DAY = nepProdParts[0];
+                ProdPipeEnt.PRODUCTION_MONTH = nepProdParts[1];
+                ProdPipeEnt.PRODUCTION_YEAR = nepProdParts[2];
+                ProdPipeEnt.PRODUCTION_TIME = DateTime.Now.ToString("HH:mm:ss");
+                ProdPipeEnt.COMPLITION_DATE = PGD.GetEnglishDateFromNepali(autoCompDate, "dd/mm/yyyy");
+                ProdPipeEnt.COMPLITION_DAY = autoCompParts[0];
+                ProdPipeEnt.COMPLITION_MONTH = autoCompParts[1];
+                ProdPipeEnt.COMPLITION_YEAR = autoCompParts[2];
+                ProdPipeEnt.COMPLITION_TIME = "";
+                ProdPipeEnt.STATUS = "1";
+
+                ProdPipeSer.Insert(ProdPipeEnt, DT);
+            }
+
+            // B. Employee Pipeline
+            DataTable dtEmpPipe = (DataTable)ViewState[PipeEmpKey];
+            foreach (DataRow r in dtEmpPipe.Rows)
+            {
+                string pRowId = Convert.ToString(r["PRODUCTION_DETAIL_ROW_ID"]);
+                string sRowId = Convert.ToString(r["STAGE_ROW_ID"]);
+
+                ProdPipeEnt = new PR_PRODUCITON_PIPELINE();
+                ProdPipeEnt.PRODUCTION_DETAIL_ID = detailRowIdToPkMap.ContainsKey(pRowId) ? detailRowIdToPkMap[pRowId] : "";
+                ProdPipeEnt.STAGE_ID = stageRowIdToPkMap.ContainsKey(sRowId) ? stageRowIdToPkMap[sRowId] : "";
+                ProdPipeEnt.PRODUCITON_UNIT = "";
+                ProdPipeEnt.PRODUCTION_DIVISION = "";
+                ProdPipeEnt.EMPLOYEE_ID = Convert.ToString(r["EMPLOYEE_ID"]);
+                ProdPipeEnt.ESTIMATED_DAY = Convert.ToString(r["ESTIMATED_DAY"]);
+                ProdPipeEnt.ESTIMATED_TIME = Convert.ToString(r["ESTIMATED_TIME"]);
+                ProdPipeEnt.PRODUCTION_DATE = PGD.GetEnglishDateFromNepali(nepProdDate, "dd/mm/yyyy");
+                ProdPipeEnt.PRODUCTION_DAY = nepProdParts[0];
+                ProdPipeEnt.PRODUCTION_MONTH = nepProdParts[1];
+                ProdPipeEnt.PRODUCTION_YEAR = nepProdParts[2];
+                ProdPipeEnt.PRODUCTION_TIME = DateTime.Now.ToString("HH:mm:ss");
+                ProdPipeEnt.COMPLITION_DATE = PGD.GetEnglishDateFromNepali(autoCompDate, "dd/mm/yyyy");
+                ProdPipeEnt.COMPLITION_DAY = autoCompParts[0];
+                ProdPipeEnt.COMPLITION_MONTH = autoCompParts[1];
+                ProdPipeEnt.COMPLITION_YEAR = autoCompParts[2];
+                ProdPipeEnt.COMPLITION_TIME = "";
+                ProdPipeEnt.STATUS = "1";
+
+                ProdPipeSer.Insert(ProdPipeEnt, DT);
+            }
+
+            // 5. COMMIT OR ABORT
+            if (DT.HAPPY == true)
+            {
+                DT.Commit();
+                HelperFunction.MsgBox(this, this.GetType(), "Production Created Successfully.");
+                ClearAll();
+            }
+            else
+            {
+                DT.Abort();
+                HelperFunction.MsgBox(this, this.GetType(), "Failed to save production. Transaction rolled back.");
+            }
+        }
+        catch (Exception ex)
+        {
+            DT.Abort();
+            HelperFunction.MsgBox(this, this.GetType(), "Transaction error: " + ex.Message);
+        }
+        finally
+        {
+            DT.Dispose();
+        }
+    }
+
+    #endregion
+
+    #region UTILITY & LOOKUP METHODS
+
+    private string GetProductName(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return "";
+        PRODUCT ent = new PRODUCT();
+        ent.PK_ID = id;
+        ent = (PRODUCT)new PRODUCTService().GetSingle(ent);
+        return ent != null ? ent.PRODUCT_NAME : "";
+    }
+
+    private string GetSizeName(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return "";
+        PRODUCT_SIZE ent = new PRODUCT_SIZE();
+        ent.PK_ID = id;
+        ent = (PRODUCT_SIZE)new PRODUCT_SIZEService().GetSingle(ent);
+        return ent != null ? ent.SIZE_NAME : "";
+    }
+
+    private string GetSwatchName(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return "";
+        PR_SWATCH ent = new PR_SWATCH();
+        ent.PK_ID = id;
+        ent = (PR_SWATCH)new PR_SWATCHService().GetSingle(ent);
+        return ent != null ? ent.SWATCH_NAME : "";
+    }
+
+    private void SetSelectedValue(DropDownList ddl, object value)
+    {
+        if (ddl == null || value == null) return;
+        string v = value.ToString();
+        if (!string.IsNullOrEmpty(v) && ddl.Items.FindByValue(v) != null)
+            ddl.SelectedValue = v;
     }
 
     protected void btnClearAll_Click(object sender, EventArgs e)
     {
-        txtProductionDate.Text = GetTodayNepali();
-        txtCompletionDate.Text = GetTodayNepali();
+        ClearAll();
+    }
 
-        if (ddlProductionType.Items.Count > 0)
-            ddlProductionType.SelectedIndex = 0;
-
-        ddlMultipleDelivery.Items.Clear();
-        ddlMultipleDelivery.Items.Insert(0, new ListItem("-- Select Delivery Date --", ""));
-        pnlSelectedDeliveryInfo.Visible = false;
-        pnlProductionProducts.Visible = false;
-
-        grdSelectedDelivery.DataSource = null;
-        grdSelectedDelivery.DataBind();
-
-        grdProductionDetails.DataSource = null;
-        grdProductionDetails.DataBind();
-
+    private void ClearAll()
+    {
         hfProductionId.Value = "";
+        hfCustomerPoId.Value = "";
+        hfMultipleDeliveryId.Value = "";
+        hfAutomatedCompletionDate.Value = "";
 
-        if (ddlCustomer.Items.Count > 0)
-            ddlCustomer.SelectedIndex = 0;
+        ddlProductionType.SelectedIndex = 0;
+        txtProductionDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
 
-        ddlCustomerOrder.Items.Clear();
-        ddlCustomerOrder.Items.Insert(0, new ListItem("-- Select Customer First --", ""));
+        btnNextMaster.Visible = true;
+        pnlPOGrid.Visible = false;
 
-        ViewState.Remove("ProductionDetailTable");
-        ViewState.Remove("ProductionStageTable");
-        ViewState.Remove("ProductionPipelineUnitTable");
-        ViewState.Remove("ProductionPipelineEmployeeTable");
-
-        BindProductionStages();
-        BindProductionPipelineUnit();
-        BindProductionPipelineEmployee();
-
+        InitializeTables();
         ShowStep(1);
     }
+
+    #endregion
 }
