@@ -431,7 +431,7 @@
                                         <asp:Repeater ID="rptDeliveryLocations" runat="server">
                                             <ItemTemplate>
                                                 <div style="font-size: 11.5px; margin-bottom: 4px; padding: 4px 6px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-                                                    <div style="color: #0f172a; font-weight: 600;">📍 <%# Eval("ADDRESS") %></div>
+                                                    <div style="color: #0f172a; font-weight: 600;"> <%# Eval("ADDRESS") %></div>
                                                     <div style="color: #64748b; font-size: 11px;">
                                                         <%# !string.IsNullOrEmpty(Convert.ToString(Eval("CONTACT_PERSON"))) ? Eval("CONTACT_PERSON") + " | " : "" %>
                                                         <%# Eval("CONTACT_NUMBER") %>
