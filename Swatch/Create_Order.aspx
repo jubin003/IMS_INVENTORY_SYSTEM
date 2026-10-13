@@ -207,14 +207,16 @@
 
                             <asp:TemplateField HeaderText="Quantity">
                                 <ItemTemplate>
-                                    <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>' placeholder="Qty"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
-
-                            <asp:TemplateField HeaderText="Unit">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" ReadOnly="true"></asp:TextBox>
-                                    <asp:HiddenField ID="hfUnitId" runat="server" Value='<%# Eval("UNIT") %>' />
+                                    <div style="position: relative; display: flex; align-items: center; width: 100%;">
+                                        <!-- Textbox with right padding so typed text never overlaps the unit label -->
+                                        <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>' placeholder="Qty" style="padding-right: 50px;"></asp:TextBox>
+            
+                                        <!-- Unit label floating on the right side inside the textbox -->
+                                        <asp:Label ID="lblUnit" runat="server" style="position: absolute; right: 10px; color: #6c757d; font-size: 12px; font-weight: 600; pointer-events: none;"></asp:Label>
+            
+                                        <!-- Critical: hfUnitId MUST remain in the row so ReadProducts() retains the value -->
+                                        <asp:HiddenField ID="hfUnitId" runat="server" Value='<%# Eval("UNIT") %>' />
+                                    </div>
                                 </ItemTemplate>
                             </asp:TemplateField>
 
