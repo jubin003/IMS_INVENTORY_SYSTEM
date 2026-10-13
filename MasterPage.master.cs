@@ -34,6 +34,7 @@ public partial class MasterPage : System.Web.UI.MasterPage
     EntityList thelist = new EntityList();
     protected void Page_Load(object sender, EventArgs e)
     {
+        Page.MaintainScrollPositionOnPostBack = true;
         try
         {
             userProfileEnt = new UserProfileEntity();

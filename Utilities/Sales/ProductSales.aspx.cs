@@ -139,7 +139,7 @@ public partial class Utilities_Sales_ProductSales : System.Web.UI.Page
             {
                 Response.Redirect("~/forbidden.aspx");
             }
-            catch (Exception ee)
+            catch (Exception)
             {
                 Response.Redirect("~/Login.aspx");
             }
