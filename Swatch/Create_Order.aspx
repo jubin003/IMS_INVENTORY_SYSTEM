@@ -207,14 +207,13 @@
 
                             <asp:TemplateField HeaderText="Quantity">
                                 <ItemTemplate>
-                                    <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>' placeholder="Qty"></asp:TextBox>
-                                </ItemTemplate>
-                            </asp:TemplateField>
+                                    <div class="input-with-unit">
+                                        <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>' placeholder="Qty"></asp:TextBox>
 
-                            <asp:TemplateField HeaderText="Unit">
-                                <ItemTemplate>
-                                    <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" ReadOnly="true"></asp:TextBox>
-                                    <asp:HiddenField ID="hfUnitId" runat="server" Value='<%# Eval("UNIT") %>' />
+                                        <asp:Label ID="lblUnit" runat="server" CssClass="unit-label"></asp:Label>
+
+                                        <asp:HiddenField ID="hfUnitId" runat="server" Value='<%# Eval("UNIT") %>' />
+                                    </div>
                                 </ItemTemplate>
                             </asp:TemplateField>
 

@@ -402,11 +402,11 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
                 ddlSwatch.Enabled = false;
             }
 
-            TextBox txtUnit = e.Row.FindControl("txtUnit") as TextBox;
+            Label lblUnit = e.Row.FindControl("lblUnit") as Label;
             TextBox txtQuantity = e.Row.FindControl("txtQuantity") as TextBox;
 
-            if (txtUnit != null)
-                txtUnit.Text = GetUnitName(Convert.ToString(rowView["UNIT"]));
+            if (lblUnit != null)
+                lblUnit.Text = GetUnitName(Convert.ToString(rowView["UNIT"]));
             if (txtQuantity != null)
                 txtQuantity.Text = Convert.ToString(rowView["QUANTITY"]);
         }

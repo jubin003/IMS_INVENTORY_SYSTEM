@@ -217,4 +217,28 @@ textarea.form-control {
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
+/*Input with unit label*/
 
+/* Container for input with trailing text/badge */
+.input-with-unit {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+/* Ensure typed text never scrolls underneath the unit label */
+.input-with-unit .form-control {
+    padding-right: 48px;
+}
+
+/* Trailing unit badge */
+.input-with-unit .unit-label {
+    position: absolute;
+    right: 10px;
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+    z-index: 2;
+}
