@@ -12,7 +12,6 @@ public partial class ManageSwatches : System.Web.UI.Page
     PR_SWATCH_TYPEService typeService = new PR_SWATCH_TYPEService();
     PR_SWATCHService swatchService = new PR_SWATCHService();
 
-    // Same allowed image types as Table_Image
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
     private const string SwatchFolder = "~/images/swatches/";
 
@@ -112,7 +111,6 @@ public partial class ManageSwatches : System.Web.UI.Page
 
     protected void gvSwatches_RowDataBound(object sender, GridViewRowEventArgs e)
     {
-        // Hide the placeholder row used when a category has no swatches yet
         if (e.Row.RowType == DataControlRowType.DataRow)
         {
             object pk = DataBinder.Eval(e.Row.DataItem, "PK_ID");
@@ -123,18 +121,12 @@ public partial class ManageSwatches : System.Web.UI.Page
         }
     }
 
-    // ---------------------------------------------------------------
-    // Image helpers (same rules as Table_Image: JPG / JPEG / PNG only)
-    // ---------------------------------------------------------------
-
-    /// <summary>Makes an exception message safe to pass to MsgBox (no quotes or backslashes).</summary>
     private static string CleanMsg(string message)
     {
         if (message == null) return "";
         return message.Replace("\\", "/").Replace("'", "").Replace("\r", " ").Replace("\n", " ");
     }
 
-    /// <summary>Returns the lower-case extension if the upload is an allowed image type, otherwise null.</summary>
     private string GetValidImageExtension(FileUpload fu)
     {
         string extension = Path.GetExtension(fu.FileName).ToLower();
@@ -316,8 +308,6 @@ public partial class ManageSwatches : System.Web.UI.Page
             DropDownList ddlEditStatus = row.FindControl("ddlEditStatus") as DropDownList;
             FileUpload fuEditImage = row.FindControl("fuEditImage") as FileUpload;
 
-            // Image is optional on edit, but if one is chosen it must be valid.
-            // Validate before touching the database.
             string extension = null;
             bool hasNewImage = fuEditImage != null && fuEditImage.HasFile;
             if (hasNewImage)
