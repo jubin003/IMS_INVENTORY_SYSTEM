@@ -5,6 +5,7 @@ using System.Web.UI.WebControls;
 using Entity.Components;
 using Service.Components;
 using Entity.Framework;
+using DataHelper.Framework;
 
 public partial class Production_Purchase_Order : System.Web.UI.Page
 {
@@ -34,7 +35,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             LoadCustomer(ddlCustomer);
             LoadPaymentTerm();
             LoadTransportation();
-            LoadCountry();
 
             txtOrderDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
             txtDeliveryDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
@@ -73,6 +73,75 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         ddl.Items.Insert(0, new ListItem("-- Select Customer --", ""));
     }
 
+    private void LoadCustomerLocations(string customerId)
+    {
+        ddlCustomerLocation.Items.Clear();
+
+        if (string.IsNullOrEmpty(customerId))
+        {
+            ddlCustomerLocation.Items.Insert(0, new ListItem("-- Select Customer Location --", ""));
+            return;
+        }
+
+        ClEnt = new PR_CUSTOMER_LOCATION();
+        ClEnt.CUSTOMER_ID = customerId;
+
+        ddlCustomerLocation.DataSource = ClSer.GetAll(ClEnt);
+        ddlCustomerLocation.DataTextField = "ADDRESS";
+        ddlCustomerLocation.DataValueField = "PK_ID";
+        ddlCustomerLocation.DataBind();
+        ddlCustomerLocation.Items.Insert(0, new ListItem("-- Select Customer Location --", ""));
+    }
+
+    protected void ddlCustomerLocation_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        string locationId = ddlCustomerLocation.SelectedValue;
+
+        if (string.IsNullOrEmpty(locationId))
+        {
+            ClearCustomerLocationDetails();
+            pnlCustomerLocationDetail.Visible = false;
+            return;
+        }
+
+        PR_CUSTOMER_LOCATION locEnt = new PR_CUSTOMER_LOCATION();
+        locEnt.PK_ID = locationId;
+        locEnt = (PR_CUSTOMER_LOCATION)ClSer.GetSingle(locEnt);
+
+        if (locEnt != null)
+        {
+            lblCustomerNameDetail.Text = lblCustomerName.Text;
+            lblCustomerAddressDetail.Text = locEnt.ADDRESS;
+            lblContactPersonDetail.Text = locEnt.CONTACT_PERSON;
+            lblContactNumberDetail.Text = locEnt.CONTACT_NUMBER;
+            lblEmailIdDetail.Text = locEnt.EMAIL_ID;
+
+            if (!string.IsNullOrEmpty(locEnt.COUNTRY_ID))
+            {
+                COUNTRY counEnt = new COUNTRY();
+                counEnt.PK_ID = locEnt.COUNTRY_ID;
+                counEnt = (COUNTRY)new COUNTRYService().GetSingle(counEnt);
+                lblCountryNameDetail.Text = counEnt != null ? counEnt.COUNTRY_NAME : locEnt.COUNTRY_ID;
+            }
+            else
+            {
+                lblCountryNameDetail.Text = "";
+            }
+
+            pnlCustomerLocationDetail.Visible = true;
+        }
+    }
+
+    private void ClearCustomerLocationDetails()
+    {
+        lblCustomerNameDetail.Text = "";
+        lblCustomerAddressDetail.Text = "";
+        lblCountryNameDetail.Text = "";
+        lblContactPersonDetail.Text = "";
+        lblContactNumberDetail.Text = "";
+        lblEmailIdDetail.Text = "";
+    }
+
     private void LoadTransportation()
     {
         PR_TRANSPORTATION ent = new PR_TRANSPORTATION();
@@ -85,17 +154,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         ddlTransportation.Items.Insert(0, new ListItem("-- Select Transportation --", ""));
     }
 
-    private void LoadCountry()
-    {
-        COUNTRY ent = new COUNTRY();
-        COUNTRYService ser = new COUNTRYService();
-        ddlDeliveryCountry.DataSource = ser.GetAll(ent);
-        ddlDeliveryCountry.DataTextField = "COUNTRY_NAME";
-        ddlDeliveryCountry.DataValueField = "PK_ID";
-        ddlDeliveryCountry.DataBind();
-        ddlDeliveryCountry.Items.Insert(0, new ListItem("-- Select Country --", ""));
-    }
-
     protected void ddlCustomer_SelectedIndexChanged(object sender, EventArgs e)
     {
         string customerId = ddlCustomer.SelectedValue;
@@ -104,10 +162,12 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         {
             ClearCustomerDetails();
             pnlCustomerDetails.Visible = false;
+            LoadCustomerLocations(string.Empty);
             return;
         }
 
         LoadCustomerDetails(customerId);
+        LoadCustomerLocations(customerId);
     }
 
     private void LoadCustomerDetails(string customerId)
@@ -130,11 +190,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         lblCustomerPhone.Text = CEnt.PHONE;
         lblCustomerEmail.Text = CEnt.EMAIL;
         pnlCustomerDetails.Visible = true;
-
-        txtDeliveryAddress.Text = CEnt.ADDRESS;
-        txtDeliveryContactPerson.Text = CEnt.CONTACT_PERSON;
-        txtDeliveryContactNumber.Text = !string.IsNullOrEmpty(CEnt.PHONE) ? CEnt.PHONE : CEnt.MOBILE;
-        txtDeliveryEmail.Text = CEnt.EMAIL;
     }
 
     private void ClearCustomerDetails()
@@ -148,44 +203,6 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
     protected void btnNextMaster_Click(object sender, EventArgs e)
     {
-        string customerId = ddlCustomer.SelectedValue;
-        string[] nepDate = (txtOrderDate.Text.Trim() + "//").Split('/');
-
-        if (string.IsNullOrEmpty(hfPK_ID.Value))
-        {
-            PoEnt = new PR_PURCHASE_ORDER();
-            EntityList thlisst = PoSer.GetAll(PoEnt);
-            string pid = "";
-            int id = 0;
-            foreach (PR_PURCHASE_ORDER row in thlisst)
-            {
-                pid = row.PK_ID;
-            }
-
-            int.TryParse(pid, out id);
-            id = id + 1;
-
-            PoEnt.CUSTOMER_ORDER_NUMBER = id.ToString();
-            PoEnt.CUSTOMER_ID = customerId;
-            PoEnt.ORDER_DATE = PGD.GetEnglishDateFromNepali(txtOrderDate.Text, "dd/mm/yyyy");
-            PoEnt.ORDER_DAY = nepDate[0];
-            PoEnt.ORDER_MONTH = nepDate[1];
-            PoEnt.ORDER_YEAR = nepDate[2];
-            PoEnt.ORDER_FISCAL_YEAR = PGD.checkFiscalYear(nepDate[1], nepDate[2]);
-            PoEnt.PAYMENT_TERM = ddlPaymentTerm.SelectedValue;
-            PoEnt.ORDER_NUMBER = id.ToString();
-
-            PoSer.Insert(PoEnt);
-
-            PR_PURCHASE_ORDER PooEnt = new PR_PURCHASE_ORDER();
-            EntityList tthlisst = PoSer.GetAll(PooEnt);
-            foreach (PR_PURCHASE_ORDER row in tthlisst)
-            {
-                pid = row.PK_ID;
-            }
-            hfPK_ID.Value = pid;
-        }
-
         BindProducts();
         ShowStep(2);
     }
@@ -308,6 +325,44 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
             ProductTable = dt;
             BindProducts();
+        }
+        else if (e.CommandName == "DuplicateExceptSwatch" || e.CommandName == "DuplicateExceptSize")
+        {
+            ReadProducts();
+
+            string rowId = Convert.ToString(e.CommandArgument);
+            DataTable dt = ProductTable;
+
+            DataRow[] matches = dt.Select("ROW_ID = '" + rowId.Replace("'", "''") + "'");
+            if (matches.Length > 0)
+            {
+                DataRow sourceRow = matches[0];
+                int sourceIndex = dt.Rows.IndexOf(sourceRow);
+
+                DataRow newRow = dt.NewRow();
+                newRow["ROW_ID"] = Guid.NewGuid().ToString("N");
+                newRow["PRODUCT_ID"] = sourceRow["PRODUCT_ID"];
+                newRow["QUANTITY"] = sourceRow["QUANTITY"];
+                newRow["UNIT"] = sourceRow["UNIT"];
+
+                if (e.CommandName == "DuplicateExceptSwatch")
+                {
+                    newRow["SIZE_ID"] = sourceRow["SIZE_ID"];
+                    newRow["SWATCH_TYPE_ID"] = "";
+                    newRow["SWATCH_ID"] = "";
+                }
+                else if (e.CommandName == "DuplicateExceptSize")
+                {
+                    newRow["SIZE_ID"] = "";
+                    newRow["SWATCH_TYPE_ID"] = sourceRow["SWATCH_TYPE_ID"];
+                    newRow["SWATCH_ID"] = sourceRow["SWATCH_ID"];
+                }
+
+                dt.Rows.InsertAt(newRow, sourceIndex + 1);
+
+                ProductTable = dt;
+                BindProducts();
+            }
         }
     }
 
@@ -498,90 +553,115 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         ShowStep(1);
     }
 
-    /// <summary>
-    /// Common persistence routine for inserting Delivery Location, Multiple Delivery, and Order Details
-    /// </summary>
     private bool SaveCurrentDeliveryRecord()
     {
         ReadProducts();
 
+        DistributedTransaction DT = new DistributedTransaction();
         string purchaseOrderId = hfPK_ID.Value;
-        if (string.IsNullOrEmpty(purchaseOrderId))
+
+        try
+        {
+            // 1. INSERT PURCHASE ORDER ONLY IF NOT YET CREATED
+            if (string.IsNullOrEmpty(purchaseOrderId))
+            {
+                string customerId = ddlCustomer.SelectedValue;
+                string[] nepDate = (txtOrderDate.Text.Trim() + "//").Split('/');
+
+                PoEnt = new PR_PURCHASE_ORDER();
+
+                EntityList thlisst = PoSer.GetAll(PoEnt);
+                string pid = "";
+                int id = 0;
+                if (thlisst != null)
+                {
+                    foreach (PR_PURCHASE_ORDER row in thlisst)
+                    {
+                        pid = row.PK_ID;
+                    }
+                }
+                int.TryParse(pid, out id);
+                id = id + 1;
+
+                PoEnt.CUSTOMER_ORDER_NUMBER = id.ToString();
+                PoEnt.CUSTOMER_ID = customerId;
+                PoEnt.ORDER_DATE = PGD.GetEnglishDateFromNepali(txtOrderDate.Text, "dd/mm/yyyy");
+                PoEnt.ORDER_DAY = nepDate[0];
+                PoEnt.ORDER_MONTH = nepDate[1];
+                PoEnt.ORDER_YEAR = nepDate[2];
+                PoEnt.ORDER_FISCAL_YEAR = PGD.checkFiscalYear(nepDate[1], nepDate[2]);
+                PoEnt.PAYMENT_TERM = ddlPaymentTerm.SelectedValue;
+                PoEnt.ORDER_NUMBER = id.ToString();
+
+                purchaseOrderId = PoSer.Insert(PoEnt, DT).ToString();
+            }
+
+            // 2. INSERT MULTIPLE DELIVERY HEADER
+            string nepDeliveryDate = txtDeliveryDate.Text.Trim();
+            string[] delivDateParts = (nepDeliveryDate + "//").Split('/');
+
+            MdEnt = new PR_MULTIPLE_DELIVERY();
+            MdEnt.PURCHASE_ORDER_ID = purchaseOrderId;
+            MdEnt.CUSOMTER_LOCATION_ID = ddlCustomerLocation.SelectedValue;
+            MdEnt.MODE_OF_TRANSPORTATION_ID = ddlTransportation.SelectedValue;
+            MdEnt.DELIVERY_DATE = PGD.GetEnglishDateFromNepali(nepDeliveryDate, "dd/mm/yyyy");
+            MdEnt.DELIVERY_DAY = delivDateParts[0];
+            MdEnt.DELIVERY_MONTH = delivDateParts[1];
+            MdEnt.DELIVERY_YEAR = delivDateParts[2];
+            MdEnt.STATUS = "1";
+            MdEnt.REMARKS = txtRemarks.Text.Trim();
+
+            string mdid = MdSer.Insert(MdEnt, DT).ToString();
+
+            // 3. INSERT ORDER DETAILS
+            DataTable pTable = ProductTable;
+            foreach (DataRow pRow in pTable.Rows)
+            {
+                OdEnt = new PR_ORDER_DETAIL();
+                OdEnt.MULTIPLE_DELVIERY_ID = mdid;
+                OdEnt.PRODUCT_ID = Convert.ToString(pRow["PRODUCT_ID"]);
+                OdEnt.SIZE_ID = Convert.ToString(pRow["SIZE_ID"]);
+                OdEnt.SWATCH_ID = Convert.ToString(pRow["SWATCH_ID"]);
+                OdEnt.UNIT = Convert.ToString(pRow["UNIT"]);
+                OdEnt.QUANTITY = Convert.ToString(pRow["QUANTITY"]);
+                OdEnt.STATUS = "1";
+
+                OdSer.Insert(OdEnt, DT);
+            }
+
+            // 4. COMMIT OR ABORT
+            if (DT.HAPPY == true)
+            {
+                DT.Commit();
+                hfPK_ID.Value = purchaseOrderId;
+                return true;
+            }
+            else
+            {
+                DT.Abort();
+                return false;
+            }
+        }
+        catch (Exception)
+        {
+            DT.Abort();
             return false;
-
-        // 1. Insert PR_CUSTOMER_LOCATION
-        ClEnt = new PR_CUSTOMER_LOCATION();
-        ClEnt.CUSTOMER_ID = ddlCustomer.SelectedValue;
-        ClEnt.ADDRESS = txtDeliveryAddress.Text.Trim();
-        ClEnt.COUNTRY_ID = ddlDeliveryCountry.SelectedValue;
-        ClEnt.CONTACT_PERSON = txtDeliveryContactPerson.Text.Trim();
-        ClEnt.CONTACT_NUMBER = txtDeliveryContactNumber.Text.Trim();
-        ClEnt.EMAIL_ID = txtDeliveryEmail.Text.Trim();
-        ClSer.Insert(ClEnt);
-
-        string locationId = ClEnt.PK_ID;
-
-        // 2. Insert PR_MULTIPLE_DELIVERY
-        string nepDeliveryDate = txtDeliveryDate.Text.Trim();
-        string[] delivDateParts = (nepDeliveryDate + "//").Split('/');
-
-        MdEnt = new PR_MULTIPLE_DELIVERY();
-        MdEnt.PURCHASE_ORDER_ID = purchaseOrderId;
-        MdEnt.CUSOMTER_LOCATION_ID = locationId;
-        MdEnt.MODE_OF_TRANSPORTATION_ID = ddlTransportation.SelectedValue;
-        MdEnt.DELIVERY_DATE = PGD.GetEnglishDateFromNepali(nepDeliveryDate, "dd/mm/yyyy");
-        MdEnt.DELIVERY_DAY = delivDateParts[0];
-        MdEnt.DELIVERY_MONTH = delivDateParts[1];
-        MdEnt.DELIVERY_YEAR = delivDateParts[2];
-        MdEnt.STATUS = "1";
-        MdEnt.REMARKS = txtRemarks.Text.Trim();
-        MdSer.Insert(MdEnt);
-
-        EntityList tlst = new EntityList();
-        MdEnt = new PR_MULTIPLE_DELIVERY();
-        tlst = MdSer.GetAll(MdEnt);
-        string mdid = "";
-        foreach (PR_MULTIPLE_DELIVERY row in tlst)
-        {
-            mdid = row.PK_ID;
         }
-
-        // 3. Insert PR_ORDER_DETAIL
-        DataTable pTable = ProductTable;
-        foreach (DataRow pRow in pTable.Rows)
+        finally
         {
-            if (string.IsNullOrEmpty(Convert.ToString(pRow["PRODUCT_ID"])))
-                continue;
-
-            OdEnt = new PR_ORDER_DETAIL();
-            OdEnt.MULTIPLE_DELVIERY_ID = mdid;
-            OdEnt.PRODUCT_ID = Convert.ToString(pRow["PRODUCT_ID"]);
-            OdEnt.SIZE_ID = Convert.ToString(pRow["SIZE_ID"]);
-            OdEnt.SWATCH_ID = Convert.ToString(pRow["SWATCH_ID"]);
-            OdEnt.UNIT = Convert.ToString(pRow["UNIT"]);
-            OdEnt.QUANTITY = Convert.ToString(pRow["QUANTITY"]);
-            OdEnt.STATUS = "1";
-            OdSer.Insert(OdEnt);
+            DT.Dispose();
         }
-
-        return true;
     }
 
-    /// <summary>
-    /// Saves current delivery and resets Step 2 controls while keeping the same PO
-    /// </summary>
     protected void btnSaveAndNextDelivery_Click(object sender, EventArgs e)
     {
         if (SaveCurrentDeliveryRecord())
         {
             ResetDeliveryAndProductsSection();
-            HelperFunction.MsgBox(this, this.GetType(), "Delivery details saved. You can now add the next delivery schedule.");
+            HelperFunction.MsgBox(this, this.GetType(), "Delivery schedule saved. You can now add the next delivery schedule.");
         }
     }
 
-    /// <summary>
-    /// Saves current delivery and completes the entire purchase order workflow
-    /// </summary>
     protected void btnFinalSave_Click(object sender, EventArgs e)
     {
         if (SaveCurrentDeliveryRecord())
@@ -594,32 +674,14 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     private void ResetDeliveryAndProductsSection()
     {
         txtDeliveryDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
-        ddlTransportation.SelectedIndex = 0;
+        if (ddlCustomerLocation.Items.Count > 0)
+            ddlCustomerLocation.SelectedIndex = 0;
+        if (ddlTransportation.Items.Count > 0)
+            ddlTransportation.SelectedIndex = 0;
         txtRemarks.Text = "";
 
-        // Reset customer address defaults if customer is selected
-        string customerId = ddlCustomer.SelectedValue;
-        if (!string.IsNullOrEmpty(customerId))
-        {
-            CEnt = new CUSTOMER();
-            CEnt.PK_ID = customerId;
-            CEnt = (CUSTOMER)CSer.GetSingle(CEnt);
-            if (CEnt != null)
-            {
-                txtDeliveryAddress.Text = CEnt.ADDRESS;
-                txtDeliveryContactPerson.Text = CEnt.CONTACT_PERSON;
-                txtDeliveryContactNumber.Text = !string.IsNullOrEmpty(CEnt.PHONE) ? CEnt.PHONE : CEnt.MOBILE;
-                txtDeliveryEmail.Text = CEnt.EMAIL;
-            }
-        }
-        else
-        {
-            txtDeliveryAddress.Text = "";
-            txtDeliveryContactPerson.Text = "";
-            txtDeliveryContactNumber.Text = "";
-            txtDeliveryEmail.Text = "";
-            ddlDeliveryCountry.SelectedIndex = 0;
-        }
+        ClearCustomerLocationDetails();
+        pnlCustomerLocationDetail.Visible = false;
 
         InitializeProductTable();
         BindProducts();
@@ -639,16 +701,17 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         txtDeliveryDate.Text = PGD.GetNepaliDateFromEnglish(PGD.GetTodayDate("dd/mm/yyyy"), "dd/mm/yyyy");
         ddlPaymentTerm.SelectedIndex = 0;
         ddlCustomer.SelectedIndex = 0;
+        ddlCustomerLocation.Items.Clear();
+        ddlCustomerLocation.Items.Insert(0, new ListItem("-- Select Customer Location --", ""));
         ddlTransportation.SelectedIndex = 0;
-        ddlDeliveryCountry.SelectedIndex = 0;
-
-        txtDeliveryAddress.Text = "";
-        txtDeliveryContactPerson.Text = "";
-        txtDeliveryContactNumber.Text = "";
-        txtDeliveryEmail.Text = "";
         txtRemarks.Text = "";
 
         ClearCustomerDetails();
+        pnlCustomerDetails.Visible = false;
+
+        ClearCustomerLocationDetails();
+        pnlCustomerLocationDetail.Visible = false;
+
         InitializeProductTable();
 
         ShowStep(1);
