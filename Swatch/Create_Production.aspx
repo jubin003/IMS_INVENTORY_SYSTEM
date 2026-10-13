@@ -176,7 +176,6 @@
         </asp:Panel>
 
         <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
-        <%-- ==================== STEP 3: PRODUCTION STAGE ==================== --%>
 <asp:Panel ID="pnlProductionStages" runat="server" Visible="false">
     <div class="bs-card">
         <div class="card-toolbar">

@@ -12,6 +12,7 @@ public partial class Swatch_View_Order : System.Web.UI.Page
     PR_MULTIPLE_DELIVERYService deliveryService = new PR_MULTIPLE_DELIVERYService();
     PR_ORDER_DETAILService orderDetailService = new PR_ORDER_DETAILService();
     PR_CUSTOMER_LOCATIONService locationService = new PR_CUSTOMER_LOCATIONService();
+    PhyeGanDate PGD = new PhyeGanDate();
 
     protected void Page_Load(object sender, EventArgs e)
     {
@@ -79,7 +80,7 @@ public partial class Swatch_View_Order : System.Web.UI.Page
         // Card 1: Master Order Header Details
         lblDetOrderNo.Text = po.ORDER_NUMBER;
         lblDetCustOrderNo.Text = po.CUSTOMER_ORDER_NUMBER;
-        lblDetOrderDate.Text = NepDate(po.ORDER_DAY, po.ORDER_MONTH, po.ORDER_YEAR);
+        lblDetOrderDate.Text = PGD.GetNepaliDateFromEnglish(po.ORDER_DATE,"dd/mm/yyyy");
         lblDetCustomer.Text = po.CUSTOMER_ID;
         lblDetPaymentTerm.Text = po.PAYMENT_TERM;
         lblDetFiscalYear.Text = po.ORDER_FISCAL_YEAR;
@@ -104,7 +105,7 @@ public partial class Swatch_View_Order : System.Web.UI.Page
             {
                 PR_MULTIPLE_DELIVERY del = (PR_MULTIPLE_DELIVERY)deliveries[i];
                 DataRow dr = dtDeliverySummary.NewRow();
-                dr["DELIVERY_DATE"] = !string.IsNullOrEmpty(del.DELIVERY_DATE) ? del.DELIVERY_DATE : NepDate(del.DELIVERY_DAY, del.DELIVERY_MONTH, del.DELIVERY_YEAR);
+                dr["DELIVERY_DATE"] = !string.IsNullOrEmpty(del.DELIVERY_DATE) ? del.DELIVERY_DATE : PGD.GetNepaliDateFromEnglish(del.DELIVERY_DATE, "dd/mm/yyyy");
                 dr["MODE_OF_TRANSPORTATION"] = !string.IsNullOrEmpty(del.MODE_OF_TRANSPORTATION_ID) ? del.MODE_OF_TRANSPORTATION_ID : "-";
                 dr["REMARKS"] = !string.IsNullOrEmpty(del.REMARKS) ? del.REMARKS : "-";
                 dr["STATUS_LABEL"] = del.STATUS == "1" ? "Active" : "Inactive";
@@ -239,14 +240,4 @@ public partial class Swatch_View_Order : System.Web.UI.Page
         LoadPurchaseOrders();
     }
 
-    public string NepDate(object day, object month, object year)
-    {
-        if (day == null || month == null || year == null) return string.Empty;
-        string d = day.ToString().Trim();
-        string m = month.ToString().Trim();
-        string y = year.ToString().Trim();
-
-        if (string.IsNullOrEmpty(y) && string.IsNullOrEmpty(m) && string.IsNullOrEmpty(d)) return string.Empty;
-        return string.Format("{0}/{1}/{2}", y, m, d);
-    }
 }
