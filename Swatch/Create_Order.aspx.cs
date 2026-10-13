@@ -6,6 +6,7 @@ using Entity.Components;
 using Service.Components;
 using Entity.Framework;
 using DataHelper.Framework;
+using System.Web;
 
 public partial class Production_Purchase_Order : System.Web.UI.Page
 {
@@ -30,6 +31,20 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
     protected void Page_Load(object sender, EventArgs e)
     {
+        // 1. INTERCEPT SWATCH MODAL AJAX REQUEST
+        if (Request.QueryString["action"] == "get_swatches")
+        {
+            Response.Clear();
+            Response.ContentType = "application/json";
+            string typeId = Request.QueryString["typeId"];
+            Response.Write(GetSwatchesJson(typeId));
+            Response.Flush();
+            Response.SuppressContent = true;
+            HttpContext.Current.ApplicationInstance.CompleteRequest();
+            return;
+        }
+
+        // 2. NORMAL PAGE LIFECYCLE
         if (!IsPostBack)
         {
             LoadCustomer(ddlCustomer);
@@ -269,7 +284,13 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             pRow["PRODUCT_ID"] = GetSelectedValue(row, "ddlProduct");
             pRow["SIZE_ID"] = GetSelectedValue(row, "ddlSize");
             pRow["SWATCH_TYPE_ID"] = GetSelectedValue(row, "ddlSwatchType");
-            pRow["SWATCH_ID"] = GetSelectedValue(row, "ddlSwatch");
+
+            // Read the swatch value selected from modal
+            HiddenField hfSwatchId = row.FindControl("hfSwatchId") as HiddenField;
+            pRow["SWATCH_ID"] = (hfSwatchId != null && !string.IsNullOrEmpty(hfSwatchId.Value))
+                ? hfSwatchId.Value
+                : GetSelectedValue(row, "ddlSwatch");
+
             pRow["QUANTITY"] = GetText(row, "txtQuantity");
             HiddenField hfUnitId = row.FindControl("hfUnitId") as HiddenField;
             pRow["UNIT"] = hfUnitId != null ? hfUnitId.Value : "";
@@ -389,17 +410,32 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             string swatchTypeId = Convert.ToString(rowView["SWATCH_TYPE_ID"]);
             SetSelectedValue(ddlSwatchType, swatchTypeId);
 
+            string swatchId = Convert.ToString(rowView["SWATCH_ID"]);
+
+            // Sync hidden field
+            HiddenField hfSwatchId = e.Row.FindControl("hfSwatchId") as HiddenField;
+            if (hfSwatchId != null)
+            {
+                hfSwatchId.Value = swatchId;
+            }
+
             if (!string.IsNullOrEmpty(swatchTypeId))
             {
-                LoadSwatches(ddlSwatch, swatchTypeId);
-                ddlSwatch.Enabled = true;
-                SetSelectedValue(ddlSwatch, rowView["SWATCH_ID"]);
+                if (ddlSwatch != null)
+                {
+                    LoadSwatches(ddlSwatch, swatchTypeId);
+                    ddlSwatch.Enabled = true;
+                    SetSelectedValue(ddlSwatch, swatchId);
+                }
             }
             else
             {
-                ddlSwatch.Items.Clear();
-                ddlSwatch.Items.Insert(0, new ListItem("-- Select Swatch --", ""));
-                ddlSwatch.Enabled = false;
+                if (ddlSwatch != null)
+                {
+                    ddlSwatch.Items.Clear();
+                    ddlSwatch.Items.Insert(0, new ListItem("-- Select Swatch --", ""));
+                    ddlSwatch.Enabled = false;
+                }
             }
 
             Label lblUnit = e.Row.FindControl("lblUnit") as Label;
@@ -715,5 +751,102 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         InitializeProductTable();
 
         ShowStep(1);
+    }
+
+    private string GetSwatchesJson(string swatchTypeId)
+    {
+        try
+        {
+            PR_SWATCH ent = new PR_SWATCH();
+            ent.STATUS = "1";
+            if (!string.IsNullOrEmpty(swatchTypeId))
+                ent.SWATCH_TYPE_ID = swatchTypeId;
+
+            PR_SWATCHService ser = new PR_SWATCHService();
+            EntityList list = (EntityList)ser.GetAll(ent);
+
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            sb.Append("{\"success\":true,\"swatches\":[");
+
+            string folderPath = Server.MapPath("~/images/swatches/");
+            string[] extensions = new string[] { ".jpg", ".jpeg", ".png" };
+            bool first = true;
+
+            if (list != null)
+            {
+                foreach (PR_SWATCH s in list)
+                {
+                    if (!first) sb.Append(",");
+                    first = false;
+
+                    string imgUrl = ResolveUrl("~/images/profile.png");
+                    foreach (string ext in extensions)
+                    {
+                        string physicalPath = System.IO.Path.Combine(folderPath, s.PK_ID + ext);
+                        if (System.IO.File.Exists(physicalPath))
+                        {
+                            imgUrl = ResolveUrl("~/images/swatches/" + s.PK_ID + ext) + "?v=" + System.IO.File.GetLastWriteTime(physicalPath).Ticks;
+                            break;
+                        }
+                    }
+
+                    sb.Append("{");
+                    sb.AppendFormat("\"id\":\"{0}\",", CleanJson(s.PK_ID));
+                    sb.AppendFormat("\"name\":\"{0}\",", CleanJson(s.SWATCH_NAME));
+                    sb.AppendFormat("\"imageUrl\":\"{0}\"", CleanJson(imgUrl));
+                    sb.Append("}");
+                }
+            }
+
+            sb.Append("]}");
+            return sb.ToString();
+        }
+        catch (Exception ex)
+        {
+            return "{\"success\":false,\"message\":\"" + CleanJson(ex.Message) + "\"}";
+        }
+    }
+
+    private static string CleanJson(string s)
+    {
+        if (string.IsNullOrEmpty(s)) return "";
+        return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", " ").Replace("\n", " ");
+    }
+
+    public string GetSwatchImageUrl(object pkId)
+    {
+        if (pkId == null || string.IsNullOrEmpty(pkId.ToString()))
+            return ResolveUrl("~/images/profile.png");
+
+        string[] extensions = new string[] { ".jpg", ".jpeg", ".png" };
+        string folderPath = Server.MapPath("~/images/swatches/");
+
+        foreach (string ext in extensions)
+        {
+            string physicalPath = System.IO.Path.Combine(folderPath, pkId.ToString() + ext);
+            if (System.IO.File.Exists(physicalPath))
+            {
+                return ResolveUrl("~/images/swatches/" + pkId.ToString() + ext) + "?v=" + System.IO.File.GetLastWriteTime(physicalPath).Ticks;
+            }
+        }
+        return ResolveUrl("~/images/profile.png");
+    }
+
+    public string GetSwatchDisplayName(object pkId)
+    {
+        if (pkId == null || string.IsNullOrEmpty(pkId.ToString()))
+            return "Choose Swatch...";
+
+        try
+        {
+            PR_SWATCH sEnt = new PR_SWATCH();
+            sEnt.PK_ID = pkId.ToString();
+            sEnt = (PR_SWATCH)new PR_SWATCHService().GetSingle(sEnt);
+            if (sEnt != null && !string.IsNullOrEmpty(sEnt.SWATCH_NAME))
+                return sEnt.SWATCH_NAME;
+        }
+        catch { }
+
+        return "Choose Swatch...";
     }
 }
