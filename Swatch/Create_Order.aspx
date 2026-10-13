@@ -1,5 +1,4 @@
 ﻿<%@ Page Title="Purchase Order Management" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Create_Order.aspx.cs" Inherits="Production_Purchase_Order" %>
-
 <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
     <div class="imsv5-container">
         <div class="imsv5-page-header">
@@ -11,8 +10,6 @@
                     </svg>
                     <span class="active">Purchase Order</span>
                 </nav>
-                <h1 class="imsv5-page-title">Create Purchase Order</h1>
-                <p class="imsv5-page-subtitle">Create the purchase order and specify delivery and product details.</p>
             </div>
         </div>
 
@@ -101,33 +98,13 @@
                         </div>
 
                         <div class="form-group">
+                            <label>Customer Location</label>
+                            <asp:DropDownList ID="ddlCustomerLocation" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlCustomerLocation_SelectedIndexChanged"></asp:DropDownList>
+                        </div>
+
+                        <div class="form-group">
                             <label>Mode of Transportation</label>
                             <asp:DropDownList ID="ddlTransportation" runat="server" CssClass="form-control"></asp:DropDownList>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Delivery Address</label>
-                            <asp:TextBox ID="txtDeliveryAddress" runat="server" CssClass="form-control" placeholder="Enter delivery address..."></asp:TextBox>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Country</label>
-                            <asp:DropDownList ID="ddlDeliveryCountry" runat="server" CssClass="form-control"></asp:DropDownList>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Contact Person (Recipient)</label>
-                            <asp:TextBox ID="txtDeliveryContactPerson" runat="server" CssClass="form-control" placeholder="Contact person..."></asp:TextBox>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Contact Number</label>
-                            <asp:TextBox ID="txtDeliveryContactNumber" runat="server" CssClass="form-control" placeholder="Contact number..."></asp:TextBox>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Email</label>
-                            <asp:TextBox ID="txtDeliveryEmail" runat="server" CssClass="form-control" placeholder="Email address..."></asp:TextBox>
                         </div>
 
                         <div class="form-group">
@@ -136,6 +113,48 @@
                         </div>
                     </div>
                 </div>
+
+                <asp:Panel ID="pnlCustomerLocationDetail" runat="server" CssClass="form-section" Visible="false">
+                    <div class="form-section-title">Customer Details</div>
+                    <div class="form-section-body">
+                        <div class="form-grid form-grid-4">
+                            <div class="form-group">
+                                <label>Customer Name</label>
+                                <asp:Label ID="lblCustomerNameDetail" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Customer Address</label>
+                                <asp:Label ID="lblCustomerAddressDetail" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Country Name</label>
+                                <asp:Label ID="lblCountryNameDetail" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Phone</label>
+                                <asp:Label ID="lblPhoneDetail" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Contact Person</label>
+                                <asp:Label ID="lblContactPersonDetail" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Contact Number</label>
+                                <asp:Label ID="lblContactNumberDetail" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Email Id</label>
+                                <asp:Label ID="lblEmailIdDetail" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                            </div>
+                        </div>
+                    </div>
+                </asp:Panel>
             </div>
 
             <!-- Product Grid Card -->
@@ -200,9 +219,42 @@
                             </asp:TemplateField>
 
                             <asp:TemplateField HeaderText="Action">
-                                <ItemStyle CssClass="text-center" />
+                                <ItemStyle CssClass="text-center" Wrap="False" />
                                 <ItemTemplate>
-                                    <asp:ImageButton ID="btnRemoveProduct" runat="server" ImageUrl="~/images/icons/deletes.png" AlternateText="Remove" ToolTip="Remove" CommandName="RemoveProductRow" CommandArgument='<%# Eval("ROW_ID") %>' CausesValidation="false" OnClientClick="return confirm('Remove product row?');" />
+                                    <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+                                        <!-- Duplicate keeping Size (clears Swatch) -->
+                                        
+                                        <asp:ImageButton ID="btnDupExceptSwatch" runat="server"
+                                            ImageUrl="~/images/icons/size.png"
+                                            AlternateText="Duplicate Size"
+                                            ToolTip="Duplicate row size"
+                                            CssClass="btn-icon"
+                                            Style="width:20px; height:20px"
+                                            CommandName="DuplicateExceptSwatch"
+                                            CommandArgument='<%# Eval("ROW_ID") %>'
+                                            CausesValidation="false" />
+
+                                        <!-- Duplicate keeping Swatch (clears Size) -->
+                                        <asp:ImageButton ID="btnDupExceptSize" runat="server"
+                                            ImageUrl="~/images/icons/swatch.png"
+                                            AlternateText="Duplicate Swatch"
+                                            ToolTip="Duplicate row swatch"
+                                            CssClass="btn-icon"
+                                            Style="width:20px; height:20px"
+                                            CommandName="DuplicateExceptSize"
+                                            CommandArgument='<%# Eval("ROW_ID") %>'
+                                            CausesValidation="false" />
+
+                                        <!-- Remove Product -->
+                                        <asp:ImageButton ID="btnRemoveProduct" runat="server"
+                                            ImageUrl="~/images/icons/deletes.png"
+                                            AlternateText="Remove"
+                                            ToolTip="Remove"
+                                            CommandName="RemoveProductRow"
+                                            CommandArgument='<%# Eval("ROW_ID") %>'
+                                            CausesValidation="false"
+                                            OnClientClick="return confirm('Remove product row?');" />
+                                    </div>
                                 </ItemTemplate>
                             </asp:TemplateField>
                         </Columns>
