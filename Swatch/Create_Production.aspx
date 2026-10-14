@@ -1,6 +1,34 @@
 ﻿<%@ Page Title="Production Management" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Create_Production.aspx.cs" Inherits="Production_Create_Production" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
+
+                <style>
+    .zoomable-swatch {
+        border-radius: 4px;
+        transition: transform 0.2s ease-in-out;
+        cursor: pointer;
+        object-fit: cover;
+        border: 1px solid #e2e8f0;
+        background-color: #fff; 
+    }
+    .zoomable-swatch:hover {
+        transform: scale(2.5);
+        z-index: 9999;
+        position: relative;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    
+    #<%= pnlProductionProducts.ClientID %> .table-responsive,
+    .bs-card {
+        overflow: visible !important;
+    }
+    
+    .enterprise-grid td {
+        overflow: visible !important;
+    }
+</style>
+
     <div class="imsv5-container">
         <div class="imsv5-page-header">
             <div class="imsv5-title-block">
@@ -141,47 +169,70 @@
                     </div>
 
                     <div class="table-responsive">
-                        <asp:GridView ID="grdProductionDetails" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionDetails_RowCommand">
-                            <Columns>
-                                <asp:TemplateField HeaderText="SN">
-                                    <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Product *">
-                                    <ItemTemplate>
-                                        <asp:HiddenField ID="hfProductId" runat="server" Value='<%# Eval("PRODUCT_ID") %>' />
-                                        <asp:TextBox ID="txtProductName" runat="server" CssClass="form-control form-readonly" Text='<%# Eval("PRODUCT_NAME") %>' ReadOnly="true"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Size">
-                                    <ItemTemplate>
-                                        <asp:HiddenField ID="hfSizeId" runat="server" Value='<%# Eval("SIZE_ID") %>' />
-                                        <asp:TextBox ID="txtSizeName" runat="server" CssClass="form-control form-readonly" Text='<%# Eval("SIZE_NAME") %>' ReadOnly="true"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Swatch">
-                                    <ItemTemplate>
-                                        <asp:HiddenField ID="hfSwatchId" runat="server" Value='<%# Eval("SWATCH_ID") %>' />
-                                        <asp:TextBox ID="txtSwatchName" runat="server" CssClass="form-control form-readonly" Text='<%# Eval("SWATCH_NAME") %>' ReadOnly="true"></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Quantity *">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>'></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Unit">
-                                    <ItemTemplate>
-                                        <asp:TextBox ID="txtUnit" runat="server" CssClass="form-control" Text='<%# Eval("UNIT") %>'></asp:TextBox>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                                <asp:TemplateField HeaderText="Action">
-                                    <ItemStyle CssClass="text-center" />
-                                    <ItemTemplate>
-                                        <asp:LinkButton ID="btnRemoveProduct" runat="server" Text="Remove" CommandName="RemoveProduct" CommandArgument='<%# Eval("ROW_ID") %>' CssClass="btn-clear" CausesValidation="false"></asp:LinkButton>
-                                    </ItemTemplate>
-                                </asp:TemplateField>
-                            </Columns>
-                        </asp:GridView>
+                        <asp:GridView ID="grdProductionDetails" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionDetails_RowCommand" >
+                    <Columns>
+                        <asp:TemplateField HeaderText="SN">
+                            <HeaderStyle Width="50px" CssClass="text-center" />
+                            <ItemStyle Width="50px" CssClass="text-center" />
+                            <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
+                        </asp:TemplateField>
+
+                        <asp:TemplateField HeaderText="Product *">
+                            <ItemTemplate>
+                                <asp:HiddenField ID="hfProductId" runat="server" Value='<%# Eval("PRODUCT_ID") %>' />
+                                <asp:Label ID="lblProductName" runat="server" Text='<%# Eval("PRODUCT_NAME") %>' CssClass="form-control-plaintext font-semibold"></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
+                        <asp:TemplateField HeaderText="Size">
+                            <ItemTemplate>
+                                <asp:HiddenField ID="hfSizeId" runat="server" Value='<%# Eval("SIZE_ID") %>' />
+                                <asp:Label ID="lblSizeName" runat="server" Text='<%# Eval("SIZE_NAME") %>' CssClass="form-control-plaintext"></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
+                        <asp:TemplateField HeaderText="Swatch">
+                            <ItemTemplate>
+                                <asp:HiddenField ID="hfSwatchId" runat="server" Value='<%# Eval("SWATCH_ID") %>' />
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <asp:Image ID="imgSwatch" runat="server" 
+                                        ImageUrl='<%# GetSwatchImageUrl(Eval("SWATCH_ID")) %>' 
+                                        Width="44px" Height="44px" 
+                                        CssClass="zoomable-swatch" />
+                                    <asp:Label ID="lblSwatchName" runat="server" Text='<%# Eval("SWATCH_NAME") %>' CssClass="form-control-plaintext"></asp:Label>
+                                </div>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
+                        <asp:TemplateField HeaderText="Quantity *">
+                            <HeaderStyle Width="120px" />
+                            <ItemTemplate>
+                                <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>'></asp:TextBox>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
+                        <asp:TemplateField HeaderText="Unit">
+                            <ItemTemplate>
+                                <asp:Label ID="lblUnit" runat="server" Text='<%# Eval("UNIT") %>' CssClass="form-control-plaintext"></asp:Label>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+
+                        <asp:TemplateField HeaderText="Action">
+                            <HeaderStyle CssClass="text-center" Width="100px" />
+                            <ItemStyle CssClass="text-center" Width="100px" VerticalAlign="Middle" />
+                            <ItemTemplate>
+                                <asp:LinkButton ID="btnRemoveProduct" runat="server" 
+                                    Text="Remove" 
+                                    CommandName="RemoveProduct" 
+                                    CommandArgument='<%# Eval("ROW_ID") %>' 
+                                    CssClass="btn-clear" 
+                                    Style="float: none; margin: 0 auto; display: inline-block;"
+                                    CausesValidation="false">
+                                </asp:LinkButton>
+                            </ItemTemplate>
+                        </asp:TemplateField>
+                    </Columns>
+                </asp:GridView>
                     </div>
                 </asp:Panel>
 

@@ -37,6 +37,15 @@ public partial class Production_Create_Production : System.Web.UI.Page
     PR_CUSTOMER_LOCATION LocEnt = new PR_CUSTOMER_LOCATION();
     PR_CUSTOMER_LOCATIONService LocSer = new PR_CUSTOMER_LOCATIONService();
 
+    PR_UNIT UEnt = new PR_UNIT();
+    PR_UNITService USer = new PR_UNITService();
+
+    PR_DIVISION DEnt = new PR_DIVISION();
+    PR_DIVISIONService DSer = new PR_DIVISIONService();
+
+    EMPLOYEES EmpEnt = new EMPLOYEES();
+    EMPLOYEESService EmpSer = new EMPLOYEESService();
+
     PhyeGanDate PGD = new PhyeGanDate();
 
     private const string ProdDetailsKey = "ProdDetailsTable";
@@ -82,6 +91,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         dtStages.Columns.Add("ROW_ID", typeof(string));
         dtStages.Columns.Add("PRODUCTION_DETAIL_ROW_ID", typeof(string));
         dtStages.Columns.Add("STAGE_MASTER_ID", typeof(string));
+        dtStages.Columns.Add("STAGE_NAME", typeof(string));
         dtStages.Columns.Add("UNIT_OR_EMPLOYEE", typeof(string));
         dtStages.Columns.Add("STATUS", typeof(string));
         ViewState[ProdStagesKey] = dtStages;
@@ -384,7 +394,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
                 nr["SWATCH_ID"] = od.SWATCH_ID;
                 nr["SWATCH_NAME"] = GetSwatchName(od.SWATCH_ID);
                 nr["QUANTITY"] = od.QUANTITY;
-                nr["UNIT"] = od.UNIT;
+                nr["UNIT"] = GetUnitName(od.UNIT);
                 nr["MULTIPLE_DELVIERY_ID"] = mdId;
                 dtProd.Rows.Add(nr);
             }
@@ -409,10 +419,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
             if (matches.Length == 0) continue;
 
             TextBox txtQty = row.FindControl("txtQuantity") as TextBox;
-            TextBox txtU = row.FindControl("txtUnit") as TextBox;
-
             matches[0]["QUANTITY"] = txtQty != null ? txtQty.Text.Trim() : "";
-            matches[0]["UNIT"] = txtU != null ? txtU.Text.Trim() : "";
         }
 
         ViewState[ProdDetailsKey] = dtProd;
@@ -479,6 +486,9 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
             matches[0]["PRODUCTION_DETAIL_ROW_ID"] = ddlProd != null ? ddlProd.SelectedValue : "";
             matches[0]["STAGE_MASTER_ID"] = ddlStg != null ? ddlStg.SelectedValue : "";
+            matches[0]["STAGE_NAME"] = (ddlStg != null && ddlStg.SelectedItem != null && !string.IsNullOrEmpty(ddlStg.SelectedValue))
+                ? ddlStg.SelectedItem.Text
+                : Convert.ToString(matches[0]["ROW_ID"]);
             matches[0]["UNIT_OR_EMPLOYEE"] = ddlAssign != null ? ddlAssign.SelectedValue : "";
             matches[0]["STATUS"] = ddlStat != null ? ddlStat.SelectedValue : "";
         }
@@ -492,9 +502,11 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
         DataTable dtStages = (DataTable)ViewState[ProdStagesKey];
         DataRow nr = dtStages.NewRow();
-        nr["ROW_ID"] = Guid.NewGuid().ToString("N");
+        string newRowId = Guid.NewGuid().ToString("N");
+        nr["ROW_ID"] = newRowId;
         nr["PRODUCTION_DETAIL_ROW_ID"] = "";
         nr["STAGE_MASTER_ID"] = "";
+        nr["STAGE_NAME"] = "Stage " + (dtStages.Rows.Count + 1);
         nr["UNIT_OR_EMPLOYEE"] = "";
         nr["STATUS"] = "Pending";
         dtStages.Rows.Add(nr);
@@ -542,18 +554,19 @@ public partial class Production_Create_Production : System.Web.UI.Page
         if (ddlStg != null)
         {
             ddlStg.Items.Clear();
-            ddlStg.Items.Insert(0, new ListItem("-- Select Stage --", ""));
             try
             {
                 PR_STAGE_MASTER smEnt = new PR_STAGE_MASTER();
+                smEnt.STATUS = "1"; 
                 PR_STAGE_MASTERService smSer = new PR_STAGE_MASTERService();
+
                 ddlStg.DataSource = smSer.GetAll(smEnt);
-                ddlStg.DataTextField = "STAGE_NAME";
+                ddlStg.DataTextField = "NAME"; 
                 ddlStg.DataValueField = "PK_ID";
                 ddlStg.DataBind();
-                ddlStg.Items.Insert(0, new ListItem("-- Select Stage --", ""));
             }
             catch { }
+            ddlStg.Items.Insert(0, new ListItem("-- Select Stage --", ""));
         }
 
         DataRowView rv = e.Row.DataItem as DataRowView;
@@ -599,6 +612,49 @@ public partial class Production_Create_Production : System.Web.UI.Page
     #endregion
 
     #region STEP 4: PRODUCTION PIPELINE & AUTOMATED COMPLETION DATE
+
+    private void LoadUnitDropDown(DropDownList ddl)
+    {
+        if (ddl == null) return;
+        ddl.Items.Clear();
+        UEnt = new PR_UNIT();
+        UEnt.STATUS = "1";
+        ddl.DataSource = USer.GetAll(UEnt);
+        ddl.DataTextField = "UNIT_NAME";
+        ddl.DataValueField = "PK_ID";
+        ddl.DataBind();
+        ddl.Items.Insert(0, new ListItem("-- Select Unit --", ""));
+    }
+
+    private void LoadDivisionByUnitDropDown(DropDownList ddl, string unitId)
+    {
+        if (ddl == null) return;
+        ddl.Items.Clear();
+
+        if (!string.IsNullOrEmpty(unitId))
+        {
+            DEnt = new PR_DIVISION();
+            DEnt.UNIT_ID = unitId;
+            DEnt.STATUS = "1";
+            ddl.DataSource = DSer.GetAll(DEnt);
+            ddl.DataTextField = "DIVISION_NAME";
+            ddl.DataValueField = "PK_ID";
+            ddl.DataBind();
+        }
+        ddl.Items.Insert(0, new ListItem("-- Select Division --", ""));
+    }
+
+    private void LoadEmployeeDropDown(DropDownList ddl)
+    {
+        if (ddl == null) return;
+        ddl.Items.Clear();
+        EmpEnt = new EMPLOYEES();
+        ddl.DataSource = EmpSer.GetAll(EmpEnt);
+        ddl.DataTextField = "FIRSTNAME";
+        ddl.DataValueField = "EMPLOYEEID";
+        ddl.DataBind();
+        ddl.Items.Insert(0, new ListItem("-- Select Employee --", ""));
+    }
 
     private void BindPipelineUnitGrid()
     {
@@ -753,12 +809,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         DropDownList ddlDiv = e.Row.FindControl("ddlPipelineDivision") as DropDownList;
 
         PopulatePipelineDropdowns(ddlProd, ddlStg);
-
-        if (ddlU != null)
-        {
-            ddlU.Items.Clear();
-            ddlU.Items.Insert(0, new ListItem("-- Select Unit --", ""));
-        }
+        LoadUnitDropDown(ddlU);
 
         DataRowView rv = e.Row.DataItem as DataRowView;
         if (rv != null)
@@ -766,7 +817,14 @@ public partial class Production_Create_Production : System.Web.UI.Page
             SetSelectedValue(ddlProd, rv["PRODUCTION_DETAIL_ROW_ID"]);
             SetSelectedValue(ddlStg, rv["STAGE_ROW_ID"]);
             SetSelectedValue(ddlU, rv["PRODUCTION_UNIT"]);
+
+            string selectedUnit = Convert.ToString(rv["PRODUCTION_UNIT"]);
+            LoadDivisionByUnitDropDown(ddlDiv, selectedUnit);
             SetSelectedValue(ddlDiv, rv["PRODUCTION_DIVISION"]);
+        }
+        else
+        {
+            LoadDivisionByUnitDropDown(ddlDiv, "");
         }
     }
 
@@ -779,12 +837,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         DropDownList ddlEmp = e.Row.FindControl("ddlPipelineEmployee") as DropDownList;
 
         PopulatePipelineDropdowns(ddlProd, ddlStg);
-
-        if (ddlEmp != null)
-        {
-            ddlEmp.Items.Clear();
-            ddlEmp.Items.Insert(0, new ListItem("-- Select Employee --", ""));
-        }
+        LoadEmployeeDropDown(ddlEmp);
 
         DataRowView rv = e.Row.DataItem as DataRowView;
         if (rv != null)
@@ -811,7 +864,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         if (ddlStg != null && dtStages != null)
         {
             ddlStg.DataSource = dtStages;
-            ddlStg.DataTextField = "STAGE_MASTER_ID";
+            ddlStg.DataTextField = "STAGE_NAME";
             ddlStg.DataValueField = "ROW_ID";
             ddlStg.DataBind();
             ddlStg.Items.Insert(0, new ListItem("-- Select Stage --", ""));
@@ -820,6 +873,8 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
     protected void ddlPipelineUnit_SelectedIndexChanged(object sender, EventArgs e)
     {
+        ReadPipelineUnit();
+
         DropDownList ddlU = sender as DropDownList;
         GridViewRow row = ddlU != null ? ddlU.NamingContainer as GridViewRow : null;
         if (row == null) return;
@@ -827,8 +882,7 @@ public partial class Production_Create_Production : System.Web.UI.Page
         DropDownList ddlDiv = row.FindControl("ddlPipelineDivision") as DropDownList;
         if (ddlDiv == null) return;
 
-        ddlDiv.Items.Clear();
-        ddlDiv.Items.Insert(0, new ListItem("-- Select Division --", ""));
+        LoadDivisionByUnitDropDown(ddlDiv, ddlU.SelectedValue);
     }
 
     protected void btnBackStages_Click(object sender, EventArgs e)
@@ -1123,6 +1177,38 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
         InitializeTables();
         ShowStep(1);
+    }
+
+    private string GetUnitName(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return "";
+
+        PRODUCT_UNIT ent = new PRODUCT_UNIT();
+        ent.PK_ID = id;
+        ent = (PRODUCT_UNIT)new PRODUCT_UNITService().GetSingle(ent);
+
+        return ent != null ? ent.UNIT_NAME : "";
+    }
+
+    private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
+    private const string SwatchFolder = "~/images/swatches/";
+
+    protected string GetSwatchImageUrl(object pkId)
+    {
+        if (pkId == null || string.IsNullOrEmpty(pkId.ToString()))
+            return ResolveUrl("~/images/profile.png");
+
+        foreach (string ext in AllowedExtensions)
+        {
+            string virtualPath = SwatchFolder + pkId.ToString() + ext;
+            string physicalPath = Server.MapPath(virtualPath);
+
+            if (System.IO.File.Exists(physicalPath))
+            {
+                return ResolveUrl(virtualPath) + "?v=" + System.IO.File.GetLastWriteTime(physicalPath).Ticks;
+            }
+        }
+        return ResolveUrl("~/images/profile.png");
     }
 
     #endregion
