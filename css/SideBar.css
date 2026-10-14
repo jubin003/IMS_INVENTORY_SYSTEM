@@ -3,7 +3,7 @@
    ============================================================ */
 :root {
     --sidebar-width: 260px;
-    --sidebar-collapsed-width: 65px;
+    --sidebar-collapsed-width: 45px;
     --sidebar-bg: #263746;
     --sidebar-bg-dark: #21303d;
     --sidebar-bg-darker: #192630;
