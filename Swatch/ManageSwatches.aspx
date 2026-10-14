@@ -123,6 +123,26 @@
                                 </EditItemTemplate>
                             </asp:TemplateField>
 
+                            <asp:TemplateField HeaderText="Swatch Code">
+                                <HeaderStyle CssClass="col-name" />
+                                <ItemStyle CssClass="col-name font-semibold" />
+                                <HeaderTemplate>
+                                    <div class="header-field-group">
+                                        <span class="header-label">Swatch Code <span class="req">*</span></span>
+                                        <asp:TextBox ID="txtSwatchCode" runat="server" CssClass="form-control inline-input" placeholder="Enter swatch code..."></asp:TextBox>
+                                    </div>
+                                </HeaderTemplate>
+                                <ItemTemplate>
+                                    <div class="cell-entity">
+                                        <span class="entity-bullet"></span>
+                                        <span><%# Eval("SWATCH_CODE") %></span>
+                                    </div>
+                                </ItemTemplate>
+                                <EditItemTemplate>
+                                    <asp:TextBox ID="txtSwatchCodeE" runat="server" Text='<%# Bind("SWATCH_CODE") %>' CssClass="form-control edit-input"></asp:TextBox>
+                                </EditItemTemplate>
+                            </asp:TemplateField>
+
                             <%-- Status --%>
                             <asp:TemplateField HeaderText="Status">
                                 <HeaderStyle CssClass="col-status" />
