@@ -1,31 +1,17 @@
 ﻿<%@ Master Language="C#" AutoEventWireup="true" CodeFile="MasterPage.master.cs" Inherits="MasterPage" %>
 
 <!DOCTYPE html>
-
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head id="Head1" runat="server">
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <!-- The above 3 meta tags *must* come first in the head; any other head content must come *after* these tags -->
     <title>IMS</title>
 
     <link rel="icon" href="assets/images/logo.png" type="image/x-icon" />
-    <!-- Bootstrap -->
 
-    <!-- Bootstrap For Nepali Calender-->
-
-    <%-- <link href="~/css/jquery-ui.min.css" rel="stylesheet" />
-    <link href="~/css/bootstrap-datepicker.min.css" rel="stylesheet" />
-    <link href="~/css/bootstrap-datepicker.css" rel="stylesheet" />
-    <link href="~/css/nepali.datepicker.v2.2.min.css" rel="stylesheet" />--%>
-    <!-- Bootstrap For Nepali Calender END-->
-
-    <%-- Bootstrap For Auto complite in dropdown list--%>
+    <%-- Dropdown & Table CSS --%>
     <link href="~/ajax/libs/js/chosen.min.css" rel="stylesheet" />
-    <%-- Bootstrap For Auto complite in dropdown list ends--%>
-
-
     <link href="~/css/fresh-bootstrap-table.css" rel="stylesheet" />
     <link href="~/css/bootstrap.min.css" rel="stylesheet" />
     <link rel="stylesheet" href="~/css/print.min.css" media="print" />
@@ -34,27 +20,22 @@
     <link href="~/css/hmsPage.css" rel="stylesheet" />
     <link href="~/css/ims-base.css" rel="stylesheet" />
     <link href="~/css/ims-form.css" rel="stylesheet" />
-    <link href="~/css/ims-popup.css" rel="stylesheet" type="text/css" />
+    <link href="~/css/ims-popup.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/css/bootstrap-modal.min.css" />
 
     <link href="~/css/animate.css" rel="stylesheet" />
-
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" />
     <link rel="stylesheet" href="~/css/weather-icons.css" />
     <link href="css/print.min.css" rel="stylesheet" />
 
-
-
-    <%--this script is for dropdown menu of header menu --%>
+    <%-- Scripts --%>
     <script src="<%= ResolveUrl("~/ajax/libs/js/jquery.min.js") %>"></script>
     <script src="<%= ResolveUrl("~/ajax/libs/js/bootstrap.min.js") %>"></script>
-    <script type="text/javascript" src="<%=ResolveClientUrl("~/ajax/libs/js/chosen.jquery.js")%>"></script>
+    <script type="text/javascript" src="<%= ResolveClientUrl("~/ajax/libs/js/chosen.jquery.js") %>"></script>
     <script type="text/javascript" src="<%= ResolveUrl("~/js/hmsLogics.js") %>"></script>
-    <%-- script Ends for dropdown menu of header menu --%>
 
-
-    <%--For Datetime in the footer Start--%>
+    <%-- Footer Clock Script --%>
     <script type="text/javascript">
         function updateTime() {
             var now = new Date();
@@ -62,21 +43,24 @@
             var minutes = now.getMinutes();
             var ampm = hours >= 12 ? 'PM' : 'AM';
 
-            // Convert hours from 24-hour format to 12-hour format
             hours = hours % 12;
-            hours = hours ? hours : 12; // the hour '0' should be '12'
+            hours = hours ? hours : 12;
             minutes = minutes < 10 ? '0' + minutes : minutes;
 
-            // Update the HTML elements
-            document.getElementById('lblHours').innerText = hours;
-            document.getElementById('lblMinutes').innerText = minutes;
-            document.getElementById('lblColon').classList.toggle('blink'); // Toggle blinking
-            document.getElementById('lblAMPM').innerText = ampm;
+            var elHours = document.getElementById('lblHours');
+            var elMinutes = document.getElementById('lblMinutes');
+            var elColon = document.getElementById('lblColon');
+            var elAMPM = document.getElementById('lblAMPM');
+
+            if (elHours) elHours.innerText = hours;
+            if (elMinutes) elMinutes.innerText = minutes;
+            if (elColon) elColon.classList.toggle('blink');
+            if (elAMPM) elAMPM.innerText = ampm;
         }
 
         function startClock() {
-            updateTime(); // Initial call to display time immediately
-            setInterval(updateTime, 60000); // Update every minute
+            updateTime();
+            setInterval(updateTime, 60000);
         }
 
         window.onload = function () {
@@ -86,17 +70,9 @@
 
     <style>
         @keyframes blink {
-            0% {
-                opacity: 1;
-            }
-
-            50% {
-                opacity: 0;
-            }
-
-            100% {
-                opacity: 1;
-            }
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
         }
 
         .blink {
@@ -109,70 +85,95 @@
             font-weight: bold;
         }
     </style>
-
-    <%--For Datetime in the footer Ends--%>
 </head>
-
 <body>
     <script src="<%= ResolveUrl("~/js/dataTable.min.js") %>"></script>
+
+    <!-- Top edge detector: slides down topnav when mouse approaches the top edge of screen -->
+    <div id="topEdgeSensor" class="top-edge-sensor"></div>
+
     <form id="form1" runat="server">
         <asp:ScriptManager ID="ScriptManager1" EnablePageMethods="true" runat="server"></asp:ScriptManager>
 
-        <%-- navbar --%>
-        <aside id="hmsSidebar" class="hms-sidebar">
-            <%-- Logo --%>
-            <div class="sidebar-header">
-                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="sidebar-brand">
+        <%-- ============================================================ --%>
+        <%-- TOP NAVBAR: Width Left to Right (Logo Left, Settings Right)   --%>
+        <%-- ============================================================ --%>
+        <header id="hmsTopNav" class="hms-topnav">
+            <!-- Left Corner: Logo -->
+            <div class="topnav-left">
+                <a href="<%= ResolveUrl("~/Default.aspx") %>" class="topnav-brand">
                     <asp:Image ID="Image1" runat="server" ImageUrl="~/images/topbar_logo.png" />
                 </a>
+            </div>
 
-                <%-- Collapse/Expand Button --%>
+            <!-- Right Corner: Settings Panel -->
+            <div class="topnav-right">
+                <div class="topnav-settings">
+                    <asp:HyperLink ID="HyperLink34" runat="server" NavigateUrl="javascript:void(0);" CssClass="topnav-settings-toggle">
+                        <asp:Image ID="imgprofile" runat="server" CssClass="topnav-avatar" />
+                        <span class="sidebar-icon"><i class="fa fa-cog"></i></span>
+                        <span>Settings</span>
+                        <i class="fa fa-angle-down"></i>
+                    </asp:HyperLink>
+
+                    <div class="topnav-settings-panel">
+                        <div class="topnav-profile">
+                            <asp:HyperLink ID="lblDisplayName" runat="server" NavigateUrl="" CssClass="topnav-profile-name"></asp:HyperLink>
+                        </div>
+
+                        <asp:HyperLink ID="HyperLink35" runat="server" NavigateUrl="~/PrivacySetting.aspx" CssClass="topnav-setting-link">
+                            <i class="fa fa-lock"></i>
+                            <span>Privacy Setting</span>
+                        </asp:HyperLink>
+
+                        <asp:HyperLink ID="HyperLink36" runat="server" NavigateUrl="ims.pdf" CssClass="topnav-setting-link" Target="_blank">
+                            <i class="fa fa-question-circle"></i>
+                            <span>Help</span>
+                        </asp:HyperLink>
+
+                        <asp:LinkButton ID="linkSignout" runat="server" OnClick="linkSignout_Click" CausesValidation="false" CssClass="topnav-setting-link topnav-signout">
+                            <i class="fa fa-sign-out"></i>
+                            <span>Sign Out</span>
+                        </asp:LinkButton>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <%-- ============================================================ --%>
+        <%-- SIDEBAR: Floating between TopNav & Footer with 12px Gaps     --%>
+        <%-- SIDEBAR: Preserved original menu, sitting between TopNav & Footer --%>
+        <%-- ============================================================ --%>
+        <aside id="hmsSidebar" class="hms-sidebar">
+            <div class="sidebar-header">
                 <button type="button" id="sidebarCollapseBtn" class="sidebar-collapse-btn" onclick="toggleCollapsedSidebar()" aria-label="Collapse sidebar">
                     <i class="fa fa-chevron-left"></i>
                 </button>
             </div>
 
-            <%--Main Menu Area Start--%>
             <div class="sidebar-menu">
-                <%-- Dashboard Area Start --%>
                 <a href="<%= ResolveUrl("~/Default.aspx") %>" class="sidebar-dashboard">
                     <span class="sidebar-icon"><i class="fa fa-dashboard"></i></span>
                     <span>Dashboard</span>
                 </a>
 
-                <%--Moduels Area Start--%>
                 <asp:Repeater ID="repeaterModule" runat="server" OnItemDataBound="repeaterModule_ItemDataBound">
                     <ItemTemplate>
                         <div class="sidebar-module">
-
-                            <%-- MODULE BUTTON --%>
                             <asp:HyperLink ID="AdministrationModule" runat="server" NavigateUrl="javascript:void(0);" CssClass="sidebar-module-toggle">
-
                                 <span class="sidebar-module-left">
-
-                                    <%-- Existing Icon --%>
                                     <span id="menuicon" runat="server" class="sidebar-icon"></span>
-
-
-                                    <%-- Module Name --%>
                                     <asp:Label ID="lblModuleName" CssClass="menuname" Text='<%# Bind("MODULENAME") %>' runat="server" />
-
-                                    <%-- Keep existing hidden values --%>
                                     <asp:Label ID="lblModuleId" Text='<%# Bind("MODULEID") %>' runat="server" Visible="false" />
-
-
                                     <asp:Label ID="lblIcon" Text='<%# Bind("PICTURENAME") %>' runat="server" Visible="false" />
-
                                 </span>
                                 <span class="sidebar-arrow"><i class="fa fa-angle-right"></i></span>
                             </asp:HyperLink>
 
-                            <%--SUBMODULES--%>
                             <div class="sidebar-submodules">
                                 <asp:Repeater ID="repeaterSubModule" runat="server" OnItemDataBound="repeaterSubModule_ItemDataBound">
                                     <ItemTemplate>
                                         <div class="sidebar-submodule">
-                                            <%-- SUBMODULE BUTTON --%>
                                             <a href="javascript:void(0);" class="sidebar-submodule-toggle">
                                                 <span>
                                                     <asp:Label ID="lblSubModuleName" Text='<%# Bind("submodule_name") %>' runat="server" />
@@ -181,10 +182,8 @@
                                             </a>
 
                                             <asp:Label ID="lblSubModuleId" Text='<%# Bind("submoduleid") %>' runat="server" Visible="false" />
-
                                             <asp:Label ID="lblParentModuleId" Text='<%# Bind("moduleid") %>' runat="server" Visible="false" />
 
-                                            <%--Pages Start--%>
                                             <div class="sidebar-pages">
                                                 <asp:Repeater ID="repeaterPages" runat="server">
                                                     <ItemTemplate>
@@ -195,7 +194,6 @@
                                                     </ItemTemplate>
                                                 </asp:Repeater>
                                             </div>
-                                            <%-- Pages end --%>
                                         </div>
                                     </ItemTemplate>
                                 </asp:Repeater>
@@ -203,65 +201,19 @@
                         </div>
                     </ItemTemplate>
                 </asp:Repeater>
-                <%-- Moduels Area End --%>
             </div>
-            <%-- Main Menu Area End --%>
-
-
-            <%--Settings Area Start--%>
-            <div class="sidebar-settings">
-                <asp:HyperLink ID="HyperLink34" runat="server" NavigateUrl="javascript:void(0);" CssClass="sidebar-settings-toggle">
-                        <span class="sidebar-module-left">
-                            <span class="sidebar-icon"> <i class="fa fa-cog"></i> </span>
-                            <span> Settings </span>
-                        </span>
-                        <span class="sidebar-arrow">
-                            <i class="fa fa-angle-up"></i>
-                        </span>
-                </asp:HyperLink>
-
-                <%-- Settings Menu Start --%>
-                <div class="sidebar-settings-panel">
-                    <%-- PROFILE --%>
-                    <div class="sidebar-profile">
-                        <asp:Image ID="imgprofile" runat="server" Width="50px" CssClass="sidebar-profile-image" />
-                        <asp:HyperLink ID="lblDisplayName" runat="server" NavigateUrl="" CssClass="sidebar-profile-name"></asp:HyperLink>
-                    </div>
-
-
-
-                    <%-- PRIVACY --%>
-                    <asp:HyperLink ID="HyperLink35" runat="server" NavigateUrl="~/PrivacySetting.aspx" CssClass="sidebar-setting-link">
-                            <i class="fa fa-lock"></i>
-                            <span> Privacy Setting </span>
-                    </asp:HyperLink>
-                    <%-- HELP --%>
-                    <asp:HyperLink ID="HyperLink36" runat="server" NavigateUrl="ims.pdf" CssClass="sidebar-setting-link" Target="_blank">
-                            <i class="fa fa-question-circle"></i>
-                            <span> Help </span>
-                    </asp:HyperLink>
-
-                    <%-- SIGN OUT --%>
-                    <asp:LinkButton ID="linkSignout" runat="server" OnClick="linkSignout_Click" CausesValidation="false" CssClass="sidebar-setting-link sidebar-signout">
-                            <i class="fa fa-sign-out"></i>
-                            <span> Sign Out </span>
-                    </asp:LinkButton>
-                </div>
-                <%-- Settings Menu End --%>
-            </div>
-            <%-- Settings Area end --%>
         </aside>
-        <%-- Main Page Content --%>
+
+        <%-- ============================================================ --%>
+        <%-- MAIN PAGE CONTENT                                            --%>
+        <%-- ============================================================ --%>
         <div class="main-page">
             <div class="mb-40">
                 <div class="col-md-offset-9 col-md-3 custom-breadcrumb no-padding-right pull-right" runat="server" id="breadcrumb" visible="false">
                     <ol class="breadcrumb">
-                        <li class="breadcrumb-item">
-                            <asp:Label Text="" runat="server" ID="lblModule" /></li>
-                        <li class="breadcrumb-item">
-                            <asp:Label Text="" runat="server" ID="lblSubModule" /></li>
-                        <li class="breadcrumb-item">
-                            <asp:Label ID="lblPage" Text="" runat="server" /></li>
+                        <li class="breadcrumb-item"><asp:Label Text="" runat="server" ID="lblModule" /></li>
+                        <li class="breadcrumb-item"><asp:Label Text="" runat="server" ID="lblSubModule" /></li>
+                        <li class="breadcrumb-item"><asp:Label ID="lblPage" Text="" runat="server" /></li>
                     </ol>
                 </div>
             </div>
@@ -271,10 +223,12 @@
                 </asp:ContentPlaceHolder>
             </div>
         </div>
-        <%-- Main Page Content --%>
     </form>
 
-    <%--footer start--%>
+    <%-- ============================================================ --%>
+    <%-- ORIGINAL FOOTER (Preserved Color, Spanning 100% Left to Right)--%>
+    <%-- ORIGINAL FOOTER (Preserved HTML & Colors, Full Screen Width)  --%>
+    <%-- ============================================================ --%>
     <footer class="footer-pos">
         <div class="container-fluid">
             <div class="row">
@@ -282,39 +236,33 @@
                     <asp:Label ID="lblComapanyName" runat="server"></asp:Label>
                 </div>
                 <div class="col-md-4" style="text-align: center">
-                    <p class="font-12">Copyright © 2024  &nbsp;&nbsp;|&nbsp;&nbsp;  Phye Gan Pvt. Ltd. &nbsp;&nbsp;| &nbsp;&nbsp; Version-V1.0</p>
+                    <p class="font-12" style="margin: 0; line-height: 38px;">Copyright © 2024 &nbsp;|&nbsp; Phye Gan Pvt. Ltd. &nbsp;|&nbsp; Version-V1.0</p>
+                    <p class="font-12">Copyright © 2024 &nbsp;&nbsp;|&nbsp;&nbsp; Phye Gan Pvt. Ltd. &nbsp;&nbsp;| &nbsp;&nbsp; Version-V1.0</p>
                 </div>
-                <div class="col-md-4" style="text-align: right">
+                <div class="col-md-4" style="text-align: right; line-height: 38px;">
                     <asp:Label ID="lblNepaliDate" runat="server" Text=""></asp:Label>
                     <asp:Label ID="lblDate" runat="server" Text=""></asp:Label>
                     <asp:Label ID="lblTime" runat="server" Text="">
-                    <span id="lblHours">Hour</span>
-                    <span id="lblColon">:</span>
-                    <span id="lblMinutes">Minutes</span>
-                    <span id="lblAMPM">AM/PM</span>
+                        <span id="lblHours">Hour</span>
+                        <span id="lblColon">:</span>
+                        <span id="lblMinutes">Minutes</span>
+                        <span id="lblAMPM">AM/PM</span>
                     </asp:Label>
                 </div>
             </div>
         </div>
-        <div class="scroll-top-wrapper ">
+        <div class="scroll-top-wrapper">
             <span class="scroll-top-inner">
                 <i class="fa fa-chevron-up"></i>
             </span>
         </div>
     </footer>
-    <%-- footer end --%>
 
-
+    <%-- Plugins & Datepicker Scripts --%>
     <script src="<%= ResolveUrl("~/js/jquery-ui.js") %>"></script>
-
-    <%-- Nepali Datepicker v5.0.6 (single, correct load) --%>
     <link href="<%= ResolveUrl("~/assets/css/nepali.datepicker.v5.0.6.min.css") %>" rel="stylesheet" />
     <script src="<%= ResolveUrl("~/assets/js/nepali.datepicker.v5.0.6.min.js") %>"></script>
-
-    <%-- English / bootstrap datepicker (keep only if you still use .bdatepicker or .expiyDate) --%>
     <script src="<%= ResolveUrl("~/js/bootstrap-datepicker.js") %>"></script>
-
-
 
     <script type="text/javascript">
         $(document).ready(function () {
@@ -334,87 +282,48 @@
             $('.expiyDate').datepicker({
                 dateFormat: "dd/mm/yy"
             });
+
             $('[data-toggle="tooltip"]').tooltip();
-            $('.dropdown').click(function () {
 
-
-                if ($(this).find('.dropdown-menu').find('.col-md-4').length == 1) {
-                    $(this).find('.dropdown-menu').addClass('width-200');
-                    if ($(this).find('.dropdown-menu').find('.col-md-4')) {
-                        $(this).find('.dropdown-menu').find('.col-md-4').removeClass('col-md-4').addClass('col-md-12');
-                    }
+            $(document).on('scroll', function () {
+                if ($(window).scrollTop() > 100) {
+                    $('.scroll-top-wrapper').addClass('show');
+                } else {
+                    $('.scroll-top-wrapper').removeClass('show');
                 }
-
-                else if ($(this).find('.dropdown-menu').find('.col-md-4').length == 2) {
-                    $(this).find('.dropdown-menu').addClass('width-400');
-                    if ($(this).find('.dropdown-menu').find('.col-md-4')) {
-                        $(this).find('.dropdown-menu').find('.col-md-4').removeClass('col-md-4').addClass('col-md-6');
-                    }
-                }
-
-                else if ($(this).find('.dropdown-menu').find('.col-md-4').length == 3) {
-                    $(this).find('.dropdown-menu').addClass('width-500');
-
-                }
-
-                else if ($(this).find('.dropdown-menu').find('.col-md-4').length > 3) {
-                    $(this).find('.dropdown-menu').addClass('width-700');
-                    if ($(this).find('.dropdown-menu').find('.col-md-4')) {
-                        $(this).find('.dropdown-menu').find('.col-md-4').removeClass('col-md-4').addClass('col-md-3');
-                    }
-                }
-
             });
 
-            $(function () {
-
-                $(document).on('scroll', function () {
-
-                    if ($(window).scrollTop() > 100) {
-                        $('.scroll-top-wrapper').addClass('show');
-                    } else {
-                        $('.scroll-top-wrapper').removeClass('show');
-                    }
-                });
-
-                $('.scroll-top-wrapper').on('click', scrollToTop);
+            $('.scroll-top-wrapper').on('click', function () {
+                $('html, body').animate({ scrollTop: 0 }, 500, 'linear');
             });
+            $('.scroll-top-wrapper').on('click', scrollToTop);
 
             function scrollToTop() {
-                verticalOffset = typeof (verticalOffset) != 'undefined' ? verticalOffset : 0;
-                element = $('body');
-                offset = element.offset();
-                offsetTop = offset.top;
+                var verticalOffset = typeof (verticalOffset) != 'undefined' ? verticalOffset : 0;
+                var element = $('body');
+                var offset = element.offset();
+                var offsetTop = offset.top;
                 $('html, body').animate({ scrollTop: offsetTop }, 500, 'linear');
             }
-
-
-            //$(".dropdown").click(function () {
-            //    $(this).find(".breadcrumb").addClass("remove-zindex");
-            //});
         });
-
     </script>
 
-    <%-- SideBar Dropdown Logic --%>
+    <%-- Sidebar & TopNav Interactive Script --%>
     <script type="text/javascript">
-
         $(document).ready(function () {
-
-            // RESTORE SIDEBAR COLLAPSE STATE
+            // Restore sidebar state
             var sidebarCollapsed = localStorage.getItem("hmsSidebarCollapsed") === "true";
-
             if (sidebarCollapsed) {
                 $("#hmsSidebar").addClass("sidebar-collapsed");
                 $("body").addClass("sidebar-is-collapsed");
             }
             updateSidebarCollapseButton(sidebarCollapsed);
 
-            // CURRENT PAGE HIGHLIGHT
+            // Active route highlight
             setActiveSidebarPage();
 
-            // TEMPORARY HOVER EXPAND
-            $("#hmsSidebar .sidebar-menu, #hmsSidebar .sidebar-settings").on("mouseenter", function () {
+            // Temporary hover expand when collapsed
+            $("#hmsSidebar .sidebar-menu").on("mouseenter", function () {
                 var sidebar = $("#hmsSidebar");
                 if (sidebar.hasClass("sidebar-collapsed")) {
                     sidebar.addClass("sidebar-hover-open");
@@ -422,155 +331,130 @@
             });
 
             $("#hmsSidebar").on("mouseleave", function () {
-                var sidebar = $(this);
-                sidebar.removeClass("sidebar-hover-open");
-                $(".sidebar-settings").removeClass("settings-open");
+                $(this).removeClass("sidebar-hover-open");
             });
 
-
-            // MODULE DROPDOWN
+            // Module dropdown toggle
             $(document).on("click", ".sidebar-module-toggle", function (e) {
                 e.preventDefault();
-                // Do nothing while sidebar is collapsed
                 if ($("#hmsSidebar").hasClass("sidebar-collapsed") && !$("#hmsSidebar").hasClass("sidebar-hover-open")) {
                     return;
                 }
                 var currentModule = $(this).closest(".sidebar-module");
-                // Close all other modules
                 $(".sidebar-module").not(currentModule).removeClass("sidebar-open");
-                // Close submodules inside other modules
                 $(".sidebar-module").not(currentModule).find(".sidebar-submodule").removeClass("submenu-open");
-
-                // Toggle selected module
                 currentModule.toggleClass("sidebar-open");
-            }
-            );
+            });
 
-            // SUBMODULE DROPDOWN
+            // Submodule dropdown toggle
             $(document).on("click", ".sidebar-submodule-toggle", function (e) {
                 e.preventDefault();
                 e.stopPropagation();
                 if ($("#hmsSidebar").hasClass("sidebar-collapsed") && !$("#hmsSidebar").hasClass("sidebar-hover-open")) {
                     return;
                 }
-
                 var currentSubModule = $(this).closest(".sidebar-submodule");
-
                 var parentModule = currentSubModule.closest(".sidebar-module");
-
-                // Close sibling submodules
                 parentModule.find(".sidebar-submodule").not(currentSubModule).removeClass("submenu-open");
-
-                // Toggle selected submodule
                 currentSubModule.toggleClass("submenu-open");
-            }
-            );
+            });
 
-
-            // SETTINGS DROPDOWN
-            $(document).on("click", ".sidebar-settings-toggle", function (e) {
+            // Topbar settings dropdown toggle
+            $(document).on("click", ".topnav-settings-toggle", function (e) {
                 e.preventDefault();
                 e.stopPropagation();
-                if ($("#hmsSidebar").hasClass("sidebar-collapsed")) {
+                $(".topnav-settings").toggleClass("settings-open");
+            });
+
+            $(document).on("click", ".topnav-settings-panel", function (e) {
+                e.stopPropagation();
+            });
+
+            $(document).on("click", function () {
+                $(".topnav-settings").removeClass("settings-open");
+            });
+
+            // Topbar scroll handling: Auto-hide scrolling down, show scrolling up
+            var lastScrollTop = 0;
+            $(window).on("scroll", function () {
+                var currentScroll = $(this).scrollTop();
+
+                if ($(".topnav-settings").hasClass("settings-open")) {
                     return;
                 }
 
-                $(".sidebar-settings").toggleClass("settings-open");
-            }
-            );
+                if (currentScroll > 60 && currentScroll > lastScrollTop) {
+                    $("#hmsTopNav").addClass("topnav-hidden");
+                    $("body").addClass("topnav-is-hidden");
+                } else if (currentScroll < lastScrollTop) {
+                    $("#hmsTopNav").removeClass("topnav-hidden");
+                    $("body").removeClass("topnav-is-hidden");
+                }
 
+                if (currentScroll <= 15) {
+                    $("#hmsTopNav").removeClass("topnav-hidden");
+                    $("body").removeClass("topnav-is-hidden");
+                }
 
-            // Do not close settings when clicking inside panel
-            $(document).on("click", ".sidebar-settings-panel", function (e) {
-                e.stopPropagation();
-            }
-            );
+                lastScrollTop = currentScroll;
+            });
 
+            // Top screen edge sensor: Show navbar when mouse hovers within 15px of top
+            $(document).on("mousemove", function (e) {
+                if (e.clientY <= 15) {
+                    $("#hmsTopNav").removeClass("topnav-hidden");
+                    $("body").removeClass("topnav-is-hidden");
+                }
+            });
 
-            // Close settings when clicking anywhere else
-            $(document).on("click", function () {
-                $(".sidebar-settings").removeClass("settings-open");
-            }
-            );
+            $("#topEdgeSensor").on("mouseenter", function () {
+                $("#hmsTopNav").removeClass("topnav-hidden");
+                $("body").removeClass("topnav-is-hidden");
+            });
 
+            $("#hmsTopNav").on("mouseleave", function () {
+                if ($(window).scrollTop() > 60 && !$(".topnav-settings").hasClass("settings-open")) {
+                    $("#hmsTopNav").addClass("topnav-hidden");
+                    $("body").addClass("topnav-is-hidden");
+                }
+            });
         });
 
-
-        // COLLAPSE / EXPAND SIDEBAR
         function toggleCollapsedSidebar() {
-
             var sidebar = $("#hmsSidebar");
-
             sidebar.toggleClass("sidebar-collapsed");
-
             var collapsed = sidebar.hasClass("sidebar-collapsed");
-
             $("body").toggleClass("sidebar-is-collapsed", collapsed);
-
             updateSidebarCollapseButton(collapsed);
-
-            // Save collapse state
             localStorage.setItem("hmsSidebarCollapsed", collapsed ? "true" : "false");
         }
 
-
-        // UPDATE COLLAPSE BUTTON ARROW
         function updateSidebarCollapseButton(collapsed) {
-
             var button = $("#sidebarCollapseBtn");
-
             if (collapsed) {
-
                 button.html('<i class="fa fa-chevron-right"></i>');
-
                 button.attr("aria-label", "Expand sidebar");
-
-            }
-            else {
-
+            } else {
                 button.html('<i class="fa fa-chevron-left"></i>');
-
                 button.attr("aria-label", "Collapse sidebar");
             }
         }
 
-
-        // CURRENT PAGE HIGHLIGHT
         function setActiveSidebarPage() {
-
-            var currentPath = window.location.pathname
-                    .toLowerCase()
-                    .replace(/\/$/, "");
-
+            var currentPath = window.location.pathname.toLowerCase().replace(/\/$/, "");
             $(".sidebar-page-link").each(function () {
-
-                var link = this;
-
-                var linkPath = new URL(link.href, window.location.origin)
-                    .pathname
-                    .toLowerCase()
-                    .replace(/\/$/, "");
-
+                var linkPath = new URL(this.href, window.location.origin).pathname.toLowerCase().replace(/\/$/, "");
                 if (linkPath === currentPath) {
-                    // Highlight page
-                    $(link).addClass("active-page");
-                    // Open parent submodule
-                    $(link).closest(".sidebar-submodule").addClass("submenu-open");
-                    // Open parent module
-                    $(link).closest(".sidebar-module").addClass("sidebar-open");
+                    $(this).addClass("active-page");
+                    $(this).closest(".sidebar-submodule").addClass("submenu-open");
+                    $(this).closest(".sidebar-module").addClass("sidebar-open");
                 }
             });
         }
 
-
-        // MOBILE SIDEBAR
         function toggleSidebar() {
-
-            $("#hmsSidebar")
-                .toggleClass("mobile-open");
+            $("#hmsSidebar").toggleClass("mobile-open");
         }
-
     </script>
-
 </body>
 </html>
