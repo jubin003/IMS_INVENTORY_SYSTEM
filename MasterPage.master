@@ -20,6 +20,7 @@
     <link href="~/css/hmsPage.css" rel="stylesheet" />
     <link href="~/css/ims-base.css" rel="stylesheet" />
     <link href="~/css/ims-form.css" rel="stylesheet" />
+    <link href="~/css/ims-popup.css" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-modal/2.2.6/css/bootstrap-modal.min.css" />
 
     <link href="~/css/animate.css" rel="stylesheet" />
@@ -140,11 +141,8 @@
         </header>
 
         <%-- ============================================================ --%>
-<<<<<<< HEAD
         <%-- SIDEBAR: Floating between TopNav & Footer with 12px Gaps     --%>
-=======
         <%-- SIDEBAR: Preserved original menu, sitting between TopNav & Footer --%>
->>>>>>> origin/main
         <%-- ============================================================ --%>
         <aside id="hmsSidebar" class="hms-sidebar">
             <div class="sidebar-header">
@@ -228,11 +226,8 @@
     </form>
 
     <%-- ============================================================ --%>
-<<<<<<< HEAD
     <%-- ORIGINAL FOOTER (Preserved Color, Spanning 100% Left to Right)--%>
-=======
     <%-- ORIGINAL FOOTER (Preserved HTML & Colors, Full Screen Width)  --%>
->>>>>>> origin/main
     <%-- ============================================================ --%>
     <footer class="footer-pos">
         <div class="container-fluid">
@@ -241,11 +236,8 @@
                     <asp:Label ID="lblComapanyName" runat="server"></asp:Label>
                 </div>
                 <div class="col-md-4" style="text-align: center">
-<<<<<<< HEAD
                     <p class="font-12" style="margin: 0; line-height: 38px;">Copyright © 2024 &nbsp;|&nbsp; Phye Gan Pvt. Ltd. &nbsp;|&nbsp; Version-V1.0</p>
-=======
                     <p class="font-12">Copyright © 2024 &nbsp;&nbsp;|&nbsp;&nbsp; Phye Gan Pvt. Ltd. &nbsp;&nbsp;| &nbsp;&nbsp; Version-V1.0</p>
->>>>>>> origin/main
                 </div>
                 <div class="col-md-4" style="text-align: right; line-height: 38px;">
                     <asp:Label ID="lblNepaliDate" runat="server" Text=""></asp:Label>
@@ -301,11 +293,9 @@
                 }
             });
 
-<<<<<<< HEAD
             $('.scroll-top-wrapper').on('click', function () {
                 $('html, body').animate({ scrollTop: 0 }, 500, 'linear');
             });
-=======
             $('.scroll-top-wrapper').on('click', scrollToTop);
 
             function scrollToTop() {
@@ -315,18 +305,13 @@
                 var offsetTop = offset.top;
                 $('html, body').animate({ scrollTop: offsetTop }, 500, 'linear');
             }
->>>>>>> origin/main
         });
     </script>
 
     <%-- Sidebar & TopNav Interactive Script --%>
     <script type="text/javascript">
         $(document).ready(function () {
-<<<<<<< HEAD
-            // Restore persistent state
-=======
             // Restore sidebar state
->>>>>>> origin/main
             var sidebarCollapsed = localStorage.getItem("hmsSidebarCollapsed") === "true";
             if (sidebarCollapsed) {
                 $("#hmsSidebar").addClass("sidebar-collapsed");
@@ -337,11 +322,7 @@
             // Active route highlight
             setActiveSidebarPage();
 
-<<<<<<< HEAD
-            // Hover expand when collapsed
-=======
-            // Temporary hover expand
->>>>>>> origin/main
+            // Temporary hover expand when collapsed
             $("#hmsSidebar .sidebar-menu").on("mouseenter", function () {
                 var sidebar = $("#hmsSidebar");
                 if (sidebar.hasClass("sidebar-collapsed")) {
@@ -353,11 +334,7 @@
                 $(this).removeClass("sidebar-hover-open");
             });
 
-<<<<<<< HEAD
-            // Accordion: Module
-=======
             // Module dropdown toggle
->>>>>>> origin/main
             $(document).on("click", ".sidebar-module-toggle", function (e) {
                 e.preventDefault();
                 if ($("#hmsSidebar").hasClass("sidebar-collapsed") && !$("#hmsSidebar").hasClass("sidebar-hover-open")) {
@@ -369,11 +346,7 @@
                 currentModule.toggleClass("sidebar-open");
             });
 
-<<<<<<< HEAD
-            // Accordion: Submodule
-=======
             // Submodule dropdown toggle
->>>>>>> origin/main
             $(document).on("click", ".sidebar-submodule-toggle", function (e) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -401,11 +374,7 @@
                 $(".topnav-settings").removeClass("settings-open");
             });
 
-<<<<<<< HEAD
-            // Topbar Scroll Handling (Hide on downscroll > 80px, show on upscroll)
-=======
             // Topbar scroll handling: Auto-hide scrolling down, show scrolling up
->>>>>>> origin/main
             var lastScrollTop = 0;
             $(window).on("scroll", function () {
                 var currentScroll = $(this).scrollTop();
@@ -414,19 +383,10 @@
                     return;
                 }
 
-<<<<<<< HEAD
-                if (currentScroll > 80 && currentScroll > lastScrollTop) {
-                    // Scrolling DOWN
-                    $("#hmsTopNav").addClass("topnav-hidden");
-                    $("body").addClass("topnav-is-hidden");
-                } else if (currentScroll < lastScrollTop) {
-                    // Scrolling UP
-=======
                 if (currentScroll > 60 && currentScroll > lastScrollTop) {
                     $("#hmsTopNav").addClass("topnav-hidden");
                     $("body").addClass("topnav-is-hidden");
                 } else if (currentScroll < lastScrollTop) {
->>>>>>> origin/main
                     $("#hmsTopNav").removeClass("topnav-hidden");
                     $("body").removeClass("topnav-is-hidden");
                 }
@@ -439,15 +399,9 @@
                 lastScrollTop = currentScroll;
             });
 
-<<<<<<< HEAD
-            // Top edge mouse detection (bring navbar down when hovering at top edge)
-            $(document).on("mousemove", function (e) {
-                if (e.clientY <= 25) {
-=======
             // Top screen edge sensor: Show navbar when mouse hovers within 15px of top
             $(document).on("mousemove", function (e) {
                 if (e.clientY <= 15) {
->>>>>>> origin/main
                     $("#hmsTopNav").removeClass("topnav-hidden");
                     $("body").removeClass("topnav-is-hidden");
                 }
@@ -459,11 +413,7 @@
             });
 
             $("#hmsTopNav").on("mouseleave", function () {
-<<<<<<< HEAD
-                if ($(window).scrollTop() > 80 && !$(".topnav-settings").hasClass("settings-open")) {
-=======
                 if ($(window).scrollTop() > 60 && !$(".topnav-settings").hasClass("settings-open")) {
->>>>>>> origin/main
                     $("#hmsTopNav").addClass("topnav-hidden");
                     $("body").addClass("topnav-is-hidden");
                 }
@@ -501,13 +451,10 @@
                 }
             });
         }
-<<<<<<< HEAD
-=======
 
         function toggleSidebar() {
             $("#hmsSidebar").toggleClass("mobile-open");
         }
->>>>>>> origin/main
     </script>
 </body>
 </html>
