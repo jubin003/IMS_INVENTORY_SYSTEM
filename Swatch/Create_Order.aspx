@@ -1,8 +1,6 @@
 ﻿<%@ Page Title="Purchase Order Management" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Create_Order.aspx.cs" Inherits="Production_Purchase_Order" %>
 
 <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
-
-
     <div class="imsv5-container">
         <div class="imsv5-page-header">
             <div class="imsv5-title-block">
@@ -177,6 +175,7 @@
                         OnRowDataBound="grdProducts_RowDataBound"
                         OnRowCommand="grdProducts_RowCommand">
                         <Columns>
+                            <%-- Column 0: S.No --%>
                             <asp:TemplateField HeaderText="S.No">
                                 <ItemTemplate>
                                     <%# Container.DataItemIndex + 1 %>
@@ -184,25 +183,28 @@
                                 </ItemTemplate>
                             </asp:TemplateField>
 
+                            <%-- Column 1: Product --%>
                             <asp:TemplateField HeaderText="Product">
                                 <ItemTemplate>
                                     <asp:DropDownList ID="ddlProduct" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlProduct_SelectedIndexChanged"></asp:DropDownList>
                                 </ItemTemplate>
                             </asp:TemplateField>
 
+                            <%-- Column 2: Size --%>
                             <asp:TemplateField HeaderText="Size">
                                 <ItemTemplate>
                                     <asp:DropDownList ID="ddlSize" runat="server" CssClass="form-control"></asp:DropDownList>
                                 </ItemTemplate>
                             </asp:TemplateField>
 
+                            <%-- Column 3: Swatch Type --%>
                             <asp:TemplateField HeaderText="Swatch Type">
                                 <ItemTemplate>
                                     <asp:DropDownList ID="ddlSwatchType" runat="server" CssClass="form-control" AutoPostBack="true" OnSelectedIndexChanged="ddlSwatchType_SelectedIndexChanged"></asp:DropDownList>
                                 </ItemTemplate>
                             </asp:TemplateField>
 
-                            <%-- Swatch Column with Modal Picker Trigger --%>
+                            <%-- Column 4: Swatch --%>
                             <asp:TemplateField HeaderText="Swatch">
                                 <HeaderStyle Width="220px" />
                                 <ItemStyle Width="220px" />
@@ -233,7 +235,7 @@
                                 </ItemTemplate>
                             </asp:TemplateField>
 
-                            <%-- Quantity Column with Embedded Unit Label --%>
+                            <%-- Column 5: Quantity --%>
                             <asp:TemplateField HeaderText="Quantity">
                                 <ItemTemplate>
                                     <div class="input-with-unit">
@@ -244,6 +246,7 @@
                                 </ItemTemplate>
                             </asp:TemplateField>
 
+                            <%-- Column 6: Action --%>
                             <asp:TemplateField HeaderText="Action">
                                 <ItemStyle CssClass="text-center" Wrap="False" />
                                 <ItemTemplate>
@@ -254,7 +257,7 @@
                                             AlternateText="Duplicate Size"
                                             ToolTip="Duplicate row size"
                                             CssClass="btn-icon"
-                                            Style="width:20px; height:20px"
+                                            Style="width:20px; height:20px; cursor:pointer;"
                                             CommandName="DuplicateExceptSwatch"
                                             CommandArgument='<%# Eval("ROW_ID") %>'
                                             CausesValidation="false" />
@@ -265,7 +268,7 @@
                                             AlternateText="Duplicate Swatch"
                                             ToolTip="Duplicate row swatch"
                                             CssClass="btn-icon"
-                                            Style="width:20px; height:20px"
+                                            Style="width:20px; height:20px; cursor:pointer;"
                                             CommandName="DuplicateExceptSize"
                                             CommandArgument='<%# Eval("ROW_ID") %>'
                                             CausesValidation="false" />
@@ -277,6 +280,7 @@
                                             ToolTip="Remove"
                                             CommandName="RemoveProductRow"
                                             CommandArgument='<%# Eval("ROW_ID") %>'
+                                            CssClass="btn-icon"
                                             CausesValidation="false"
                                             OnClientClick="return confirm('Remove product row?');" />
                                     </div>
@@ -300,7 +304,6 @@
     <!-- ======================================================== -->
     <div id="swatchModalOverlay" class="swatch-modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)">
         <div class="swatch-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="swatchModalTitle">
-            <!-- Header -->
             <div class="swatch-modal-header">
                 <div class="swatch-modal-title-wrap">
                     <h3 id="swatchModalTitle" class="swatch-modal-title">Select Swatch</h3>
@@ -309,7 +312,6 @@
                 <button type="button" class="swatch-modal-close" onclick="closeSwatchModal()" aria-label="Close modal">&times;</button>
             </div>
 
-            <!-- Search Bar -->
             <div class="swatch-modal-search-bar">
                 <div class="swatch-modal-search-box">
                     <svg class="swatch-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
@@ -323,7 +325,6 @@
                 <div class="swatch-count-badge" id="swatchCountBadge">0 Swatches</div>
             </div>
 
-            <!-- Modal Body: Centered Grid View -->
             <div class="swatch-modal-body">
                 <div id="swatchModalLoading" class="swatch-modal-state" style="display:none;">
                     <div class="swatch-spinner"></div>
@@ -340,7 +341,6 @@
                 <div id="swatchModalGrid" class="swatch-modal-grid"></div>
             </div>
 
-            <!-- Confirmation Footer -->
             <div class="swatch-modal-footer">
                 <div class="swatch-modal-selected-info">
                     <span class="selected-label">Selected:</span>
@@ -353,6 +353,12 @@
             </div>
         </div>
     </div>
+
+    <style type="text/css">
+        .btn-icon:not(:disabled):hover { cursor: pointer; }
+        .btn-icon:disabled, .btn-icon.disabled { cursor: not-allowed; opacity: .5; }
+        .swatch-select-btn:disabled { cursor: not-allowed; opacity: .55; }
+    </style>
 
     <script type="text/javascript">
         var activeSwatchRow = null;
@@ -426,18 +432,7 @@
                         card.setAttribute("data-name", s.name);
                         card.setAttribute("data-img", s.imageUrl);
 
-                        card.innerHTML =
-                            '<div class="swatch-card-check">' +
-                                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">' +
-                                    '<path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>' +
-                                '</svg>' +
-                            '</div>' +
-                            '<div class="swatch-card-thumb-wrap">' +
-                                '<img class="swatch-card-thumb" src="' + s.imageUrl + '" alt="' + s.name + '" loading="lazy" />' +
-                            '</div>' +
-                            '<div class="swatch-card-info">' +
-                                '<span class="swatch-card-name" title="' + s.name + '">' + s.name + '</span>' +
-                            '</div>';
+                        card.innerHTML = '<div class="swatch-card-check"><svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14"><path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path></svg></div><div class="swatch-card-thumb-wrap"><img class="swatch-card-thumb" src="' + s.imageUrl + '" alt="' + s.name + '" loading="lazy" /></div><div class="swatch-card-info"><span class="swatch-card-name" title="' + s.name + '">' + s.name + '</span></div>';
 
                         card.onclick = function () { selectSwatchCard(card); };
                         card.ondblclick = function () {
@@ -481,11 +476,9 @@
         function confirmSwatchSelection() {
             if (!currentSelectedSwatch || !activeSwatchRow) return;
 
-            // Update hidden field for ASP.NET PostBack save
             var hfSwatch = activeSwatchRow.querySelector('[id*="hfSwatchId"]');
             if (hfSwatch) hfSwatch.value = currentSelectedSwatch.id;
 
-            // Keep hidden DropDownList in sync
             var ddlSwatch = activeSwatchRow.querySelector('[id*="ddlSwatch"]');
             if (ddlSwatch) ddlSwatch.value = currentSelectedSwatch.id;
 
@@ -498,7 +491,6 @@
                     label.textContent = currentSelectedSwatch.name;
                 }
 
-                // Ensure image element exists and is visible
                 var img = pickerBtn.querySelector('.swatch-cell-thumb');
                 if (!img) {
                     img = document.createElement('img');

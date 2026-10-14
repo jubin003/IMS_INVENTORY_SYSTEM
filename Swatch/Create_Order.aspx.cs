@@ -1,19 +1,21 @@
 ﻿using System;
 using System.Data;
+using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using Entity.Components;
 using Service.Components;
 using Entity.Framework;
 using DataHelper.Framework;
-using System.Web;
 
 public partial class Production_Purchase_Order : System.Web.UI.Page
 {
     PR_PURCHASE_ORDER PoEnt = new PR_PURCHASE_ORDER();
     PR_PURCHASE_ORDERService PoSer = new PR_PURCHASE_ORDERService();
+
     PR_ORDER_DETAIL OdEnt = new PR_ORDER_DETAIL();
     PR_ORDER_DETAILService OdSer = new PR_ORDER_DETAILService();
+
     CUSTOMER CEnt = new CUSTOMER();
     CUSTOMERService CSer = new CUSTOMERService();
 
@@ -23,11 +25,18 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
     PR_MULTIPLE_DELIVERY MdEnt = new PR_MULTIPLE_DELIVERY();
     PR_MULTIPLE_DELIVERYService MdSer = new PR_MULTIPLE_DELIVERYService();
 
-    PhyeGanDate PGD = new PhyeGanDate();
     PAYMENT_TYPE PtEnt = new PAYMENT_TYPE();
     PAYMENT_TYPEService PtSer = new PAYMENT_TYPEService();
 
+    PRODUCT_SETTING PsEnt = new PRODUCT_SETTING();
+    PRODUCT_SETTINGService PsSer = new PRODUCT_SETTINGService();
+
+    EntityList theList = new EntityList();
+    PhyeGanDate PGD = new PhyeGanDate();
+
     private const string ProductTableKey = "ProductTableKey";
+    private bool isProductSizeVisible = true;
+    private bool isProductColourVisible = true;
 
     protected void Page_Load(object sender, EventArgs e)
     {
@@ -44,7 +53,10 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             return;
         }
 
-        // 2. NORMAL PAGE LIFECYCLE
+        // 2. LOAD PRODUCT SETTINGS & APPLY COLUMN VISIBILITY
+        LoadProductSettings();
+
+        // 3. NORMAL PAGE LIFECYCLE
         if (!IsPostBack)
         {
             LoadCustomer(ddlCustomer);
@@ -57,6 +69,45 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             InitializeProductTable();
             ShowStep(1);
         }
+    }
+
+    private void LoadProductSettings()
+    {
+        PsEnt = new PRODUCT_SETTING();
+        string officeCode = Convert.ToString(Session["OFFICE_CODE"]);
+        if (!string.IsNullOrEmpty(officeCode))
+        {
+            PsEnt.OFFICE_CODE = officeCode;
+        }
+
+        theList = (EntityList)PsSer.GetAll(PsEnt);
+        if ((theList == null || theList.Count == 0) && !string.IsNullOrEmpty(officeCode))
+        {
+            theList = (EntityList)PsSer.GetAll(new PRODUCT_SETTING());
+        }
+
+        if (theList != null && theList.Count > 0)
+        {
+            PsEnt = (PRODUCT_SETTING)theList[0];
+        }
+        else
+        {
+            PsEnt = (PRODUCT_SETTING)PsSer.GetSingle(PsEnt);
+        }
+
+        if (PsEnt != null)
+        {
+            string sizeSetting = Convert.ToString(PsEnt.PRODUCT_SIZE).Trim();
+            string colourSetting = Convert.ToString(PsEnt.PRODUCT_COLOUR).Trim();
+
+            isProductSizeVisible = !(sizeSetting == "0" || sizeSetting.Equals("false", StringComparison.OrdinalIgnoreCase));
+            isProductColourVisible = !(colourSetting == "0" || colourSetting.Equals("false", StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Column 2: Size | Column 3: Swatch Type | Column 4: Swatch
+        grdProducts.Columns[2].Visible = isProductSizeVisible;
+        grdProducts.Columns[3].Visible = isProductColourVisible;
+        grdProducts.Columns[4].Visible = isProductColourVisible;
     }
 
     private void ShowStep(int step)
@@ -119,24 +170,24 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
             return;
         }
 
-        PR_CUSTOMER_LOCATION locEnt = new PR_CUSTOMER_LOCATION();
-        locEnt.PK_ID = locationId;
-        locEnt = (PR_CUSTOMER_LOCATION)ClSer.GetSingle(locEnt);
+        ClEnt = new PR_CUSTOMER_LOCATION();
+        ClEnt.PK_ID = locationId;
+        ClEnt = (PR_CUSTOMER_LOCATION)ClSer.GetSingle(ClEnt);
 
-        if (locEnt != null)
+        if (ClEnt != null)
         {
             lblCustomerNameDetail.Text = lblCustomerName.Text;
-            lblCustomerAddressDetail.Text = locEnt.ADDRESS;
-            lblContactPersonDetail.Text = locEnt.CONTACT_PERSON;
-            lblContactNumberDetail.Text = locEnt.CONTACT_NUMBER;
-            lblEmailIdDetail.Text = locEnt.EMAIL_ID;
+            lblCustomerAddressDetail.Text = ClEnt.ADDRESS;
+            lblContactPersonDetail.Text = ClEnt.CONTACT_PERSON;
+            lblContactNumberDetail.Text = ClEnt.CONTACT_NUMBER;
+            lblEmailIdDetail.Text = ClEnt.EMAIL_ID;
 
-            if (!string.IsNullOrEmpty(locEnt.COUNTRY_ID))
+            if (!string.IsNullOrEmpty(ClEnt.COUNTRY_ID))
             {
                 COUNTRY counEnt = new COUNTRY();
-                counEnt.PK_ID = locEnt.COUNTRY_ID;
+                counEnt.PK_ID = ClEnt.COUNTRY_ID;
                 counEnt = (COUNTRY)new COUNTRYService().GetSingle(counEnt);
-                lblCountryNameDetail.Text = counEnt != null ? counEnt.COUNTRY_NAME : locEnt.COUNTRY_ID;
+                lblCountryNameDetail.Text = counEnt != null ? counEnt.COUNTRY_NAME : ClEnt.COUNTRY_ID;
             }
             else
             {
@@ -264,6 +315,10 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
     private void BindProducts()
     {
+        grdProducts.Columns[2].Visible = isProductSizeVisible;
+        grdProducts.Columns[3].Visible = isProductColourVisible;
+        grdProducts.Columns[4].Visible = isProductColourVisible;
+
         grdProducts.DataSource = ProductTable;
         grdProducts.DataBind();
     }
@@ -282,14 +337,13 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
             DataRow pRow = matches[0];
             pRow["PRODUCT_ID"] = GetSelectedValue(row, "ddlProduct");
-            pRow["SIZE_ID"] = GetSelectedValue(row, "ddlSize");
-            pRow["SWATCH_TYPE_ID"] = GetSelectedValue(row, "ddlSwatchType");
+            pRow["SIZE_ID"] = isProductSizeVisible ? GetSelectedValue(row, "ddlSize") : "";
+            pRow["SWATCH_TYPE_ID"] = isProductColourVisible ? GetSelectedValue(row, "ddlSwatchType") : "";
 
-            // Read the swatch value selected from modal
             HiddenField hfSwatchId = row.FindControl("hfSwatchId") as HiddenField;
-            pRow["SWATCH_ID"] = (hfSwatchId != null && !string.IsNullOrEmpty(hfSwatchId.Value))
-                ? hfSwatchId.Value
-                : GetSelectedValue(row, "ddlSwatch");
+            pRow["SWATCH_ID"] = isProductColourVisible
+                ? (hfSwatchId != null && !string.IsNullOrEmpty(hfSwatchId.Value) ? hfSwatchId.Value : GetSelectedValue(row, "ddlSwatch"))
+                : "";
 
             pRow["QUANTITY"] = GetText(row, "txtQuantity");
             HiddenField hfUnitId = row.FindControl("hfUnitId") as HiddenField;
@@ -349,6 +403,12 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         }
         else if (e.CommandName == "DuplicateExceptSwatch" || e.CommandName == "DuplicateExceptSize")
         {
+            if ((e.CommandName == "DuplicateExceptSwatch" && !isProductSizeVisible) ||
+                (e.CommandName == "DuplicateExceptSize" && !isProductColourVisible))
+            {
+                return;
+            }
+
             ReadProducts();
 
             string rowId = Convert.ToString(e.CommandArgument);
@@ -368,15 +428,15 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
                 if (e.CommandName == "DuplicateExceptSwatch")
                 {
-                    newRow["SIZE_ID"] = sourceRow["SIZE_ID"];
+                    newRow["SIZE_ID"] = isProductSizeVisible ? sourceRow["SIZE_ID"] : "";
                     newRow["SWATCH_TYPE_ID"] = "";
                     newRow["SWATCH_ID"] = "";
                 }
                 else if (e.CommandName == "DuplicateExceptSize")
                 {
                     newRow["SIZE_ID"] = "";
-                    newRow["SWATCH_TYPE_ID"] = sourceRow["SWATCH_TYPE_ID"];
-                    newRow["SWATCH_ID"] = sourceRow["SWATCH_ID"];
+                    newRow["SWATCH_TYPE_ID"] = isProductColourVisible ? sourceRow["SWATCH_TYPE_ID"] : "";
+                    newRow["SWATCH_ID"] = isProductColourVisible ? sourceRow["SWATCH_ID"] : "";
                 }
 
                 dt.Rows.InsertAt(newRow, sourceIndex + 1);
@@ -396,56 +456,78 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         DropDownList ddlSize = e.Row.FindControl("ddlSize") as DropDownList;
         DropDownList ddlSwatchType = e.Row.FindControl("ddlSwatchType") as DropDownList;
         DropDownList ddlSwatch = e.Row.FindControl("ddlSwatch") as DropDownList;
+        ImageButton btnDupExceptSwatch = e.Row.FindControl("btnDupExceptSwatch") as ImageButton;
+        ImageButton btnDupExceptSize = e.Row.FindControl("btnDupExceptSize") as ImageButton;
 
-        LoadProducts(ddlProduct);
-        LoadSizes(ddlSize);
-        LoadSwatchTypes(ddlSwatchType);
+        if (ddlProduct != null) LoadProducts(ddlProduct);
+        if (ddlSize != null && isProductSizeVisible) LoadSizes(ddlSize);
+        if (ddlSwatchType != null && isProductColourVisible) LoadSwatchTypes(ddlSwatchType);
 
         DataRowView rowView = e.Row.DataItem as DataRowView;
-        if (rowView != null)
+        if (rowView == null) return;
+
+        SetSelectedValue(ddlProduct, rowView["PRODUCT_ID"]);
+
+        if (ddlSize != null)
         {
-            SetSelectedValue(ddlProduct, rowView["PRODUCT_ID"]);
-            SetSelectedValue(ddlSize, rowView["SIZE_ID"]);
-
-            string swatchTypeId = Convert.ToString(rowView["SWATCH_TYPE_ID"]);
-            SetSelectedValue(ddlSwatchType, swatchTypeId);
-
-            string swatchId = Convert.ToString(rowView["SWATCH_ID"]);
-
-            // Sync hidden field
-            HiddenField hfSwatchId = e.Row.FindControl("hfSwatchId") as HiddenField;
-            if (hfSwatchId != null)
+            ddlSize.Visible = isProductSizeVisible;
+            if (isProductSizeVisible)
             {
-                hfSwatchId.Value = swatchId;
+                SetSelectedValue(ddlSize, rowView["SIZE_ID"]);
             }
+        }
 
-            if (!string.IsNullOrEmpty(swatchTypeId))
+        if (btnDupExceptSwatch != null)
+        {
+            btnDupExceptSwatch.Visible = isProductSizeVisible;
+        }
+
+        string swatchTypeId = Convert.ToString(rowView["SWATCH_TYPE_ID"]);
+        string swatchId = Convert.ToString(rowView["SWATCH_ID"]);
+
+        if (ddlSwatchType != null)
+        {
+            ddlSwatchType.Visible = isProductColourVisible;
+            if (isProductColourVisible)
             {
-                if (ddlSwatch != null)
-                {
-                    LoadSwatches(ddlSwatch, swatchTypeId);
-                    ddlSwatch.Enabled = true;
-                    SetSelectedValue(ddlSwatch, swatchId);
-                }
+                SetSelectedValue(ddlSwatchType, swatchTypeId);
+            }
+        }
+
+        if (btnDupExceptSize != null)
+        {
+            btnDupExceptSize.Visible = isProductColourVisible;
+        }
+
+        HiddenField hfSwatchId = e.Row.FindControl("hfSwatchId") as HiddenField;
+        if (hfSwatchId != null)
+        {
+            hfSwatchId.Value = isProductColourVisible ? swatchId : "";
+        }
+
+        if (ddlSwatch != null)
+        {
+            if (isProductColourVisible && !string.IsNullOrEmpty(swatchTypeId))
+            {
+                LoadSwatches(ddlSwatch, swatchTypeId);
+                ddlSwatch.Enabled = true;
+                SetSelectedValue(ddlSwatch, swatchId);
             }
             else
             {
-                if (ddlSwatch != null)
-                {
-                    ddlSwatch.Items.Clear();
-                    ddlSwatch.Items.Insert(0, new ListItem("-- Select Swatch --", ""));
-                    ddlSwatch.Enabled = false;
-                }
+                ddlSwatch.Items.Clear();
+                ddlSwatch.Items.Insert(0, new ListItem("-- Select Swatch --", ""));
+                ddlSwatch.Enabled = false;
             }
-
-            Label lblUnit = e.Row.FindControl("lblUnit") as Label;
-            TextBox txtQuantity = e.Row.FindControl("txtQuantity") as TextBox;
-
-            if (lblUnit != null)
-                lblUnit.Text = GetUnitName(Convert.ToString(rowView["UNIT"]));
-            if (txtQuantity != null)
-                txtQuantity.Text = Convert.ToString(rowView["QUANTITY"]);
         }
+
+        Label lblUnit = e.Row.FindControl("lblUnit") as Label;
+        TextBox txtQuantity = e.Row.FindControl("txtQuantity") as TextBox;
+
+        if (lblUnit != null)
+            lblUnit.Text = GetUnitName(Convert.ToString(rowView["UNIT"]));
+        if (txtQuantity != null)
+            txtQuantity.Text = Convert.ToString(rowView["QUANTITY"]);
     }
 
     private void LoadProducts(DropDownList ddl)
@@ -520,13 +602,15 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
                 unitId = ent.UNIT_ID;
         }
 
-        DataRow[] matches = ProductTable.Select("ROW_ID = '" + hfProductRowId.Value.Replace("'", "''") + "'");
+        DataTable dt = ProductTable;
+        DataRow[] matches = dt.Select("ROW_ID = '" + hfProductRowId.Value.Replace("'", "''") + "'");
         if (matches.Length > 0)
         {
             matches[0]["PRODUCT_ID"] = ddlProduct.SelectedValue;
             matches[0]["UNIT"] = unitId;
         }
 
+        ProductTable = dt;
         BindProducts();
     }
 
@@ -541,13 +625,15 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
         HiddenField hfProductRowId = row.FindControl("hfProductRowId") as HiddenField;
         if (hfProductRowId == null) return;
 
-        DataRow[] matches = ProductTable.Select("ROW_ID = '" + hfProductRowId.Value.Replace("'", "''") + "'");
+        DataTable dt = ProductTable;
+        DataRow[] matches = dt.Select("ROW_ID = '" + hfProductRowId.Value.Replace("'", "''") + "'");
         if (matches.Length > 0)
         {
-            matches[0]["SWATCH_TYPE_ID"] = ddlSwatchType.SelectedValue;
+            matches[0]["SWATCH_TYPE_ID"] = isProductColourVisible ? ddlSwatchType.SelectedValue : "";
             matches[0]["SWATCH_ID"] = "";
         }
 
+        ProductTable = dt;
         BindProducts();
     }
 
@@ -606,12 +692,12 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
 
                 PoEnt = new PR_PURCHASE_ORDER();
 
-                EntityList thlisst = PoSer.GetAll(PoEnt);
+                theList = (EntityList)PoSer.GetAll(PoEnt);
                 string pid = "";
                 int id = 0;
-                if (thlisst != null)
+                if (theList != null)
                 {
-                    foreach (PR_PURCHASE_ORDER row in thlisst)
+                    foreach (PR_PURCHASE_ORDER row in theList)
                     {
                         pid = row.PK_ID;
                     }
@@ -656,8 +742,8 @@ public partial class Production_Purchase_Order : System.Web.UI.Page
                 OdEnt = new PR_ORDER_DETAIL();
                 OdEnt.MULTIPLE_DELVIERY_ID = mdid;
                 OdEnt.PRODUCT_ID = Convert.ToString(pRow["PRODUCT_ID"]);
-                OdEnt.SIZE_ID = Convert.ToString(pRow["SIZE_ID"]);
-                OdEnt.SWATCH_ID = Convert.ToString(pRow["SWATCH_ID"]);
+                OdEnt.SIZE_ID = isProductSizeVisible ? Convert.ToString(pRow["SIZE_ID"]) : "";
+                OdEnt.SWATCH_ID = isProductColourVisible ? Convert.ToString(pRow["SWATCH_ID"]) : "";
                 OdEnt.UNIT = Convert.ToString(pRow["UNIT"]);
                 OdEnt.QUANTITY = Convert.ToString(pRow["QUANTITY"]);
                 OdEnt.STATUS = "1";
