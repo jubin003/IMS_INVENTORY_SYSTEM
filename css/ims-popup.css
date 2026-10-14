@@ -1,0 +1,475 @@
+﻿/* =========================================================
+   1. QUANTITY FIELD WITH EMBEDDED UNIT LABEL (PCS, MTR, etc.)
+   ========================================================= */
+.input-with-unit {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+.input-with-unit .form-control {
+    width: 100%;
+    padding-right: 48px !important;
+    box-sizing: border-box;
+}
+
+.input-with-unit .unit-label {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #64748b;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    pointer-events: none;
+    line-height: 1;
+    user-select: none;
+}
+
+/* =========================================================
+   2. SWATCH CELL TRIGGER (Inside the GridView row)
+   ========================================================= */
+.swatch-cell-picker {
+    width: 100%;
+}
+
+.swatch-select-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 10px;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #4b5563;
+    transition: all 0.15s ease;
+    box-sizing: border-box;
+    text-align: left;
+}
+
+.swatch-select-btn:hover:not(:disabled) {
+    border-color: #2563eb;
+    background: #f8fafc;
+}
+
+.swatch-select-btn:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    border-color: #e5e7eb;
+}
+
+.swatch-select-btn.has-selected {
+    border-color: #cbd5e1;
+}
+
+/*.swatch-cell-thumb {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}*/
+
+.swatch-cell-thumb {
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    object-fit: cover;
+    border: 1px solid #e2e8f0;
+    flex-shrink: 0;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.swatch-cell-label {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+.swatch-cell-chevron {
+    color: #9ca3af;
+    flex-shrink: 0;
+}
+
+/* =========================================================
+   3. SWATCH MODAL OVERLAY & CONTAINER
+   ========================================================= */
+.swatch-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(4px);
+    z-index: 10050;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.swatch-modal-dialog {
+    background: #ffffff;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 800px;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    animation: swatchModalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes swatchModalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.96) translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* =========================================================
+   4. MODAL HEADER & SEARCH
+   ========================================================= */
+.swatch-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.swatch-modal-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.swatch-modal-subtitle {
+    display: block;
+    font-size: 13px;
+    color: #64748b;
+    margin-top: 3px;
+}
+
+.swatch-modal-close {
+    background: none;
+    border: none;
+    font-size: 26px;
+    line-height: 1;
+    color: #94a3b8;
+    cursor: pointer;
+    border-radius: 8px;
+    padding: 4px 8px;
+    transition: all 0.15s ease;
+}
+
+.swatch-modal-close:hover {
+    color: #0f172a;
+    background: #e2e8f0;
+}
+
+.swatch-modal-search-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 24px;
+    border-bottom: 1px solid #f1f5f9;
+    background: #ffffff;
+}
+
+.swatch-modal-search-box {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+}
+
+.swatch-search-icon {
+    position: absolute;
+    left: 12px;
+    color: #94a3b8;
+    pointer-events: none;
+}
+
+.swatch-modal-search-input {
+    width: 100%;
+    padding: 9px 36px 9px 38px;
+    font-size: 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    outline: none;
+    transition: all 0.15s ease;
+    background: #f8fafc;
+    box-sizing: border-box;
+}
+
+.swatch-modal-search-input:focus {
+    background: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.swatch-modal-clear-btn {
+    position: absolute;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #94a3b8;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.swatch-modal-clear-btn:hover {
+    color: #0f172a;
+}
+
+.swatch-count-badge {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 6px 12px;
+    border-radius: 20px;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   5. MODAL BODY & GRID CARDS
+   ========================================================= */
+.swatch-modal-body {
+    flex: 1;
+    padding: 20px 24px;
+    overflow-y: auto;
+    max-height: 440px;
+    background: #f8fafc;
+}
+
+.swatch-modal-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+}
+
+@media (max-width: 768px) {
+    .swatch-modal-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (max-width: 520px) {
+    .swatch-modal-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+}
+
+.swatch-card {
+    position: relative;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    user-select: none;
+    box-sizing: border-box;
+}
+
+.swatch-card:hover {
+    border-color: #93c5fd;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 18px -4px rgba(37, 99, 235, 0.16);
+}
+
+.swatch-card.selected {
+    border-color: #2563eb;
+    background-color: #eff6ff;
+    box-shadow: 0 0 0 1px #2563eb, 0 6px 16px rgba(37, 99, 235, 0.18);
+}
+
+.swatch-card-check {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 22px;
+    height: 22px;
+    background: #2563eb;
+    border-radius: 50%;
+    color: #ffffff;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    z-index: 2;
+}
+
+.swatch-card.selected .swatch-card-check {
+    display: flex;
+}
+
+.swatch-card-thumb-wrap {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.swatch-card-thumb {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.2s ease;
+}
+
+.swatch-card:hover .swatch-card-thumb {
+    transform: scale(1.05);
+}
+
+.swatch-card-info {
+    margin-top: 10px;
+    width: 100%;
+    text-align: center;
+}
+
+.swatch-card-name {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.swatch-card.selected .swatch-card-name {
+    color: #1d4ed8;
+}
+
+/* =========================================================
+   6. STATES & SPINNER
+   ========================================================= */
+.swatch-modal-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 20px;
+    color: #64748b;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.swatch-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #2563eb;
+    border-radius: 50%;
+    animation: swatchSpin 0.7s linear infinite;
+}
+
+@keyframes swatchSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* =========================================================
+   7. MODAL FOOTER & ACTIONS
+   ========================================================= */
+.swatch-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #ffffff;
+}
+
+.swatch-modal-selected-info {
+    font-size: 13px;
+    color: #475569;
+}
+
+.swatch-modal-selected-info .selected-name {
+    font-weight: 700;
+    color: #0f172a;
+    margin-left: 4px;
+}
+
+.swatch-modal-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.btn-swatch-cancel {
+    padding: 8px 16px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-swatch-cancel:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.btn-swatch-confirm {
+    padding: 8px 18px;
+    background: #2563eb;
+    border: 1px solid #2563eb;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.btn-swatch-confirm:hover:not(:disabled) {
+    background: #1d4ed8;
+}
+
+.btn-swatch-confirm:disabled {
+    background: #94a3b8;
+    border-color: #94a3b8;
+    cursor: not-allowed;
+    opacity: 0.65;
+}

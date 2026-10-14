@@ -1,5 +1,8 @@
 ﻿<%@ Page Title="Purchase Order Management" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Create_Order.aspx.cs" Inherits="Production_Purchase_Order" %>
+
 <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
+
+
     <div class="imsv5-container">
         <div class="imsv5-page-header">
             <div class="imsv5-title-block">
@@ -199,19 +202,43 @@
                                 </ItemTemplate>
                             </asp:TemplateField>
 
+                            <%-- Swatch Column with Modal Picker Trigger --%>
                             <asp:TemplateField HeaderText="Swatch">
+                                <HeaderStyle Width="220px" />
+                                <ItemStyle Width="220px" />
                                 <ItemTemplate>
-                                    <asp:DropDownList ID="ddlSwatch" runat="server" CssClass="form-control" Enabled="false"></asp:DropDownList>
+                                    <asp:HiddenField ID="hfSwatchId" runat="server" Value='<%# Eval("SWATCH_ID") %>' />
+                                    <asp:DropDownList ID="ddlSwatch" runat="server" Style="display:none;"></asp:DropDownList>
+
+                                    <div class="swatch-cell-picker">
+                                        <button type="button"
+                                            class='<%# string.IsNullOrEmpty(Eval("SWATCH_ID") as string) ? "swatch-select-btn" : "swatch-select-btn has-selected" %>'
+                                            onclick="openSwatchModalForGridRow(this)"
+                                            <%# string.IsNullOrEmpty(Eval("SWATCH_TYPE_ID") as string) ? "disabled title='Please select Swatch Type first'" : "" %>>
+
+                                            <img class="swatch-cell-thumb"
+                                                src='<%# GetSwatchImageUrl(Eval("SWATCH_ID")) %>'
+                                                style='<%# string.IsNullOrEmpty(Eval("SWATCH_ID") as string) ? "display:none;" : "display:inline-block;" %>'
+                                                alt="Swatch Preview" />
+
+                                            <span class="swatch-cell-label">
+                                                <asp:Literal ID="litSwatchName" runat="server" Text='<%# GetSwatchDisplayName(Eval("SWATCH_ID")) %>'></asp:Literal>
+                                            </span>
+
+                                            <svg class="swatch-cell-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">
+                                                <path d="M19 9l-7 7-7-7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </ItemTemplate>
                             </asp:TemplateField>
 
+                            <%-- Quantity Column with Embedded Unit Label --%>
                             <asp:TemplateField HeaderText="Quantity">
                                 <ItemTemplate>
                                     <div class="input-with-unit">
                                         <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>' placeholder="Qty"></asp:TextBox>
-
                                         <asp:Label ID="lblUnit" runat="server" CssClass="unit-label"></asp:Label>
-
                                         <asp:HiddenField ID="hfUnitId" runat="server" Value='<%# Eval("UNIT") %>' />
                                     </div>
                                 </ItemTemplate>
@@ -222,7 +249,6 @@
                                 <ItemTemplate>
                                     <div style="display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
                                         <!-- Duplicate keeping Size (clears Swatch) -->
-                                        
                                         <asp:ImageButton ID="btnDupExceptSwatch" runat="server"
                                             ImageUrl="~/images/icons/size.png"
                                             AlternateText="Duplicate Size"
@@ -268,4 +294,276 @@
             </div>
         </asp:Panel>
     </div>
+
+    <!-- ======================================================== -->
+    <!-- SWATCH SELECTION OVERLAY MODAL -->
+    <!-- ======================================================== -->
+    <div id="swatchModalOverlay" class="swatch-modal-overlay" style="display:none;" onclick="handleModalOverlayClick(event)">
+        <div class="swatch-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="swatchModalTitle">
+            <!-- Header -->
+            <div class="swatch-modal-header">
+                <div class="swatch-modal-title-wrap">
+                    <h3 id="swatchModalTitle" class="swatch-modal-title">Select Swatch</h3>
+                    <span id="swatchModalSubtitle" class="swatch-modal-subtitle">Choose a swatch for this item</span>
+                </div>
+                <button type="button" class="swatch-modal-close" onclick="closeSwatchModal()" aria-label="Close modal">&times;</button>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="swatch-modal-search-bar">
+                <div class="swatch-modal-search-box">
+                    <svg class="swatch-search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" width="18" height="18">
+                        <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                    <input type="text" id="swatchModalSearchInput" class="swatch-modal-search-input"
+                           placeholder="Search swatch by name or code..."
+                           oninput="filterSwatchModalCards()" />
+                    <button type="button" id="swatchModalClearSearch" class="swatch-modal-clear-btn" style="display:none;" onclick="clearSwatchModalSearch()">&times;</button>
+                </div>
+                <div class="swatch-count-badge" id="swatchCountBadge">0 Swatches</div>
+            </div>
+
+            <!-- Modal Body: Centered Grid View -->
+            <div class="swatch-modal-body">
+                <div id="swatchModalLoading" class="swatch-modal-state" style="display:none;">
+                    <div class="swatch-spinner"></div>
+                    <span>Loading swatches...</span>
+                </div>
+
+                <div id="swatchModalEmpty" class="swatch-modal-state" style="display:none;">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="40" height="40">
+                        <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                    </svg>
+                    <span id="swatchModalEmptyText">No swatches found matching your search.</span>
+                </div>
+
+                <div id="swatchModalGrid" class="swatch-modal-grid"></div>
+            </div>
+
+            <!-- Confirmation Footer -->
+            <div class="swatch-modal-footer">
+                <div class="swatch-modal-selected-info">
+                    <span class="selected-label">Selected:</span>
+                    <span id="swatchModalSelectedName" class="selected-name">None</span>
+                </div>
+                <div class="swatch-modal-actions">
+                    <button type="button" class="btn-swatch-cancel" onclick="closeSwatchModal()">Cancel</button>
+                    <button type="button" id="btnConfirmSwatchSelection" class="btn-swatch-confirm" disabled onclick="confirmSwatchSelection()">Confirm Selection</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        var activeSwatchRow = null;
+        var currentSelectedSwatch = null;
+
+        function openSwatchModalForGridRow(btnElement) {
+            var row = btnElement.closest('tr');
+            if (!row) return;
+
+            var ddlType = row.querySelector('[id*="ddlSwatchType"]');
+            if (!ddlType || !ddlType.value) {
+                alert("Please select a Swatch Type for this row first.");
+                return;
+            }
+
+            activeSwatchRow = row;
+            currentSelectedSwatch = null;
+
+            var typeId = ddlType.value;
+            var typeName = ddlType.options[ddlType.selectedIndex].text;
+            document.getElementById('swatchModalSubtitle').textContent = "Category: " + typeName;
+
+            var hfSwatch = row.querySelector('[id*="hfSwatchId"]');
+            var initialSwatchId = hfSwatch ? hfSwatch.value : "";
+
+            document.getElementById('swatchModalSearchInput').value = "";
+            document.getElementById('swatchModalClearSearch').style.display = "none";
+            document.getElementById('swatchModalSelectedName').textContent = "None";
+            document.getElementById('btnConfirmSwatchSelection').disabled = true;
+
+            document.getElementById('swatchModalOverlay').style.display = "flex";
+            loadSwatchesForModal(typeId, initialSwatchId);
+        }
+
+        function loadSwatchesForModal(typeId, preselectId) {
+            var grid = document.getElementById('swatchModalGrid');
+            var loading = document.getElementById('swatchModalLoading');
+            var empty = document.getElementById('swatchModalEmpty');
+
+            grid.innerHTML = "";
+            grid.style.display = "none";
+            empty.style.display = "none";
+            loading.style.display = "flex";
+
+            var targetUrl = window.location.pathname + "?action=get_swatches&typeId=" + encodeURIComponent(typeId);
+
+            fetch(targetUrl)
+                .then(function (res) {
+                    if (!res.ok) {
+                        throw new Error("HTTP error " + res.status);
+                    }
+                    return res.json();
+                })
+                .then(function (data) {
+                    loading.style.display = "none";
+
+                    if (!data.success || !data.swatches || data.swatches.length === 0) {
+                        empty.style.display = "flex";
+                        document.getElementById('swatchModalEmptyText').textContent = "No swatches configured for this category.";
+                        document.getElementById('swatchCountBadge').textContent = "0 Swatches";
+                        return;
+                    }
+
+                    document.getElementById('swatchCountBadge').textContent = data.swatches.length + " Swatches";
+                    grid.style.display = "grid";
+
+                    data.swatches.forEach(function (s) {
+                        var card = document.createElement('div');
+                        card.className = "swatch-card";
+                        card.setAttribute("data-id", s.id);
+                        card.setAttribute("data-name", s.name);
+                        card.setAttribute("data-img", s.imageUrl);
+
+                        card.innerHTML =
+                            '<div class="swatch-card-check">' +
+                                '<svg fill="none" stroke="currentColor" viewBox="0 0 24 24" width="14" height="14">' +
+                                    '<path d="M5 13l4 4L19 7" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>' +
+                                '</svg>' +
+                            '</div>' +
+                            '<div class="swatch-card-thumb-wrap">' +
+                                '<img class="swatch-card-thumb" src="' + s.imageUrl + '" alt="' + s.name + '" loading="lazy" />' +
+                            '</div>' +
+                            '<div class="swatch-card-info">' +
+                                '<span class="swatch-card-name" title="' + s.name + '">' + s.name + '</span>' +
+                            '</div>';
+
+                        card.onclick = function () { selectSwatchCard(card); };
+                        card.ondblclick = function () {
+                            selectSwatchCard(card);
+                            confirmSwatchSelection();
+                        };
+
+                        grid.appendChild(card);
+
+                        if (preselectId && s.id === preselectId) {
+                            selectSwatchCard(card);
+                        }
+                    });
+
+                    document.getElementById('swatchModalSearchInput').focus();
+                })
+                .catch(function (err) {
+                    console.error("Swatch Load Error:", err);
+                    loading.style.display = "none";
+                    empty.style.display = "flex";
+                    document.getElementById('swatchModalEmptyText').textContent = "Error loading swatches.";
+                });
+        }
+
+        function selectSwatchCard(cardElement) {
+            var cards = document.querySelectorAll('.swatch-card');
+            cards.forEach(function (c) { c.classList.remove('selected'); });
+
+            cardElement.classList.add('selected');
+
+            currentSelectedSwatch = {
+                id: cardElement.getAttribute('data-id'),
+                name: cardElement.getAttribute('data-name'),
+                imageUrl: cardElement.getAttribute('data-img')
+            };
+
+            document.getElementById('swatchModalSelectedName').textContent = currentSelectedSwatch.name;
+            document.getElementById('btnConfirmSwatchSelection').disabled = false;
+        }
+
+        function confirmSwatchSelection() {
+            if (!currentSelectedSwatch || !activeSwatchRow) return;
+
+            // Update hidden field for ASP.NET PostBack save
+            var hfSwatch = activeSwatchRow.querySelector('[id*="hfSwatchId"]');
+            if (hfSwatch) hfSwatch.value = currentSelectedSwatch.id;
+
+            // Keep hidden DropDownList in sync
+            var ddlSwatch = activeSwatchRow.querySelector('[id*="ddlSwatch"]');
+            if (ddlSwatch) ddlSwatch.value = currentSelectedSwatch.id;
+
+            var pickerBtn = activeSwatchRow.querySelector('.swatch-select-btn');
+            if (pickerBtn) {
+                pickerBtn.classList.add('has-selected');
+
+                var label = pickerBtn.querySelector('.swatch-cell-label');
+                if (label) {
+                    label.textContent = currentSelectedSwatch.name;
+                }
+
+                // Ensure image element exists and is visible
+                var img = pickerBtn.querySelector('.swatch-cell-thumb');
+                if (!img) {
+                    img = document.createElement('img');
+                    img.className = 'swatch-cell-thumb';
+                    img.alt = 'Swatch Preview';
+                    pickerBtn.insertBefore(img, label);
+                }
+
+                img.src = currentSelectedSwatch.imageUrl;
+                img.style.display = 'inline-block';
+            }
+
+            closeSwatchModal();
+        }
+
+        function filterSwatchModalCards() {
+            var input = document.getElementById('swatchModalSearchInput');
+            var filter = input.value.trim().toLowerCase();
+            var clearBtn = document.getElementById('swatchModalClearSearch');
+            clearBtn.style.display = filter.length > 0 ? "block" : "none";
+
+            var cards = document.querySelectorAll('.swatch-card');
+            var matchCount = 0;
+
+            cards.forEach(function (card) {
+                var name = (card.getAttribute('data-name') || '').toLowerCase();
+                if (name.indexOf(filter) > -1) {
+                    card.style.display = "flex";
+                    matchCount++;
+                } else {
+                    card.style.display = "none";
+                }
+            });
+
+            document.getElementById('swatchCountBadge').textContent = matchCount + " Swatches";
+            var empty = document.getElementById('swatchModalEmpty');
+            if (matchCount === 0) {
+                empty.style.display = "flex";
+                document.getElementById('swatchModalEmptyText').textContent = "No swatches found matching \"" + filter + "\".";
+            } else {
+                empty.style.display = "none";
+            }
+        }
+
+        function clearSwatchModalSearch() {
+            var input = document.getElementById('swatchModalSearchInput');
+            input.value = "";
+            filterSwatchModalCards();
+            input.focus();
+        }
+
+        function closeSwatchModal() {
+            document.getElementById('swatchModalOverlay').style.display = "none";
+            activeSwatchRow = null;
+            currentSelectedSwatch = null;
+        }
+
+        function handleModalOverlayClick(e) {
+            if (e.target.id === 'swatchModalOverlay') {
+                closeSwatchModal();
+            }
+        }
+
+        window.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') closeSwatchModal();
+        });
+    </script>
 </asp:Content>
