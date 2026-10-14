@@ -12,7 +12,7 @@ public partial class Swatch_View_Order : System.Web.UI.Page
     PR_MULTIPLE_DELIVERYService deliveryService = new PR_MULTIPLE_DELIVERYService();
     PR_ORDER_DETAILService orderDetailService = new PR_ORDER_DETAILService();
     PR_CUSTOMER_LOCATIONService locationService = new PR_CUSTOMER_LOCATIONService();
-    PhyeGanDate PGD = new PhyeGanDate();
+    protected PhyeGanDate PGD = new PhyeGanDate();
 
     protected void Page_Load(object sender, EventArgs e)
     {

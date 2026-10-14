@@ -47,13 +47,13 @@
                                         </ItemTemplate>
                                     </asp:TemplateField>
 
-                                    <asp:TemplateField HeaderText="Order Date">
-                                        <HeaderStyle CssClass="col-date" />
-                                        <ItemStyle CssClass="col-date" />
-                                        <ItemTemplate>
-                                            <asp:Label ID="lblOrderDate" runat="server" Text='<%# NepDate(Eval("ORDER_DAY"), Eval("ORDER_MONTH"), Eval("ORDER_YEAR")) %>' />
-                                        </ItemTemplate>
-                                    </asp:TemplateField>
+                                        <asp:TemplateField HeaderText="Order Date">
+                                            <HeaderStyle CssClass="col-date" />
+                                            <ItemStyle CssClass="col-date" />
+                                            <ItemTemplate>
+                                                <asp:Label ID="lblOrderDate" runat="server" Text='<%# Eval("ORDER_DAY") + "/" + Eval("ORDER_MONTH") + "/" + Eval("ORDER_YEAR") %>' />
+                                            </ItemTemplate>
+                                        </asp:TemplateField>
 
                                     <asp:TemplateField HeaderText="Order Number">
                                         <HeaderStyle CssClass="col-code" />
