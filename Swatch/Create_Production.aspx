@@ -2,32 +2,35 @@
 
 <asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
 
-                <style>
-    .zoomable-swatch {
-        border-radius: 4px;
-        transition: transform 0.2s ease-in-out;
-        cursor: pointer;
-        object-fit: cover;
-        border: 1px solid #e2e8f0;
-        background-color: #fff; 
-    }
-    .zoomable-swatch:hover {
-        transform: scale(2.5);
-        z-index: 9999;
-        position: relative;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    }
-    
-    
-    #<%= pnlProductionProducts.ClientID %> .table-responsive,
-    .bs-card {
-        overflow: visible !important;
-    }
-    
-    .enterprise-grid td {
-        overflow: visible !important;
-    }
-</style>
+    <style>
+        .zoomable-swatch {
+            border-radius: 4px;
+            transition: transform 0.2s ease-in-out;
+            cursor: pointer;
+            object-fit: cover;
+            border: 1px solid #e2e8f0;
+            background-color: #fff;
+        }
+
+            .zoomable-swatch:hover {
+                transform: scale(2.5);
+                z-index: 9999;
+                position: relative;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            }
+
+        #<%= pnlProductionProducts.ClientID %> .table-responsive,
+        .bs-card {
+            overflow: visible !important;
+        }
+
+        .enterprise-grid td {
+            overflow: visible !important;
+        }
+    </style>
+
+    <asp:UpdatePanel ID="UpdatePanel1" runat="server">
+        <ContentTemplate>
 
     <div class="imsv5-container">
         <div class="imsv5-page-header">
@@ -75,15 +78,15 @@
                 </div>
 
                 <%-- Delivery Schedule Grid (Shown only when Production Type is 'PO') --%>
-                <asp:Panel ID="pnlPOGrid" runat="server" Visible="false" CssClass="form-section" style="margin-top: 20px;">
+                <asp:Panel ID="pnlPOGrid" runat="server" Visible="false" CssClass="form-section" Style="margin-top: 20px;">
                     <div class="card-toolbar">
                         <div class="toolbar-stats">
                             <span class="badge-stat">Scheduled Deliveries (Ranked by Urgency)</span>
                         </div>
                     </div>
                     <div class="table-responsive">
-                        <asp:GridView ID="grdPurchaseOrders" runat="server" AutoGenerateColumns="False" 
-                            CssClass="enterprise-grid" GridLines="None" 
+                        <asp:GridView ID="grdPurchaseOrders" runat="server" AutoGenerateColumns="False"
+                            CssClass="enterprise-grid" GridLines="None"
                             AllowPaging="True" PageSize="20" OnPageIndexChanging="grdPurchaseOrders_PageIndexChanging"
                             AllowSorting="True" OnSorting="grdPurchaseOrders_Sorting"
                             OnRowCommand="grdPurchaseOrders_RowCommand">
@@ -105,24 +108,24 @@
                                 <asp:TemplateField HeaderText="Action">
                                     <ItemStyle CssClass="text-center" />
                                     <ItemTemplate>
-                                        <asp:LinkButton ID="btnViewDetails" runat="server" 
-                                            CommandName="ViewDeliveryDetails" 
-                                            CommandArgument='<%# Eval("MULTIPLE_DELIVERY_ID") %>' 
-                                            CssClass="btn-action-icon" 
-                                            ToolTip="View Details" 
+                                        <asp:LinkButton ID="btnViewDetails" runat="server"
+                                            CommandName="ViewDeliveryDetails"
+                                            CommandArgument='<%# Eval("MULTIPLE_DELIVERY_ID") %>'
+                                            CssClass="btn-action-icon"
+                                            ToolTip="View Details"
                                             CausesValidation="false">
                                             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                             </svg>
                                         </asp:LinkButton>
-                                        <asp:LinkButton ID="btnCreateProductionOrder" runat="server" 
-                                            CommandName="CreateFromDelivery" 
-                                            CommandArgument='<%# Eval("MULTIPLE_DELIVERY_ID") %>' 
-                                            CssClass="btn-action-icon text-primary" 
-                                            ToolTip="Create Production" 
-                                            CausesValidation="false" 
-                                            style="margin-left: 8px;">
+                                        <asp:LinkButton ID="btnCreateProductionOrder" runat="server"
+                                            CommandName="CreateFromDelivery"
+                                            CommandArgument='<%# Eval("MULTIPLE_DELIVERY_ID") %>'
+                                            CssClass="btn-action-icon text-primary"
+                                            ToolTip="Create Production"
+                                            CausesValidation="false"
+                                            Style="margin-left: 8px;">
                                             <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                                             </svg>
@@ -150,7 +153,15 @@
                     </div>
                 </div>
 
-                <div class="form-grid form-grid-2">
+                <div class="form-grid form-grid-4">
+                    <div class="form-group">
+                        <label>Order Number</label>
+                        <asp:Label ID="lblDetailsOrderNumber" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                    </div>
+                    <div class="form-group">
+                        <label>Customer Name</label>
+                        <asp:Label ID="lblDetailsCustomerName" runat="server" CssClass="form-control form-readonly"></asp:Label>
+                    </div>
                     <div class="form-group">
                         <label>Production Date</label>
                         <asp:Label ID="lblDetailsProductionDate" runat="server" CssClass="form-control form-readonly"></asp:Label>
@@ -169,70 +180,70 @@
                     </div>
 
                     <div class="table-responsive">
-                        <asp:GridView ID="grdProductionDetails" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionDetails_RowCommand" >
-                    <Columns>
-                        <asp:TemplateField HeaderText="SN">
-                            <HeaderStyle Width="50px" CssClass="text-center" />
-                            <ItemStyle Width="50px" CssClass="text-center" />
-                            <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
-                        </asp:TemplateField>
+                        <asp:GridView ID="grdProductionDetails" runat="server" AutoGenerateColumns="False" CssClass="enterprise-grid" GridLines="None" OnRowCommand="grdProductionDetails_RowCommand">
+                            <Columns>
+                                <asp:TemplateField HeaderText="SN">
+                                    <HeaderStyle Width="50px" CssClass="text-center" />
+                                    <ItemStyle Width="50px" CssClass="text-center" />
+                                    <ItemTemplate><%# Container.DataItemIndex + 1 %></ItemTemplate>
+                                </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Product *">
-                            <ItemTemplate>
-                                <asp:HiddenField ID="hfProductId" runat="server" Value='<%# Eval("PRODUCT_ID") %>' />
-                                <asp:Label ID="lblProductName" runat="server" Text='<%# Eval("PRODUCT_NAME") %>' CssClass="form-control-plaintext font-semibold"></asp:Label>
-                            </ItemTemplate>
-                        </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Product *">
+                                    <ItemTemplate>
+                                        <asp:HiddenField ID="hfProductId" runat="server" Value='<%# Eval("PRODUCT_ID") %>' />
+                                        <asp:Label ID="lblProductName" runat="server" Text='<%# Eval("PRODUCT_NAME") %>' CssClass="form-control-plaintext font-semibold"></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Size">
-                            <ItemTemplate>
-                                <asp:HiddenField ID="hfSizeId" runat="server" Value='<%# Eval("SIZE_ID") %>' />
-                                <asp:Label ID="lblSizeName" runat="server" Text='<%# Eval("SIZE_NAME") %>' CssClass="form-control-plaintext"></asp:Label>
-                            </ItemTemplate>
-                        </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Size">
+                                    <ItemTemplate>
+                                        <asp:HiddenField ID="hfSizeId" runat="server" Value='<%# Eval("SIZE_ID") %>' />
+                                        <asp:Label ID="lblSizeName" runat="server" Text='<%# Eval("SIZE_NAME") %>' CssClass="form-control-plaintext"></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Swatch">
-                            <ItemTemplate>
-                                <asp:HiddenField ID="hfSwatchId" runat="server" Value='<%# Eval("SWATCH_ID") %>' />
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <asp:Image ID="imgSwatch" runat="server" 
-                                        ImageUrl='<%# GetSwatchImageUrl(Eval("SWATCH_ID")) %>' 
-                                        Width="44px" Height="44px" 
-                                        CssClass="zoomable-swatch" />
-                                    <asp:Label ID="lblSwatchName" runat="server" Text='<%# Eval("SWATCH_NAME") %>' CssClass="form-control-plaintext"></asp:Label>
-                                </div>
-                            </ItemTemplate>
-                        </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Swatch">
+                                    <ItemTemplate>
+                                        <asp:HiddenField ID="hfSwatchId" runat="server" Value='<%# Eval("SWATCH_ID") %>' />
+                                        <div style="display: flex; align-items: center; gap: 10px;">
+                                            <asp:Image ID="imgSwatch" runat="server"
+                                                ImageUrl='<%# GetSwatchImageUrl(Eval("SWATCH_ID")) %>'
+                                                Width="44px" Height="44px"
+                                                CssClass="zoomable-swatch" />
+                                            <asp:Label ID="lblSwatchName" runat="server" Text='<%# Eval("SWATCH_NAME") %>' CssClass="form-control-plaintext"></asp:Label>
+                                        </div>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Quantity *">
-                            <HeaderStyle Width="120px" />
-                            <ItemTemplate>
-                                <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>'></asp:TextBox>
-                            </ItemTemplate>
-                        </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Quantity *">
+                                    <HeaderStyle Width="120px" />
+                                    <ItemTemplate>
+                                        <asp:TextBox ID="txtQuantity" runat="server" CssClass="form-control" Text='<%# Eval("QUANTITY") %>'></asp:TextBox>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Unit">
-                            <ItemTemplate>
-                                <asp:Label ID="lblUnit" runat="server" Text='<%# Eval("UNIT") %>' CssClass="form-control-plaintext"></asp:Label>
-                            </ItemTemplate>
-                        </asp:TemplateField>
+                                <asp:TemplateField HeaderText="Unit">
+                                    <ItemTemplate>
+                                        <asp:Label ID="lblUnit" runat="server" Text='<%# Eval("UNIT") %>' CssClass="form-control-plaintext"></asp:Label>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
 
-                        <asp:TemplateField HeaderText="Action">
-                            <HeaderStyle CssClass="text-center" Width="100px" />
-                            <ItemStyle CssClass="text-center" Width="100px" VerticalAlign="Middle" />
-                            <ItemTemplate>
-                                <asp:LinkButton ID="btnRemoveProduct" runat="server" 
-                                    Text="Remove" 
-                                    CommandName="RemoveProduct" 
-                                    CommandArgument='<%# Eval("ROW_ID") %>' 
-                                    CssClass="btn-clear" 
-                                    Style="float: none; margin: 0 auto; display: inline-block;"
-                                    CausesValidation="false">
-                                </asp:LinkButton>
-                            </ItemTemplate>
-                        </asp:TemplateField>
-                    </Columns>
-                </asp:GridView>
+                                <asp:TemplateField HeaderText="Action">
+                                    <HeaderStyle CssClass="text-center" Width="100px" />
+                                    <ItemStyle CssClass="text-center" Width="100px" VerticalAlign="Middle" />
+                                    <ItemTemplate>
+                                        <asp:LinkButton ID="btnRemoveProduct" runat="server"
+                                            Text="Remove"
+                                            CommandName="RemoveProduct"
+                                            CommandArgument='<%# Eval("ROW_ID") %>'
+                                            CssClass="btn-clear"
+                                            Style="float: none; margin: 0 auto; display: inline-block;"
+                                            CausesValidation="false">
+                                        </asp:LinkButton>
+                                    </ItemTemplate>
+                                </asp:TemplateField>
+                            </Columns>
+                        </asp:GridView>
                     </div>
                 </asp:Panel>
 
@@ -265,9 +276,9 @@
                 </div>
 
                 <div class="table-responsive">
-                    <asp:GridView ID="grdProductionStages" runat="server" AutoGenerateColumns="False" 
-                        CssClass="enterprise-grid" GridLines="None" 
-                        OnRowCommand="grdProductionStages_RowCommand" 
+                    <asp:GridView ID="grdProductionStages" runat="server" AutoGenerateColumns="False"
+                        CssClass="enterprise-grid" GridLines="None"
+                        OnRowCommand="grdProductionStages_RowCommand"
                         OnRowDataBound="grdProductionStages_RowDataBound">
                         <Columns>
                             <asp:TemplateField HeaderText="SN">
@@ -330,8 +341,8 @@
                     </div>
 
                     <div class="table-responsive">
-                        <asp:GridView ID="grdProductionPipelineUnit" runat="server" AutoGenerateColumns="False" 
-                            CssClass="enterprise-grid" GridLines="None" 
+                        <asp:GridView ID="grdProductionPipelineUnit" runat="server" AutoGenerateColumns="False"
+                            CssClass="enterprise-grid" GridLines="None"
                             OnRowCommand="grdProductionPipelineUnit_RowCommand"
                             OnRowDataBound="grdProductionPipelineUnit_RowDataBound">
                             <Columns>
@@ -390,8 +401,8 @@
                     </div>
 
                     <div class="table-responsive">
-                        <asp:GridView ID="grdProductionPipelineEmployee" runat="server" AutoGenerateColumns="False" 
-                            CssClass="enterprise-grid" GridLines="None" 
+                        <asp:GridView ID="grdProductionPipelineEmployee" runat="server" AutoGenerateColumns="False"
+                            CssClass="enterprise-grid" GridLines="None"
                             OnRowCommand="grdProductionPipelineEmployee_RowCommand"
                             OnRowDataBound="grdProductionPipelineEmployee_RowDataBound">
                             <Columns>
@@ -442,4 +453,7 @@
             </div>
         </asp:Panel>
     </div>
+
+        </ContentTemplate>
+    </asp:UpdatePanel>
 </asp:Content>
