@@ -136,6 +136,47 @@ public partial class Production_Create_Production : System.Web.UI.Page
         set { ViewState["GridSortDirection"] = value; }
     }
 
+    // Load active urgency levels into memory once and sort by DAYS 
+    private DataTable DtUrgencyLevels
+    {
+        get
+        {
+            if (ViewState["DtUrgencyLevels"] == null)
+            {
+                DataTable dt = new DataTable();
+                dt.Columns.Add("NAME", typeof(string));
+                dt.Columns.Add("DAYS", typeof(int));
+                dt.Columns.Add("COLOR", typeof(string));
+
+                try
+                {
+                    PR_URGENCY_LEVEL uEnt = new PR_URGENCY_LEVEL();
+                    uEnt.STATUS = "1";
+                    PR_URGENCY_LEVELService uSer = new PR_URGENCY_LEVELService();
+                    EntityList uList = uSer.GetAll(uEnt);
+
+                    if (uList != null && uList.Count > 0)
+                    {
+                        foreach (PR_URGENCY_LEVEL item in uList)
+                        {
+                            int days = 0;
+                            if (int.TryParse(item.DAYS, out days))
+                            {
+                                dt.Rows.Add(item.URGENCY_NAME, days, item.COLOR);
+                            }
+                        }
+                    }
+                }
+                catch { }
+
+                DataView dv = dt.DefaultView;
+                dv.Sort = "DAYS ASC";
+                ViewState["DtUrgencyLevels"] = dv.ToTable();
+            }
+            return (DataTable)ViewState["DtUrgencyLevels"];
+        }
+    }
+
     protected void ddlProductionType_SelectedIndexChanged(object sender, EventArgs e)
     {
         string selectedType = ddlProductionType.SelectedValue;
@@ -196,39 +237,55 @@ public partial class Production_Create_Production : System.Web.UI.Page
         MdEnt.STATUS = "1";
         EntityList mdList = MdSer.GetAll(MdEnt);
 
+        // Fetch parent tables into memory without setting STATUS="1" to ignore the blank status in the DB
+        EntityList allPOs = new PR_PURCHASE_ORDERService().GetAll(new PR_PURCHASE_ORDER());
+        EntityList allCustomers = new CUSTOMERService().GetAll(new CUSTOMER());
+        EntityList allLocations = new PR_CUSTOMER_LOCATIONService().GetAll(new PR_CUSTOMER_LOCATION());
+
         if (mdList != null)
         {
             foreach (PR_MULTIPLE_DELIVERY md in mdList)
             {
                 string orderNumber = "";
                 string customerName = "";
+                string locAddress = "";
 
-                if (!string.IsNullOrEmpty(md.PURCHASE_ORDER_ID))
+                // 1. Map Purchase Order and Customer from memory
+                if (!string.IsNullOrEmpty(md.PURCHASE_ORDER_ID) && allPOs != null)
                 {
-                    PoEnt = new PR_PURCHASE_ORDER();
-                    PoEnt.PK_ID = md.PURCHASE_ORDER_ID;
-                    PoEnt = (PR_PURCHASE_ORDER)PoSer.GetSingle(PoEnt);
-
-                    if (PoEnt != null)
+                    foreach (PR_PURCHASE_ORDER po in allPOs)
                     {
-                        orderNumber = PoEnt.ORDER_NUMBER;
-                        if (!string.IsNullOrEmpty(PoEnt.CUSTOMER_ID))
+                        if (po.PK_ID == md.PURCHASE_ORDER_ID)
                         {
-                            CustEnt = new CUSTOMER();
-                            CustEnt.PK_ID = PoEnt.CUSTOMER_ID;
-                            CustEnt = (CUSTOMER)CustSer.GetSingle(CustEnt);
-                            customerName = CustEnt != null ? CustEnt.CUSTOMER_NAME : "";
+                            orderNumber = po.ORDER_NUMBER;
+
+                            if (!string.IsNullOrEmpty(po.CUSTOMER_ID) && allCustomers != null)
+                            {
+                                foreach (CUSTOMER cust in allCustomers)
+                                {
+                                    if (cust.PK_ID == po.CUSTOMER_ID)
+                                    {
+                                        customerName = cust.CUSTOMER_NAME;
+                                        break;
+                                    }
+                                }
+                            }
+                            break;
                         }
                     }
                 }
 
-                string locAddress = "";
-                if (!string.IsNullOrEmpty(md.CUSOMTER_LOCATION_ID))
+                // 2. Map Location from memory
+                if (!string.IsNullOrEmpty(md.CUSOMTER_LOCATION_ID) && allLocations != null)
                 {
-                    LocEnt = new PR_CUSTOMER_LOCATION();
-                    LocEnt.PK_ID = md.CUSOMTER_LOCATION_ID;
-                    LocEnt = (PR_CUSTOMER_LOCATION)LocSer.GetSingle(LocEnt);
-                    locAddress = LocEnt != null ? LocEnt.ADDRESS : "";
+                    foreach (PR_CUSTOMER_LOCATION loc in allLocations)
+                    {
+                        if (loc.PK_ID == md.CUSOMTER_LOCATION_ID)
+                        {
+                            locAddress = loc.ADDRESS;
+                            break;
+                        }
+                    }
                 }
 
                 DataRow dr = dtDeliveries.NewRow();
@@ -248,6 +305,84 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
         BindSortedDeliveries();
     }
+
+    //private void LoadScheduledDeliveriesGrid()
+    //{
+    //    DataTable dtDeliveries = new DataTable();
+    //    dtDeliveries.Columns.Add("MULTIPLE_DELIVERY_ID", typeof(string));
+    //    dtDeliveries.Columns.Add("ORDER_NUMBER", typeof(string));
+    //    dtDeliveries.Columns.Add("CUSTOMER_NAME", typeof(string));
+    //    dtDeliveries.Columns.Add("DELIVERY_DATE", typeof(string));
+    //    dtDeliveries.Columns.Add("PARSED_DATE", typeof(DateTime));
+    //    dtDeliveries.Columns.Add("CUSTOMER_LOCATION", typeof(string));
+
+    //    MdEnt = new PR_MULTIPLE_DELIVERY();
+    //    MdEnt.STATUS = "1";
+    //    EntityList mdList = MdSer.GetAll(MdEnt);
+
+    //    if (mdList != null)
+    //    {
+    //        foreach (PR_MULTIPLE_DELIVERY md in mdList)
+    //        {
+    //            string orderNumber = "";
+    //            string customerName = "";
+
+    //            if (!string.IsNullOrEmpty(md.PURCHASE_ORDER_ID))
+    //            {
+    //                PoEnt = new PR_PURCHASE_ORDER();
+    //                PoEnt.PK_ID = md.PURCHASE_ORDER_ID;
+
+    //                // Replaced GetSingle with GetAll to prevent mapping failures
+    //                EntityList poList = PoSer.GetAll(PoEnt);
+    //                if (poList != null && poList.Count > 0)
+    //                {
+    //                    PoEnt = (PR_PURCHASE_ORDER)poList[0];
+    //                    orderNumber = PoEnt.ORDER_NUMBER;
+
+    //                    if (!string.IsNullOrEmpty(PoEnt.CUSTOMER_ID))
+    //                    {
+    //                        CustEnt = new CUSTOMER();
+    //                        CustEnt.PK_ID = PoEnt.CUSTOMER_ID;
+    //                        EntityList cList = CustSer.GetAll(CustEnt);
+    //                        if (cList != null && cList.Count > 0)
+    //                        {
+    //                            CustEnt = (CUSTOMER)cList[0];
+    //                            customerName = CustEnt.CUSTOMER_NAME;
+    //                        }
+    //                    }
+    //                }
+    //            }
+
+    //            string locAddress = "";
+    //            if (!string.IsNullOrEmpty(md.CUSOMTER_LOCATION_ID))
+    //            {
+    //                LocEnt = new PR_CUSTOMER_LOCATION();
+    //                LocEnt.PK_ID = md.CUSOMTER_LOCATION_ID;
+    //                EntityList locList = LocSer.GetAll(LocEnt);
+    //                if (locList != null && locList.Count > 0)
+    //                {
+    //                    LocEnt = (PR_CUSTOMER_LOCATION)locList[0];
+    //                    locAddress = LocEnt.ADDRESS;
+    //                }
+    //            }
+
+    //            DataRow dr = dtDeliveries.NewRow();
+    //            dr["MULTIPLE_DELIVERY_ID"] = md.PK_ID;
+    //            dr["ORDER_NUMBER"] = orderNumber;
+    //            dr["CUSTOMER_NAME"] = customerName;
+    //            dr["DELIVERY_DATE"] = md.DELIVERY_DATE;
+    //            dr["PARSED_DATE"] = ParseDateToDateTime(md.DELIVERY_DATE);
+    //            dr["CUSTOMER_LOCATION"] = locAddress;
+    //            dtDeliveries.Rows.Add(dr);
+    //        }
+    //    }
+
+    //    GridSortExpression = "PARSED_DATE";
+    //    GridSortDirection = "ASC";
+    //    ScheduledDeliveriesTable = dtDeliveries;
+
+    //    BindSortedDeliveries();
+    //}
 
     private void BindSortedDeliveries()
     {
@@ -293,23 +428,36 @@ public partial class Production_Create_Production : System.Web.UI.Page
             return "<span class=\"badge-stat\">" + deliveryDateObj.ToString() + "</span>";
 
         int remainingDays = (int)(deliveryDate.Date - DateTime.Now.Date).TotalDays;
+        DataTable dtUrgency = DtUrgencyLevels;
 
         if (remainingDays < 0)
         {
-            return "<span style=\"color:#e53e3e; font-weight:600; padding:3px 8px; background:#fff5f5; border:1px solid #feb2b2; border-radius:4px;\">Overdue (" + Math.Abs(remainingDays) + "d)</span>";
+            return "<span style=\"color:#fff; text-shadow:0px 1px 2px rgba(0,0,0,0.5); font-weight:600; padding:3px 8px; background:#e53e3e; border:1px solid #c53030; border-radius:4px;\">Overdue (" + Math.Abs(remainingDays) + "d)</span>";
         }
-        else if (remainingDays <= 5)
+
+        if (dtUrgency != null && dtUrgency.Rows.Count > 0)
         {
-            return "<span style=\"color:#dd6b20; font-weight:600; padding:3px 8px; background:#fffaf0; border:1px solid #fbd38d; border-radius:4px;\">Urgent (" + remainingDays + "d)</span>";
+            // Iterate through dynamic thresholds
+            foreach (DataRow row in dtUrgency.Rows)
+            {
+                int thresholdDays = Convert.ToInt32(row["DAYS"]);
+                if (remainingDays <= thresholdDays)
+                {
+                    string name = row["NAME"].ToString();
+                    string color = row["COLOR"].ToString();
+                    return string.Format("<span style=\"color:#fff; text-shadow:0px 1px 2px rgba(0,0,0,0.5); font-weight:600; padding:3px 8px; background:{0}; border:1px solid {0}; border-radius:4px;\">{1} ({2}d)</span>", color, name, remainingDays);
+                }
+            }
+
+            // If it exceeds all thresholds, use the largest configured level
+            DataRow lastRow = dtUrgency.Rows[dtUrgency.Rows.Count - 1];
+            string fallbackColor = lastRow["COLOR"].ToString();
+            string fallbackName = lastRow["NAME"].ToString();
+            return string.Format("<span style=\"color:#fff; text-shadow:0px 1px 2px rgba(0,0,0,0.5); font-weight:600; padding:3px 8px; background:{0}; border:1px solid {0}; border-radius:4px;\">{1} ({2}d)</span>", fallbackColor, fallbackName, remainingDays);
         }
-        else if (remainingDays <= 15)
-        {
-            return "<span style=\"color:#3182ce; font-weight:600; padding:3px 8px; background:#ebf8ff; border:1px solid #bee3f8; border-radius:4px;\">Moderate (" + remainingDays + "d)</span>";
-        }
-        else
-        {
-            return "<span style=\"color:#38a169; font-weight:600; padding:3px 8px; background:#f0fff4; border:1px solid #c6f6d5; border-radius:4px;\">Normal (" + remainingDays + "d)</span>";
-        }
+
+        // Ultimate fallback if nothing is configured in the Urgency_Levels table
+        return "<span class=\"badge-stat\">" + remainingDays + "d</span>";
     }
 
     protected void grdPurchaseOrders_RowCommand(object sender, GridViewCommandEventArgs e)
@@ -321,10 +469,11 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
             MdEnt = new PR_MULTIPLE_DELIVERY();
             MdEnt.PK_ID = mdId;
-            MdEnt = (PR_MULTIPLE_DELIVERY)MdSer.GetSingle(MdEnt);
+            EntityList mdList = MdSer.GetAll(MdEnt);
 
-            if (MdEnt != null)
+            if (mdList != null && mdList.Count > 0)
             {
+                MdEnt = (PR_MULTIPLE_DELIVERY)mdList[0];
                 hfCustomerPoId.Value = MdEnt.PURCHASE_ORDER_ID;
                 hfAutomatedCompletionDate.Value = MdEnt.DELIVERY_DATE;
 
@@ -332,8 +481,31 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
                 PoEnt = new PR_PURCHASE_ORDER();
                 PoEnt.PK_ID = MdEnt.PURCHASE_ORDER_ID;
-                PoEnt = (PR_PURCHASE_ORDER)PoSer.GetSingle(PoEnt);
-                lblStageOrderNumber.Text = PoEnt != null ? PoEnt.ORDER_NUMBER : "";
+                EntityList poList = PoSer.GetAll(PoEnt);
+
+                if (poList != null && poList.Count > 0)
+                {
+                    PoEnt = (PR_PURCHASE_ORDER)poList[0];
+                    string orderNum = PoEnt.ORDER_NUMBER;
+                    lblStageOrderNumber.Text = orderNum;
+                    lblDetailsOrderNumber.Text = orderNum;
+
+                    if (!string.IsNullOrEmpty(PoEnt.CUSTOMER_ID))
+                    {
+                        CustEnt = new CUSTOMER();
+                        CustEnt.PK_ID = PoEnt.CUSTOMER_ID;
+                        EntityList cList = CustSer.GetAll(CustEnt);
+                        if (cList != null && cList.Count > 0)
+                        {
+                            CustEnt = (CUSTOMER)cList[0];
+                            lblDetailsCustomerName.Text = CustEnt.CUSTOMER_NAME;
+                        }
+                    }
+                    else
+                    {
+                        lblDetailsCustomerName.Text = "N/A";
+                    }
+                }
             }
 
             lblDetailsProductionDate.Text = txtProductionDate.Text;
@@ -355,6 +527,8 @@ public partial class Production_Create_Production : System.Web.UI.Page
         hfMultipleDeliveryId.Value = "";
         hfAutomatedCompletionDate.Value = "";
 
+        lblDetailsOrderNumber.Text = "IN-HOUSE";
+        lblDetailsCustomerName.Text = "N/A";
         lblDetailsProductionDate.Text = txtProductionDate.Text;
         lblDetailsDeliveryTarget.Text = "IN-HOUSE (Automated)";
         lblStageProductionDate.Text = txtProductionDate.Text;
@@ -557,11 +731,11 @@ public partial class Production_Create_Production : System.Web.UI.Page
             try
             {
                 PR_STAGE_MASTER smEnt = new PR_STAGE_MASTER();
-                smEnt.STATUS = "1"; 
+                smEnt.STATUS = "1";
                 PR_STAGE_MASTERService smSer = new PR_STAGE_MASTERService();
 
                 ddlStg.DataSource = smSer.GetAll(smEnt);
-                ddlStg.DataTextField = "NAME"; 
+                ddlStg.DataTextField = "NAME";
                 ddlStg.DataValueField = "PK_ID";
                 ddlStg.DataBind();
             }
@@ -1127,8 +1301,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
         if (string.IsNullOrEmpty(id)) return "";
         PRODUCT ent = new PRODUCT();
         ent.PK_ID = id;
-        ent = (PRODUCT)new PRODUCTService().GetSingle(ent);
-        return ent != null ? ent.PRODUCT_NAME : "";
+        EntityList pList = new PRODUCTService().GetAll(ent);
+        if (pList != null && pList.Count > 0)
+        {
+            return ((PRODUCT)pList[0]).PRODUCT_NAME;
+        }
+        return "";
     }
 
     private string GetSizeName(string id)
@@ -1136,8 +1314,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
         if (string.IsNullOrEmpty(id)) return "";
         PRODUCT_SIZE ent = new PRODUCT_SIZE();
         ent.PK_ID = id;
-        ent = (PRODUCT_SIZE)new PRODUCT_SIZEService().GetSingle(ent);
-        return ent != null ? ent.SIZE_NAME : "";
+        EntityList sList = new PRODUCT_SIZEService().GetAll(ent);
+        if (sList != null && sList.Count > 0)
+        {
+            return ((PRODUCT_SIZE)sList[0]).SIZE_NAME;
+        }
+        return "";
     }
 
     private string GetSwatchName(string id)
@@ -1145,8 +1327,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
         if (string.IsNullOrEmpty(id)) return "";
         PR_SWATCH ent = new PR_SWATCH();
         ent.PK_ID = id;
-        ent = (PR_SWATCH)new PR_SWATCHService().GetSingle(ent);
-        return ent != null ? ent.SWATCH_NAME : "";
+        EntityList swList = new PR_SWATCHService().GetAll(ent);
+        if (swList != null && swList.Count > 0)
+        {
+            return ((PR_SWATCH)swList[0]).SWATCH_NAME;
+        }
+        return "";
     }
 
     private void SetSelectedValue(DropDownList ddl, object value)
@@ -1185,9 +1371,12 @@ public partial class Production_Create_Production : System.Web.UI.Page
 
         PRODUCT_UNIT ent = new PRODUCT_UNIT();
         ent.PK_ID = id;
-        ent = (PRODUCT_UNIT)new PRODUCT_UNITService().GetSingle(ent);
-
-        return ent != null ? ent.UNIT_NAME : "";
+        EntityList uList = new PRODUCT_UNITService().GetAll(ent);
+        if (uList != null && uList.Count > 0)
+        {
+            return ((PRODUCT_UNIT)uList[0]).UNIT_NAME;
+        }
+        return "";
     }
 
     private static readonly string[] AllowedExtensions = { ".jpg", ".jpeg", ".png" };
