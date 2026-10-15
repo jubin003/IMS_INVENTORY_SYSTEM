@@ -1,0 +1,118 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Biometric.aspx.cs" Inherits="HR_AttendanceBiometric_Biometric" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
+    <style>
+        .grid-style {
+            border-collapse: collapse;
+            width: 100%;
+            table-layout: auto; /* Allows cells to resize based on content */
+        }
+
+            .grid-style th, .grid-style td {
+                white-space: nowrap; /* Prevent column wrapping */
+                padding: 8px;
+                border: 1px solid #ddd;
+                text-align: left;
+            }
+
+        .grid-header {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+
+        .grid-row {
+            background-color: #ffffff;
+        }
+    </style>
+    <div class="Container-fluid" style="font-size: 16px; font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif">
+        <table class="divmain" runat="server">
+            <tr style="overflow: visible">
+                <td style="width: 200px">
+                    <asp:Label ID="lblDeviceIP" runat="server" Text="Device IP"></asp:Label>
+                    <asp:TextBox ID="txtDeviceIP" runat="server" CssClass="form-control"></asp:TextBox>
+                </td>
+                <td>
+                    <asp:Label ID="lblPort" runat="server" Text="Port"></asp:Label>
+                    <asp:TextBox ID="txtPort" runat="server" CssClass="form-control"></asp:TextBox>
+                </td>
+                <td style="width: 150px">
+                    <asp:Label ID="lblMachineNo" runat="server" Text="Machine Number"></asp:Label>
+                    <asp:TextBox ID="txtMachineNo" runat="server" CssClass="form-control"></asp:TextBox>
+                </td>
+                <td>
+                    <br />
+                    <asp:Button ID="btnConnect" runat="server" CssClass="btn btn-success" Text="Connect" OnClick="btnConnect_Click" />
+                </td>
+                <td>
+                    <br />
+                    <asp:Button ID="btnPing" runat="server" CssClass="btn btn-success" Text="Ping" OnClick="btnPing_Click" />
+                </td>
+            </tr>
+        </table>
+        <div style="width: 100%; border: 1px solid grey; margin-top: 10px"></div>
+        <table class="divDeviceInfo">
+            <tr>
+                <td colspan="10" style="margin: 10px;">Device Info :-
+                        <asp:Label ID="lblDeviceInfo" runat="server"></asp:Label>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <asp:Button ID="btnUserInfo" runat="server" CssClass="btn btn-default" Text="Get All User Info" Enabled="false" OnClick="btnUserInfo_Click" /></td>
+                <td>
+                    <asp:Button ID="btnLogData" runat="server" CssClass="btn btn-default" Text="Get Log Data" Enabled="false" OnClick="btnLogData_Click" /></td>
+                <td>
+                    <asp:Button ID="btnUserId" runat="server" CssClass="btn btn-default" Text="Get All User ID" Enabled="false" OnClick="btnUserId_Click" /></td>
+                <td>
+                    <asp:Button ID="btnDeviceTime" runat="server" CssClass="btn btn-default" Text="Get Device Time" Enabled="false" OnClick="btnDeviceTime_Click" /></td>
+                <td>
+                    <asp:Button ID="btnBeep" runat="server" CssClass="btn btn-default" Text="Beep" Enabled="false" OnClick="btnBeep_Click" /></td>
+                <td>
+                    <asp:Button ID="btnEnable" runat="server" CssClass="btn btn-default" Text="Enable Device" Enabled="false" /></td>
+                <td>
+                    <asp:Button ID="btnDisable" runat="server" CssClass="btn btn-default" Text="Disable Device" Enabled="false" /></td>
+                <td>
+                    <asp:Button ID="btnRestart" runat="server" CssClass="btn btn-default" Text="Restart Device" Enabled="false" /></td>
+                <td>
+                    <asp:Button ID="btnPowerOff" runat="server" CssClass="btn btn-default" Text="Power off" Enabled="false" /></td>
+                <td>
+                    <asp:Button ID="btnUpload" runat="server" CssClass="btn btn-default" Text="Upload User Info" Enabled="false" /></td>
+            </tr>
+        </table>
+        <table style="width: 100%">
+            <tr>
+                <td style="border: 1px solid grey; margin-top: 5px; width: 100%; max-height: 800px; overflow: auto; margin-bottom: 5em">
+                    <asp:GridView ID="dgvRecords" runat="server" AutoGenerateColumns="true" CssClass="grid-style" Width="100%" Height="100%"
+                        HeaderStyle-CssClass="grid-header" RowStyle-CssClass="grid-row" AllowPaging="false">
+                    </asp:GridView>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <asp:Label ID="lblStatus" runat="server"></asp:Label>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <script>
+        function resizeGrid() {
+            const grid = document.getElementById('<%= dgvRecords.ClientID %>');
+            const container = grid.parentElement;
+
+            // Calculate available space
+            const availableHeight = window.innerHeight - container.getBoundingClientRect().top - 20;
+
+            // Set container height
+            container.style.maxHeight = `${Math.min(availableHeight, 500)}px`;
+
+            // Optional: force full width
+            container.style.width = '100%';
+            grid.style.width = '100%';
+        }
+
+        window.addEventListener('load', resizeGrid);
+        window.addEventListener('resize', resizeGrid);
+    </script>
+
+</asp:Content>
+

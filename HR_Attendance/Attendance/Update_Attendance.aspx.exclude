@@ -1,0 +1,41 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="Update_Attendance.aspx.cs" Inherits="HR_Attendance_Attendance_Update_Attendance" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
+    <table>
+        <tr>
+            <td style="width: 120px;">From Date:<br />
+                <asp:TextBox ID="txtFromDate" AutoPostBack="true" Style="height: 32px; width: 150px; font-size: small;"  runat="server" />
+            </td>
+            <td style="width: 120px;">To Date:<br />
+                <asp:TextBox ID="txtToDate" AutoPostBack="true" Style="height: 32px; width: 150px; font-size: small;" runat="server" />
+            </td>
+            <td>Department:<br />
+                <asp:DropDownList runat="server" ID="ddlDept" Height="32px" AutoPostBack="true" OnSelectedIndexChanged="ddlDept_SelectedIndexChanged" />
+            </td>
+            <td style="width: 200px;">Division:<br />
+                <asp:DropDownList runat="server" ID="ddlDiv" Height="32px" AutoPostBack="true" OnSelectedIndexChanged="ddlDiv_SelectedIndexChanged1" />
+            </td>
+            <td style="width: 250px;">Employee:<br />
+                <asp:DropDownList runat="server" ID="ddlEmpID" Height="32px" />
+            </td>
+            <td>
+                <asp:Button ID="btnUpdate" runat="server" Text="Refresh" OnClick="btnUpdate_Click" /></td>
+        </tr>
+        <tr>
+            <td colspan="6">
+                <div id="divProgress" style="display: none; position: absolute; top: 50%; left: 50%; margin-top: -50px; margin-left: -50px;">
+                    Please wait import in process<br />
+                    <img id="imgProgress" runat="server" visible="true" alt="Loading" src="~/images/icons/progress.gif" />
+                </div>
+            </td>
+        </tr>
+    </table>
+    <script type="text/javascript">
+        window.onload = function () {
+            // Initialize all datepickers with their respective formats
+            document.getElementById("<%= txtFromDate.ClientID %>").NepaliDatePicker({ dateFormat: "DD/MM/YYYY", miniEnglishDates: true });
+            document.getElementById("<%= txtToDate.ClientID %>").NepaliDatePicker({ dateFormat: "DD/MM/YYYY", miniEnglishDates: true });
+        };
+    </script>
+</asp:Content>
+

@@ -1,0 +1,179 @@
+﻿<%@ Page Title="" Language="C#" MasterPageFile="~/MasterPage.master" AutoEventWireup="true" CodeFile="importattendance.aspx.cs" Inherits="HR_importattendance" %>
+
+<asp:Content ID="Content1" ContentPlaceHolderID="ContentPlaceHolder1" runat="Server">
+    <script type="text/javascript">
+
+        function myFunction() {
+            var x = document.getElementById("divProgress");
+            if (x.style.display === "none") {
+                x.style.display = "block";
+            } else {
+                x.style.display = "none";
+            }
+        }
+    </script>
+    <style type="text/css">
+        html, body {
+            background: none !important;
+        }
+
+        #overlayprogress {
+            position: fixed;
+            z-index: 99;
+            top: 30px;
+            left: 0px;
+            background-color: #ffffff;
+            width: 100%;
+            height: 200%;
+            filter: Alpha(opacity=80);
+            opacity: 0.80;
+            -moz-opacity: 0.40;
+        }
+
+        #theprogress {
+            background-color: #ffffff;
+            text-align: center;
+            filter: Alpha(opacity=100);
+            opacity: 1;
+            -moz-opacity: 1;
+        }
+
+        #modelprogress {
+            position: fixed;
+            left: 20%;
+            top: 20%;
+            right: 20%;
+            bottom: 20%;
+            color: white;
+        }
+    </style>
+
+
+    <div>
+        <table class="gridtable">
+            <tr runat="server" id="divGetLog">
+                 <td>
+                    <asp:Label ID="lblMachineNo" runat="server" Text="Machine Number"></asp:Label>
+                    <asp:DropDownList ID="ddlMachineNo" runat="server" CssClass="form-control" AutoPostBack="true" OnTextChanged="ddlMachineNo_TextChanged"></asp:DropDownList>
+                </td>
+                <td>
+                    <asp:Label ID="lblDeviceIP" runat="server" Text="Device IP"></asp:Label>
+                    <asp:TextBox ID="txtDeviceIP" runat="server" CssClass="form-control" Text="192.168.0.202"></asp:TextBox>
+                </td>
+                <td>
+                    <asp:Label ID="lblPort" runat="server" Text="Port"></asp:Label>
+                    <asp:TextBox ID="txtPort" runat="server" CssClass="form-control"></asp:TextBox>
+                </td>
+               
+                <td>
+                    <asp:Button ID="btnLogData" runat="server" CssClass="btn btn-default" Text="Get Log Data" OnClientClick="myFunction()" OnClick="btnLogData_Click" />
+                </td>
+            </tr>
+            <tr>
+
+                <td colspan="4">
+                    <div style="width: 100%; border: 1px solid grey; margin-top: 10px"></div>
+                    <div class="divDeviceInfo">
+                        Device Info :-
+                        <asp:Label ID="lblDeviceInfo" runat="server"></asp:Label>
+
+
+                        <asp:Label ID="lblStatus" runat="server" Text=""></asp:Label>
+
+                        <div id="div1" style="position: absolute; top: 90%; left: 50%; margin-top: -50px; margin-left: -50px;" runat="server" visible="false">
+                            Please wait import in process<br />
+                            <img id="img1" runat="server" visible="true" alt="Loading" src="~/images/icons/progress.gif" />
+                        </div>
+                        <div class="col-md-12" style="border: 1px solid grey; margin-top: 5px; width: 100%; max-height: 800px; overflow: auto; margin-bottom: 5em">
+
+                            <asp:GridView ID="dgvRecords" runat="server" AutoGenerateColumns="true" CssClass="grid-style" Visible="false" Width="100%" Height="100%"
+                                HeaderStyle-CssClass="grid-header" RowStyle-CssClass="grid-row" AllowPaging="false">
+                            </asp:GridView>
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+
+            <tr runat="server" id="divCalculate" visible="true">
+                <td>Department :
+                </td>
+                <td>
+                    <asp:DropDownList runat="server" Height="22px" ID="ddlDepartment" AutoPostBack="True"></asp:DropDownList>
+                </td>
+
+                <td>
+                    <asp:Button ID="btnImport" runat="server" Height="22px" Text="Calculate" OnClick="btnImport_Click" OnClientClick="myFunction()" />
+                    <div id="divProgress" style="display: none; position: absolute; top: 50%; left: 50%; margin-top: -50px; margin-left: -50px;">
+                        Please wait import in process<br />
+                        <img id="imgProgress" runat="server" visible="true" alt="Loading" src="~/images/icons/progress.gif" />
+                    </div>
+                </td>
+                <td></td>
+            </tr>
+
+
+        </table>
+    </div>
+
+
+    <asp:UpdatePanel ID="updatepanel1" runat="server">
+        <ContentTemplate>
+            <div>
+                <table>
+                    <tr>
+                        <td>
+                            <asp:GridView ID="gridattendance" runat="server" EnableModelValidation="True"
+                                OnRowDataBound="gridattendance_RowDataBound" Visible="true">
+                                <Columns>
+                                    <asp:TemplateField HeaderText="SN">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblSn" runat="server" Text="<%# Container.DataItemIndex+1 %>"></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                    <asp:TemplateField HeaderText="Employee Id">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblEmployeeId" runat="server" Text='<%# DataBinder.Eval (Container.DataItem,"EMPLOYEEID") %>'></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                    <asp:TemplateField HeaderText="Date">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblDate" runat="server" Text='<%# DataBinder.Eval (Container.DataItem,"DATE") %>'></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                    <asp:TemplateField HeaderText="In Time">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblInTime" runat="server" Text='<%# DataBinder.Eval (Container.DataItem,"INTIME") %>'></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                    <asp:TemplateField HeaderText="Out Time">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblOutTime" runat="server" Text='<%# DataBinder.Eval (Container.DataItem,"OUTTIME") %>'></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                    <asp:TemplateField HeaderText="Working Hour">
+                                        <ItemTemplate>
+                                            <asp:Label ID="lblWorkingHour" runat="server" Text='<%# DataBinder.Eval (Container.DataItem,"WORKINGHOUR") %>'></asp:Label>
+                                        </ItemTemplate>
+                                    </asp:TemplateField>
+                                </Columns>
+                            </asp:GridView>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>&nbsp;</td>
+                    </tr>
+                </table>
+            </div>
+        </ContentTemplate>
+    </asp:UpdatePanel>
+
+
+
+   
+
+
+
+
+</asp:Content>
+

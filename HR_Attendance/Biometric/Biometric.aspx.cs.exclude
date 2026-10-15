@@ -1,0 +1,433 @@
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Configuration;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.WebControls;
+using Entity.Components;
+using Service.Components;
+using System.Globalization;
+
+public partial class HR_AttendanceBiometric_Biometric : System.Web.UI.Page
+{
+    HR_AttTemp HATEnt = new HR_AttTemp();
+    HR_AttTempService HATSer = new HR_AttTempService();
+
+    HelperFunction hf = new HelperFunction();
+
+    DeviceManipulator manipulator = new DeviceManipulator();
+    public ZkemClient objZkeeper;
+    private bool isDeviceConnected;
+
+    private List<EmployeeAttendance> _pendingAttendanceRecords = new List<EmployeeAttendance>();
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            txtDeviceIP.Text = "192.168.0.202";
+            txtPort.Text = "4370";
+            txtMachineNo.Text = "1";
+        }
+    }
+
+    public bool IsDeviceConnected
+    {
+        get { return isDeviceConnected; }
+        set
+        {
+            isDeviceConnected = value;
+            if (isDeviceConnected)
+            {
+                lblStatus.Text = "<b>The device is connected!!</b>";
+                btnConnect.Text = "Disconnect";
+                ToggleControls(true);
+            }
+            else
+            {
+                try
+                {
+                    if (objZkeeper != null)
+                    {
+                        objZkeeper.Disconnect();
+                        objZkeeper = null; // Clear the object reference after disconnect
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lblStatus.Text = "<b>Failed to disconnect: " + ex.Message + "</b>";
+                }
+                finally
+                {
+                    lblStatus.Text = "<b>The device is disconnected!!</b>";
+                    lblDeviceInfo.Text = string.Empty; // Clear device info label
+                    btnConnect.Text = "Connect";
+                    ToggleControls(false);
+                }
+            }
+        }
+    }
+
+    protected void connect()
+    {
+        try
+        {
+            lblStatus.Text = string.Empty;
+            if (IsDeviceConnected)
+            {
+                IsDeviceConnected = false;
+                return;
+            }
+
+            string ipAddress = txtDeviceIP.Text.Trim();
+            string port = txtPort.Text.Trim();
+            if (ipAddress == string.Empty || port == string.Empty)
+                throw new Exception("The Device IP Address and Port is mandotory !!");
+
+            int portNumber = 4370;
+            if (!int.TryParse(port, out portNumber))
+                throw new Exception("Not a valid port number");
+
+            bool isValidIpA = UniversalStatic.ValidateIP(ipAddress);
+            if (!isValidIpA)
+                throw new Exception("The Device IP is invalid !!");
+
+            isValidIpA = UniversalStatic.PingTheDevice(ipAddress);
+            if (!isValidIpA)
+                throw new Exception("The device at " + ipAddress + ":" + port + " did not respond!!");
+
+            objZkeeper = new ZkemClient(RaiseDeviceEvent);
+            IsDeviceConnected = objZkeeper.Connect_Net(ipAddress, portNumber);
+
+            if (IsDeviceConnected)
+            {
+                string deviceInfo = manipulator.FetchDeviceInfo(objZkeeper, int.Parse(txtMachineNo.Text.Trim()));
+                lblDeviceInfo.Text = deviceInfo;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            lblStatus.Text = ex.Message;
+        }
+    }
+
+    protected void btnConnect_Click(object sender, EventArgs e)
+    {
+        connect();
+    }
+
+    private void RaiseDeviceEvent(object sender, string actionType)
+    {
+        switch (actionType)
+        {
+            case UniversalStatic.acx_Disconnect:
+                {
+                    lblStatus.Text = "The device is switched off";
+                    DisplayEmpty();
+                    btnConnect.Text = "Connect";
+                    ToggleControls(false);
+                    break;
+                }
+
+            default:
+                break;
+        }
+
+    }
+    private void DisplayEmpty()
+    {
+        ClearGrid();
+        //dgvRecords.Controls.Add(new DataEmpty());
+    }
+    private void ClearGrid()
+    {
+        if (dgvRecords.Controls.Count > 2)
+        { dgvRecords.Controls.RemoveAt(2); }
+
+
+        dgvRecords.DataSource = null;
+        dgvRecords.Controls.Clear();
+        //dgvRecords.Rows.Clear();
+        dgvRecords.Columns.Clear();
+    }
+    protected void btnPing_Click(object sender, EventArgs e)
+    {
+        lblStatus.Text = string.Empty;
+
+        string ipAddress = txtDeviceIP.Text.Trim();
+
+        bool isValidIpA = UniversalStatic.ValidateIP(ipAddress);
+        if (!isValidIpA)
+            throw new Exception("The Device IP is invalid !!");
+
+        isValidIpA = UniversalStatic.PingTheDevice(ipAddress);
+        if (isValidIpA)
+            lblStatus.Text = "The device is active";
+        else
+            lblStatus.Text = "Could not read any response";
+    }
+    protected void btnUserInfo_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            lblStatus.Text = string.Empty;
+            connect();
+
+            ICollection<UserInfo> lstFingerPrintTemplates = manipulator.GetAllUserInfo(objZkeeper, int.Parse(txtMachineNo.Text.Trim()));
+            if (lstFingerPrintTemplates != null && lstFingerPrintTemplates.Count > 0)
+            {
+                BindToGridView(lstFingerPrintTemplates);
+                lblStatus.Text = lstFingerPrintTemplates.Count + " records found !!";
+            }
+            else
+                DisplayListOutput("No records found");
+        }
+        catch (Exception ex)
+        {
+            DisplayListOutput(ex.Message);
+        }
+    }
+    private void BindToGridView(object list)
+    {
+        ClearGrid();
+
+        IEnumerable enumerable = list as IEnumerable;
+
+        if (enumerable != null)
+        {
+            List<object> objectList = new List<object>();
+
+            foreach (var item in enumerable)
+            {
+                objectList.Add(item);
+            }
+
+            DataTable dataTable = ConvertToDataTable(objectList);
+            dgvRecords.DataSource = dataTable;
+            dgvRecords.DataBind();
+
+            string count = dgvRecords.Rows.Count.ToString();
+            UniversalStatic.ChangeGridProperties(dgvRecords);
+        }
+        else
+        {
+            dgvRecords.DataSource = list;
+            dgvRecords.DataBind();
+            UniversalStatic.ChangeGridProperties(dgvRecords);
+        }
+
+    }
+    private DataTable ConvertToDataTable(List<object> items)
+    {
+        if (items == null || items.Count == 0)
+            return new DataTable();
+
+        Type type = items[0].GetType();
+        DataTable dataTable = new DataTable(type.Name);
+        var props = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        foreach (var prop in props)
+        {
+            dataTable.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
+        }
+
+        foreach (var item in items)
+        {
+            var values = new object[props.Length];
+            for (int i = 0; i < props.Length; i++)
+            {
+                values[i] = props[i].GetValue(item, null);
+            }
+            dataTable.Rows.Add(values);
+        }
+
+        return dataTable;
+    }
+    private void DisplayListOutput(string message)
+    {
+        if (dgvRecords.Controls.Count > 2)
+        { dgvRecords.Controls.RemoveAt(2); }
+
+        lblStatus.Text = message;
+    }
+    private void ToggleControls(bool value)
+    {
+        btnUserInfo.Enabled = value;
+        btnLogData.Enabled = value;
+        btnUserId.Enabled = value;
+        btnDeviceTime.Enabled = value;
+        btnBeep.Enabled = value;
+        btnEnable.Enabled = value;
+        btnDisable.Enabled = value;
+        btnRestart.Enabled = value;
+        btnPowerOff.Enabled = value;
+        btnUpload.Enabled = value;
+        txtMachineNo.Enabled = !value;
+        txtPort.Enabled = !value;
+        txtDeviceIP.Enabled = !value;
+        isDeviceConnected = value;
+    }
+    protected void btnDeviceTime_Click(object sender, EventArgs e)
+    {
+        connect();
+        int machineNumber = int.Parse(txtMachineNo.Text.Trim());
+        int dwYear = 0;
+        int dwMonth = 0;
+        int dwDay = 0;
+        int dwHour = 0;
+        int dwMinute = 0;
+        int dwSecond = 0;
+
+        bool result = objZkeeper.GetDeviceTime(machineNumber, ref dwYear, ref dwMonth, ref dwDay, ref dwHour, ref dwMinute, ref dwSecond);
+
+        string deviceTime = new DateTime(dwYear, dwMonth, dwDay, dwHour, dwMinute, dwSecond).ToString();
+        List<DeviceTimeInfo> lstDeviceInfo = new List<DeviceTimeInfo>();
+        lstDeviceInfo.Add(new DeviceTimeInfo() { DeviceTime = deviceTime });
+        BindToGridView(lstDeviceInfo);
+    }
+
+    protected void btnBeep_Click(object sender, EventArgs e)
+    {
+        connect();
+        objZkeeper.Beep(100);
+    }
+
+
+    #region Get Log Date
+    protected void btnLogData_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            lblStatus.Text = string.Empty;
+            connect();
+
+            // Get log data from device
+            ICollection<MachineInfo> lstMachineInfo = manipulator.GetLogData(objZkeeper, int.Parse(txtMachineNo.Text.Trim()));
+            if (lstMachineInfo != null && lstMachineInfo.Count > 0)
+            {
+                List<EmployeeAttendance> attendanceRecords = new List<EmployeeAttendance>();
+
+                #region To empty the table
+                HATEnt = new HR_AttTemp();
+                HATSer.Delete(HATEnt);
+                #endregion
+
+                foreach (MachineInfo record in lstMachineInfo)
+                {
+                    DateTime dateTimeRecord;
+                    if (DateTime.TryParse(record.DateTimeRecord, out dateTimeRecord))
+                    {
+                        EmployeeAttendance attendance = new EmployeeAttendance();
+                        attendance.EmployeeID = record.IndRegID;
+                        attendance.DateOnly = dateTimeRecord.Date;
+                        attendance.TimeOnly = dateTimeRecord.ToString("hh:mm:ss tt");
+                        attendance.TotalSeconds = (int)dateTimeRecord.TimeOfDay.TotalSeconds;
+                        attendanceRecords.Add(attendance);
+
+                    }
+                    else
+                    {
+                        lblStatus.Text += "Invalid datetime format: " + record.DateTimeRecord +
+                                          " for EmployeeID: " + record.IndRegID + ". Record skipped.<br/>";
+                    }
+                }
+
+                if (attendanceRecords.Count > 0)
+                {
+                    int recordsSaved = SaveAttendanceRecords(attendanceRecords);
+                    lblStatus.Text += recordsSaved.ToString() + " attendance records saved successfully!";
+
+                    // Optional: Bind to grid view
+                    BindToGridView(attendanceRecords);
+                }
+                else
+                {
+                    DisplayListOutput("No valid attendance records found");
+                }
+            }
+            else
+            {
+                DisplayListOutput("No attendance records found");
+            }
+        }
+        catch (Exception ex)
+        {
+            DisplayListOutput("Error processing attendance: " + ex.Message);
+        }
+    }
+
+    public class EmployeeAttendance
+    {
+        public int EmployeeID { get; set; }
+        public DateTime DateOnly { get; set; }
+        public string TimeOnly { get; set; }
+        public int TotalSeconds { get; set; }
+    }
+
+    private int SaveAttendanceRecords(List<EmployeeAttendance> records)
+    {
+        if (records == null || records.Count == 0) return 0;
+
+        int recordsSaved = 0;
+        try
+        {
+            foreach (EmployeeAttendance record in records)
+            {
+                string employeeId = record.EmployeeID.ToString();
+                string attDate = record.DateOnly.ToString("dd/MM/yyyy");
+                string attTime = record.TimeOnly;
+                int totalSeconds = record.TotalSeconds;
+
+                HATEnt = new HR_AttTemp();
+                HATEnt.EMPLOYEE_ID = employeeId;
+                HATEnt.ATT_DATE = attDate;
+                HATEnt.ATT_TIME = attTime;
+                HATEnt.ATT_SEC = totalSeconds.ToString();
+                HATSer.Insert(HATEnt);
+
+                recordsSaved++;
+            }
+            return recordsSaved;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Database save failed: " + ex.Message);
+        }
+    }
+    protected void bntSave_Click(object sender, EventArgs e)
+    {
+    }
+    #endregion
+
+    protected void btnUserId_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            connect();
+            ICollection<UserIDInfo> lstUserIDInfo = manipulator.GetAllUserID(objZkeeper, int.Parse(txtMachineNo.Text.Trim()));
+
+            if (lstUserIDInfo != null && lstUserIDInfo.Count > 0)
+            {
+                BindToGridView(lstUserIDInfo);
+                lblStatus.Text = (lstUserIDInfo.Count + " records found !!");
+            }
+            else
+            {
+                DisplayEmpty();
+                DisplayListOutput("No records found");
+            }
+
+        }
+        catch (Exception ex)
+        {
+            DisplayListOutput(ex.Message);
+        }
+    }
+
+
+
+}

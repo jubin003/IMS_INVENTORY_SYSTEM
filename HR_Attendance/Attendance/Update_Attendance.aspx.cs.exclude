@@ -1,0 +1,158 @@
+﻿using Entity.Components;
+using Oracle.DataAccess.Client;
+using Service.Components;
+using System;
+using System.Configuration;
+using System.Data;
+
+using PhyeGanCore;
+
+public partial class HR_Attendance_Attendance_Update_Attendance : System.Web.UI.Page
+{
+    HR_DEPARTMENT DPEnt = new HR_DEPARTMENT();
+    HR_DEPARTMENTService DPSer = new HR_DEPARTMENTService();
+
+    HR_DIVISION DivEnt = new HR_DIVISION();
+    HR_DIVISIONService DivSrv = new HR_DIVISIONService();
+
+    HR_EMPLOYEES EEnttemp = new HR_EMPLOYEES();
+    HR_EMPLOYEESService ESertemp = new HR_EMPLOYEESService();
+
+    HelperFunction hf = new HelperFunction();
+    PhyeGanDate pgd = new PhyeGanDate();
+
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            txtFromDate.Text = pgd.GetTodayNepaliDate();
+            txtToDate.Text = pgd.GetTodayNepaliDate();
+            loadDepartment();
+            LoadDivision();
+            ddlEmpID.Items.Insert(0, "Select");
+        }
+    }
+    protected void loadDepartment()
+    {
+        DPEnt = new HR_DEPARTMENT();
+        ddlDept.DataSource = DPSer.GetAll(DPEnt);
+        ddlDept.DataTextField = "DEP_NAME";
+        ddlDept.DataValueField = "PK_ID";
+        ddlDept.DataBind();
+        ddlDept.Items.Insert(0, "Select");
+    }
+    protected void LoadDivision()
+    {
+        DivEnt = new HR_DIVISION();
+        if (ddlDept.SelectedValue != "Select")
+        {
+            DivEnt.DEP_ID = ddlDept.SelectedValue;
+        }
+        else
+        {
+            DivEnt.DEP_ID = "";
+        }
+        DivEnt.STATUS = "1";
+        ddlDiv.DataSource = DivSrv.GetAll(DivEnt);
+        ddlDiv.DataTextField = "DIVISION_NAME";
+        ddlDiv.DataValueField = "PK_ID";
+        ddlDiv.DataBind();
+        ddlDiv.Items.Insert(0, "Select");
+    }
+    protected void LoadEmployeeID()
+    {
+        ddlEmpID.Items.Clear();
+        EEnttemp = new HR_EMPLOYEES();
+        if (ddlDept.SelectedValue != "Select")
+        {
+            EEnttemp.DEPARTMENTID = ddlDept.SelectedValue;
+        }
+        else
+        {
+            EEnttemp.DEPARTMENTID = "";
+        }
+
+        if (ddlDiv.SelectedValue != "Select")
+        {
+            EEnttemp.DIVISION = ddlDiv.SelectedValue;
+        }
+        else
+        {
+            EEnttemp.DIVISION = "";
+        }
+        EEnttemp.STATUS = "1";
+        ddlEmpID.DataSource = ESertemp.GetAll(EEnttemp);
+        ddlEmpID.DataTextField = "FULL_NAME";
+        ddlEmpID.DataValueField = "EMPLOYEEID";
+        ddlEmpID.DataBind();
+        ddlEmpID.Items.Insert(0, "Select");
+    }
+    protected void ddlDept_SelectedIndexChanged(object sender, EventArgs e)
+    {
+        LoadDivision();
+        LoadEmployeeID();
+    }
+
+    protected void ddlDiv_SelectedIndexChanged1(object sender, EventArgs e)
+    {
+        LoadEmployeeID();
+    }
+
+
+    protected void btnUpdate_Click(object sender, EventArgs e)
+    {
+        imgProgress.Visible = true;
+        string[] Fromdate = txtFromDate.Text.Split('/');
+        string[] todate = txtToDate.Text.Split('/');
+
+        string fdate = pgd.ConvertNepaliTOEnglish(Fromdate[0], Fromdate[1], Fromdate[2]);
+        string tdate = pgd.ConvertNepaliTOEnglish(todate[0], todate[1], todate[2]);
+        if (ddlEmpID.SelectedValue != "Select")
+        {
+            GETATTENDANCEDETAIL(fdate, tdate, ddlDept.SelectedValue, ddlEmpID.SelectedValue);
+            hf.UPDATE_WEEK_ENDDAYS(fdate, tdate, ddlDept.SelectedValue, ddlEmpID.SelectedValue);
+            
+        }
+        else
+        {
+            GETATTENDANCEDETAIL(fdate, tdate, ddlDept.SelectedValue, "");
+            hf.UPDATE_WEEK_ENDDAYS(fdate, tdate, ddlDept.SelectedValue, "");
+            
+        }
+        imgProgress.Visible = false;
+    }
+
+
+    public void GETATTENDANCEDETAIL(string fdate, string tdate, string division, string Employee_id)
+    {
+        using (OracleConnection connection = new OracleConnection(ConfigurationManager.ConnectionStrings["cnMIS"].ConnectionString))
+        {
+            try
+            {
+                connection.Open();
+
+                // Create a command object for the procedure
+                using (OracleCommand command = connection.CreateCommand())
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "PKJ_HR_ATTENDANCE_CALCULATE.UPDATE_ATTENDANCE_INOUT";
+
+                    // Add input parameters
+                    command.Parameters.Add("VAR_FROM_DATE", OracleDbType.Varchar2).Value = fdate;
+                    command.Parameters.Add("VAR_TO_DATE", OracleDbType.Varchar2).Value = tdate;
+                    command.Parameters.Add("VAR_EMP_DIVISION", OracleDbType.Varchar2).Value = division;
+                    if (Employee_id != "")
+                        command.Parameters.Add("VAR_EMP_ID", OracleDbType.Varchar2).Value = Employee_id;
+                    // Execute the procedure
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                string kbhay = ex.ToString();
+            }
+            connection.Close();
+        }
+    }
+}

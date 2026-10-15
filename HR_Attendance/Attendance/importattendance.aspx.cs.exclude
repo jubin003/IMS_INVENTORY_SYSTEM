@@ -1,0 +1,492 @@
+﻿
+#region things to remember
+//status:0 in attendance is Off Day
+//status:1 in attendance is Present
+//status:2 in attendance is Absent
+//status:3 in attendance is Holiday
+//status:4 in attendance is Leave
+//status:5 in attendance is Half Day Leave
+//status:6 in attendance is Less Than Half Day
+//status:7 in attendance is date greater than today. Attendance is not done yet
+#endregion
+
+
+
+using System;
+using System.Web.UI.WebControls;
+using Entity.Components;
+using Entity.Framework;
+using Service.Components;
+using System.Collections;
+using System.Data;
+using DataHelper.Framework;
+using System.Data.OleDb;
+using System.Configuration;
+using Oracle.DataAccess.Client;
+using System.Collections.Generic;
+
+public partial class HR_importattendance : System.Web.UI.Page
+{
+    HR_AttTemp ATMPEnt = new HR_AttTemp();
+    HR_AttTempService ATMPSer = new HR_AttTempService();
+
+    HR_ATTENDANCE ATEnt = new HR_ATTENDANCE();
+    HR_AttendanceService ATSer = new HR_AttendanceService();
+
+    HR_AttendanceTemp ATMEnt = new HR_AttendanceTemp();
+    HR_AttendanceTempService ATMSer = new HR_AttendanceTempService();
+
+    HR_DEPARTMENT DEnt = new HR_DEPARTMENT();
+    HR_DEPARTMENTService DSer = new HR_DEPARTMENTService();
+
+    HR_EMPLOYEES EEnt = new HR_EMPLOYEES();
+    HR_EMPLOYEESService ESer = new HR_EMPLOYEESService();
+
+    HR_AttTemp HATEnt = new HR_AttTemp();
+    HR_AttTempService HATSer = new HR_AttTempService();
+
+    
+
+    ATT_DEVICE_INFO ADIEnt = new ATT_DEVICE_INFO();
+    ATT_DEVICE_INFOService ADISer = new ATT_DEVICE_INFOService();
+
+    PhyeGanDate hf = new PhyeGanDate();
+
+    DeviceManipulator manipulator = new DeviceManipulator();
+    public ZkemClient objZkeeper;
+    private bool isDeviceConnected;
+
+    private List<EmployeeAttendance> _pendingAttendanceRecords = new List<EmployeeAttendance>();
+
+    static string fdate = "";
+    static string tdate = "";
+
+    protected void Page_Load(object sender, EventArgs e)
+    {
+        if (!IsPostBack)
+        {
+            loadMachineNo();            
+            txtDeviceIP.Text = "";
+            txtPort.Text = "4370";
+            //txtMachineNo.Text = "1";
+            LoadDivision();
+        }
+    }
+
+    protected void LoadDivision()  //Step 1
+    {
+        DEnt = new HR_DEPARTMENT();
+       
+        ddlDepartment.DataSource = DSer.GetAll(DEnt);
+        ddlDepartment.DataTextField = "DEP_NAME";
+        ddlDepartment.DataValueField = "PK_ID";
+        ddlDepartment.DataBind();
+        ddlDepartment.Items.Insert(0, "Select");
+    }
+
+    protected void btnImport_Click(object sender, EventArgs e) //Step 5
+    {
+
+        imgProgress.Visible = true;
+        string last_imp_date = hf.getlast_imp_date(ddlDepartment.SelectedValue);
+        GETATTENDANCEDETAIL(last_imp_date, hf.GetTodayDate("dd/mm/yyyy"), ddlDepartment.SelectedValue);
+        hf.UPDATE_WEEK_ENDDAYS(last_imp_date, hf.GetTodayDate("dd/mm/yyyy"), ddlDepartment.SelectedValue,"");
+        imgProgress.Visible = false; // to hide progress bar
+
+    }
+
+
+
+    public void GETATTENDANCEDETAIL(string fdate, string tdate, string division)
+    {
+        using (OracleConnection connection = new OracleConnection(ConfigurationManager.ConnectionStrings["cnMIS"].ConnectionString))
+        {
+            try
+            {
+                connection.Open();
+
+                // Create a command object for the procedure
+                using (OracleCommand command = connection.CreateCommand())
+                {
+                    command.CommandType = CommandType.StoredProcedure;
+                    command.CommandText = "PKJ_HR_ATTENDANCE_CALCULATE.UPDATE_ATTENDANCE_INOUT"; 
+
+                    // Add input parameters
+                    command.Parameters.Add("VAR_FROM_DATE", OracleDbType.Varchar2).Value = fdate;
+                    command.Parameters.Add("VAR_TO_DATE", OracleDbType.Varchar2).Value = tdate;
+                    command.Parameters.Add("VAR_EMP_DIVISION", OracleDbType.Varchar2).Value = division;
+
+                    // Execute the procedure
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                string kbhay = ex.ToString();
+            }
+            connection.Close();
+        }
+    }
+
+    
+    protected void gridattendance_RowDataBound(object sender, GridViewRowEventArgs e) //Step 9 
+    {
+        if (e.Row.RowType == DataControlRowType.DataRow)
+        {
+            Label lblInTime = e.Row.FindControl("lblInTime") as Label;
+            Label lblOutTime = e.Row.FindControl("lblOutTime") as Label;
+            Label lblWorkingHour = e.Row.FindControl("lblWorkingHour") as Label;
+
+
+            TimeSpan intime = TimeSpan.FromSeconds(Convert.ToInt32(lblInTime.Text));
+            DateTime indatetime = DateTime.Today.Add(intime);
+            lblInTime.Text = indatetime.ToString("hh:mm:ss tt");
+
+
+            TimeSpan outtime = TimeSpan.FromSeconds(Convert.ToInt32(lblOutTime.Text));
+            DateTime outdatetime = DateTime.Today.Add(outtime);
+            lblOutTime.Text = outdatetime.ToString("hh:mm:ss tt");
+
+            TimeSpan workingtime = TimeSpan.FromSeconds(Convert.ToInt32(lblWorkingHour.Text));
+
+            int hour = workingtime.Hours;
+            int min = workingtime.Minutes;
+            int sec = workingtime.Seconds;
+            lblWorkingHour.Text = hour.ToString("00") + ":" + min.ToString("00") + ":" + sec.ToString("00");
+
+        }
+    }
+    protected void btnLogData_Click(object sender, EventArgs e)
+    {
+        imgProgress.Visible = true;
+        dgvRecords.Visible = false;
+        try
+        {
+            lblStatus.Text = string.Empty;
+            connect();
+
+            // Get log data from device
+            ICollection<MachineInfo> lstMachineInfo = manipulator.GetLogData(objZkeeper, int.Parse(ddlMachineNo.SelectedValue.Trim()));
+            if (lstMachineInfo != null && lstMachineInfo.Count > 0)
+            {
+                List<EmployeeAttendance> attendanceRecords = new List<EmployeeAttendance>();
+
+                #region To empty the table
+                HATEnt = new HR_AttTemp();
+                HATSer.Delete(HATEnt);
+                #endregion
+
+                foreach (MachineInfo record in lstMachineInfo)
+                {
+                    DateTime dateTimeRecord;
+                    if (DateTime.TryParse(record.DateTimeRecord, out dateTimeRecord))
+                    {
+                        EmployeeAttendance attendance = new EmployeeAttendance();
+                        attendance.EmployeeID = record.IndRegID;
+                        attendance.DateOnly = dateTimeRecord.Date;
+                        attendance.TimeOnly = dateTimeRecord.ToString("hh:mm:ss tt");
+                        attendance.TotalSeconds = (int)dateTimeRecord.TimeOfDay.TotalSeconds;
+                        attendanceRecords.Add(attendance);
+                    }
+                    else
+                    {
+                        lblStatus.Text += "Invalid datetime format: " + record.DateTimeRecord +
+                                          " for EmployeeID: " + record.IndRegID + ". Record skipped.<br/>";
+                    }
+                }
+
+                if (attendanceRecords.Count > 0)
+                {
+                    int recordsSaved = SaveAttendanceRecords(attendanceRecords);
+                    lblStatus.Text += recordsSaved.ToString() + " attendance records saved successfully!";
+
+                    // Optional: Bind to grid view
+                    BindToGridView(attendanceRecords);
+                }
+                else
+                {
+                    DisplayListOutput("No valid attendance records found");
+                }
+            }
+            else
+            {
+                DisplayListOutput("No attendance records found");
+            }
+        }
+        catch (Exception ex)
+        {
+            DisplayListOutput("Error processing attendance: " + ex.Message);
+        }
+        divGetLog.Visible = false;
+        dgvRecords.Visible = false;
+        divCalculate.Visible = true;
+    }
+
+
+
+    protected void connect()
+    {
+        try
+        {
+            lblStatus.Text = string.Empty;
+            if (IsDeviceConnected)
+            {
+                IsDeviceConnected = false;
+                return;
+            }
+
+            string ipAddress = txtDeviceIP.Text.Trim();
+            string port = txtPort.Text.Trim();
+            if (ipAddress == string.Empty || port == string.Empty)
+                throw new Exception("The Device IP Address and Port is mandotory !!");
+
+            int portNumber = 4370;
+            if (!int.TryParse(port, out portNumber))
+                throw new Exception("Not a valid port number");
+
+            bool isValidIpA = UniversalStatic.ValidateIP(ipAddress);
+            if (!isValidIpA)
+                throw new Exception("The Device IP is invalid !!");
+
+            isValidIpA = UniversalStatic.PingTheDevice(ipAddress);
+            if (!isValidIpA)
+                throw new Exception("The device at " + ipAddress + ":" + port + " did not respond!!");
+
+            objZkeeper = new ZkemClient(RaiseDeviceEvent);
+            IsDeviceConnected = objZkeeper.Connect_Net(ipAddress, portNumber);
+
+            if (IsDeviceConnected)
+            {
+                string deviceInfo = manipulator.FetchDeviceInfo(objZkeeper, int.Parse(ddlMachineNo.SelectedValue));
+                lblDeviceInfo.Text = deviceInfo;
+            }
+
+        }
+        catch (Exception ex)
+        {
+            lblStatus.Text = ex.Message;
+        }
+    }
+    private int SaveAttendanceRecords(List<EmployeeAttendance> records)
+    {
+        if (records == null || records.Count == 0) return 0;
+
+        int recordsSaved = 0;
+        try
+        {
+            foreach (EmployeeAttendance record in records)
+            {
+                string employeeId = record.EmployeeID.ToString();
+                string attDate = record.DateOnly.ToString("dd/MM/yyyy");
+                string attTime = record.TimeOnly;
+                int totalSeconds = record.TotalSeconds;
+
+                HATEnt = new HR_AttTemp();
+                HATEnt.EMPLOYEE_ID = employeeId;
+                HATEnt.ATT_DATE = attDate;
+                HATEnt.ATT_TIME = attTime;
+                HATEnt.ATT_SEC = totalSeconds.ToString();
+                HATSer.Insert(HATEnt);
+
+                recordsSaved++;
+            }
+            return recordsSaved;
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Database save failed: " + ex.Message);
+        }
+    }
+    private void BindToGridView(object list)
+    {
+        ClearGrid();
+
+        IEnumerable enumerable = list as IEnumerable;
+
+        if (enumerable != null)
+        {
+            List<object> objectList = new List<object>();
+
+            foreach (var item in enumerable)
+            {
+                objectList.Add(item);
+            }
+
+            DataTable dataTable = ConvertToDataTable(objectList);
+            dgvRecords.DataSource = dataTable;
+            dgvRecords.DataBind();
+
+            string count = dgvRecords.Rows.Count.ToString();
+            UniversalStatic.ChangeGridProperties(dgvRecords);
+        }
+        else
+        {
+            dgvRecords.DataSource = list;
+            dgvRecords.DataBind();
+            UniversalStatic.ChangeGridProperties(dgvRecords);
+        }
+
+    }
+    private void DisplayListOutput(string message)
+    {
+        if (dgvRecords.Controls.Count > 2)
+        { dgvRecords.Controls.RemoveAt(2); }
+
+        lblStatus.Text = message;
+    }
+    private void ToggleControls(bool value)
+    {
+        ddlMachineNo.Enabled = !value;
+        txtPort.Enabled = !value;
+        txtDeviceIP.Enabled = !value;
+        isDeviceConnected = value;
+    }
+    public bool IsDeviceConnected
+    {
+        get { return isDeviceConnected; }
+        set
+        {
+            isDeviceConnected = value;
+            if (isDeviceConnected)
+            {
+                lblStatus.Text = "<b>The device is connected!!</b>";
+                ToggleControls(true);
+            }
+            else
+            {
+                try
+                {
+                    if (objZkeeper != null)
+                    {
+                        objZkeeper.Disconnect();
+                        objZkeeper = null; // Clear the object reference after disconnect
+                    }
+                }
+                catch (Exception ex)
+                {
+                    lblStatus.Text = "<b>Failed to disconnect: " + ex.Message + "</b>";
+                }
+                finally
+                {
+                    lblStatus.Text = "<b>The device is disconnected!!</b>";
+                    lblDeviceInfo.Text = string.Empty; // Clear device info label                  
+                    ToggleControls(false);
+                }
+            }
+        }
+    }
+    public class EmployeeAttendance
+    {
+        public int EmployeeID { get; set; }
+        public DateTime DateOnly { get; set; }
+        public string TimeOnly { get; set; }
+        public int TotalSeconds { get; set; }
+    }
+
+
+    private void ClearGrid()
+    {
+        if (dgvRecords.Controls.Count > 2)
+        { dgvRecords.Controls.RemoveAt(2); }
+
+
+        dgvRecords.DataSource = null;
+        dgvRecords.Controls.Clear();
+        //dgvRecords.Rows.Clear();
+        dgvRecords.Columns.Clear();
+    }
+    private DataTable ConvertToDataTable(List<object> items)
+    {
+        if (items == null || items.Count == 0)
+            return new DataTable();
+
+        Type type = items[0].GetType();
+        DataTable dataTable = new DataTable(type.Name);
+        var props = type.GetProperties(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+
+        foreach (var prop in props)
+        {
+            dataTable.Columns.Add(prop.Name, Nullable.GetUnderlyingType(prop.PropertyType) ?? prop.PropertyType);
+        }
+
+        foreach (var item in items)
+        {
+            var values = new object[props.Length];
+            for (int i = 0; i < props.Length; i++)
+            {
+                values[i] = props[i].GetValue(item, null);
+            }
+            dataTable.Rows.Add(values);
+        }
+
+        return dataTable;
+    }
+    private void RaiseDeviceEvent(object sender, string actionType)
+    {
+        switch (actionType)
+        {
+            case UniversalStatic.acx_Disconnect:
+                {
+                    lblStatus.Text = "The device is switched off";
+                    DisplayEmpty();
+                    //btnConnect.Text = "Connect";
+                    ToggleControls(false);
+                    break;
+                }
+
+            default:
+                break;
+        }
+
+    }
+    private void DisplayEmpty()
+    {
+        ClearGrid();
+        //dgvRecords.Controls.Add(new DataEmpty());
+    }
+
+    protected void loadMachineNo()
+    {
+        ADIEnt = new ATT_DEVICE_INFO();
+        ddlMachineNo.DataSource = ADISer.GetAll(ADIEnt);
+        ddlMachineNo.DataTextField = "MACHINE_NO";
+        ddlMachineNo.DataTextField = "MACHINE_NO";
+        ddlMachineNo.DataBind();
+        ddlMachineNo.Items.Insert(0, "Select");
+    }
+
+    protected void ddlMachineNo_TextChanged(object sender, EventArgs e)
+    {
+        checkMachineNo();
+    }
+
+    protected void checkMachineNo()
+    {
+        ADIEnt = new HR_Attendance_Attendance_Device_Info();
+        if (ddlMachineNo.SelectedValue != "Select")
+        {
+            ADIEnt.PK_ID = ddlMachineNo.SelectedValue;
+            ADIEnt = (HR_Attendance_Attendance_Device_Info();)ADISer.GetSingle(ADIEnt);
+            if (ADIEnt != null)
+            {
+                txtDeviceIP.Text = ADIEnt.IP_ADDRESS;
+            }
+            else
+            {
+                HelperFunction.MsgBox(this, this.GetType(), "Machine not found !!");
+                cleaField();
+            }
+        }
+        else
+        {
+            HelperFunction.MsgBox(this, this.GetType(), "Please select the Machine No !!");
+            cleaField();
+        }
+    }
+
+    protected void cleaField()
+    {
+        ddlMachineNo.SelectedValue = "Select";
+        txtDeviceIP.Text = "";
+    }
+}
